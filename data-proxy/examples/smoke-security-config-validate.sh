@@ -155,6 +155,23 @@ if [[ $ok -ne 1 ]]; then
   wait "$VALID_PID" 2>/dev/null || true
   exit 1
 fi
+echo "==> UI40/UI43/UI50 security-policies honesty on valid config (port 18082)"
+curl -fsS "http://127.0.0.1:18082/admin/security-policies" >/tmp/dn-ui50-security-policies.json
+python3 - <<'PY_HON'
+import json
+data=json.load(open("/tmp/dn-ui50-security-policies.json"))
+assert data.get("enabled") is True, data
+st=data.get("streaming") or {}
+assert st.get("peak_is_process_rss") is False, st
+assert st.get("obligations_force_streaming") is True, st
+assert data.get("star_expands_wildcard") is False, data.get("star_expands_wildcard")
+sc=data.get("sql_cursor") or {}
+assert sc.get("process_local") is True, sc
+assert sc.get("backend_with_hold") is False, sc
+assert sc.get("forward_fetch_only") is True, sc
+assert sc.get("session_end_clears") is True, sc
+print("UI50 valid-config security-policies honesty ok", "window_rows", st.get("window_rows"), "sql_cursor", sc)
+PY_HON
 kill "$VALID_PID" 2>/dev/null || true
 wait "$VALID_PID" 2>/dev/null || true
 echo "valid config started ok (stopped)"

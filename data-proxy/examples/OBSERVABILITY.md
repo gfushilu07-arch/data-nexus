@@ -75,6 +75,7 @@ Admin UI surfaces security-policies honesty without metrics traffic (UI40/UI43â€
 | Sessions (UI47) | `sql_cursor` + streaming peak/obligations from security-policies | Session list reminds process-local cursors; peak logical only |
 | Tickets / Vault (UI48) | same always-on honesty fields on H05 pages | Ops pages show process-local cursor + logical peak without `/metrics` |
 | Cedar (UI49) | streaming/sql_cursor + star_expands_wildcard next to PDP status | Cedar page does not imply peak RSS or backend WITH HOLD |
+| Audit (UI50) | B08 sample + streaming/sql_cursor honesty banner | Sample is not L3; peak logical; cursors process-local |
 
 Admin UI (UI38) soft-parses `/metrics` on Overview + Settings:
 

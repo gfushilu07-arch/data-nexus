@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AdminAuditEvent, AdminAuditStats } from '~/composables/useAdminApi'
+import type { AdminAuditEvent, AdminAuditStats, AdminSecurityPolicies } from '~/composables/useAdminApi'
 
 definePageMeta({ layout: 'admin' })
 useHead({ title: 'Audit · Data Nexus Admin' })
@@ -25,6 +25,10 @@ const fromLocal = ref('')
 const toLocal = ref('')
 const limit = ref(100)
 const selectedEvent = ref<AdminAuditEvent | null>(null)
+const sqlCursorPolicy = ref<AdminSecurityPolicies['sql_cursor'] | null>(null)
+const streamingPolicy = ref<AdminSecurityPolicies['streaming'] | null>(null)
+const auditSamplePolicy = ref<AdminSecurityPolicies['audit_sample'] | null>(null)
+const starExpandsWildcard = ref(false)
 
 function setStatus(msg: string, kind: 'ok' | 'error' | '' = '') {
   status.value = msg
@@ -133,23 +137,30 @@ const statCards = computed(() => {
 async function load() {
   setStatus('Loading…')
   try {
-    const res = await api.auditEvents({
-      decision: decision.value || undefined,
-      audit_level: auditLevel.value || undefined,
-      outcome: outcome.value || undefined,
-      listener: listener.value || undefined,
-      rule: rule.value || undefined,
-      action: action.value || undefined,
-      service: service.value || undefined,
-      subject_id: subjectId.value || undefined,
-      event_id: eventId.value || undefined,
-      from_ms: localToMs(fromLocal.value),
-      to_ms: localToMs(toLocal.value),
-      limit: Math.min(1000, Math.max(1, Number(limit.value) || 100)),
-    }, apiBase.value)
+    const [res, policies] = await Promise.all([
+      api.auditEvents({
+        decision: decision.value || undefined,
+        audit_level: auditLevel.value || undefined,
+        outcome: outcome.value || undefined,
+        listener: listener.value || undefined,
+        rule: rule.value || undefined,
+        action: action.value || undefined,
+        service: service.value || undefined,
+        subject_id: subjectId.value || undefined,
+        event_id: eventId.value || undefined,
+        from_ms: localToMs(fromLocal.value),
+        to_ms: localToMs(toLocal.value),
+        limit: Math.min(1000, Math.max(1, Number(limit.value) || 100)),
+      }, apiBase.value),
+      api.securityPolicies(apiBase.value).catch(() => null),
+    ])
     events.value = res.events || []
     source.value = res.source || '—'
     note.value = res.note || ''
+    sqlCursorPolicy.value = policies?.sql_cursor ?? null
+    streamingPolicy.value = policies?.streaming ?? null
+    auditSamplePolicy.value = policies?.audit_sample ?? null
+    starExpandsWildcard.value = policies?.star_expands_wildcard ?? false
     if (res.stats) {
       stats.value = res.stats
     }
@@ -163,7 +174,10 @@ async function load() {
       }
     }
     const notePart = note.value ? ` · ${note.value}` : ''
-    setStatus(`${events.value.length} events${notePart}`, 'ok')
+    const hon = auditSamplePolicy.value
+      ? ` · sample L3=${auditSamplePolicy.value.full_result_l3 ?? false}`
+      : ''
+    setStatus(`${events.value.length} events${notePart}${hon}`, 'ok')
   }
   catch (e: any) {
     setStatus(e?.data?.message || e?.message || String(e), 'error')
@@ -421,6 +435,27 @@ onMounted(() => {
           {{ c.hint }}
         </div>
       </div>
+    </div>
+
+    <div
+      v-if="auditSamplePolicy || sqlCursorPolicy || streamingPolicy"
+      class="card mono honesty-banner"
+    >
+      <template v-if="auditSamplePolicy">
+        B08 sample_enabled={{ auditSamplePolicy.sample_enabled }}
+        · needs {{ auditSamplePolicy.requires_audit_level || 'L2' }}
+        · full_result_l3={{ auditSamplePolicy.full_result_l3 ?? false }}
+      </template>
+      <template v-if="streamingPolicy">
+        · peak_is_process_rss={{ streamingPolicy.peak_is_process_rss ?? false }}
+        · obligations_force_streaming={{ streamingPolicy.obligations_force_streaming ?? true }}
+      </template>
+      <template v-if="sqlCursorPolicy">
+        · sql_cursor process_local={{ sqlCursorPolicy.process_local }}
+        / backend_with_hold={{ sqlCursorPolicy.backend_with_hold }}
+      </template>
+      · star_expands_wildcard={{ starExpandsWildcard }}
+      <span class="hint-inline"> (UI50: not L3 full archive; peak logical only; cursors not backend WITH HOLD)</span>
     </div>
 
     <div class="card filters">
@@ -835,6 +870,8 @@ onMounted(() => {
 .form-grid label { display: flex; flex-direction: column; gap: .25rem; font-size: .85rem; color: #444; }
 .input { border: 1px solid #d0d7de; border-radius: 6px; padding: .35rem .5rem; min-width: 0; font: inherit; }
 .hint { color: #57606a; font-size: .85rem; margin: 0; }
+.honesty-banner { font-size: .82rem; color: #57606a; margin: .5rem 0 .75rem; line-height: 1.4; }
+.honesty-banner .hint-inline { color: #6b7280; }
 .table { width: 100%; border-collapse: collapse; font-size: .9rem; }
 .table th, .table td { border-bottom: 1px solid #eef1f4; padding: .45rem .4rem; text-align: left; vertical-align: top; }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .85rem; }
