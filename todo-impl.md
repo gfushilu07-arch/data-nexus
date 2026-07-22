@@ -298,3 +298,4 @@ examples/        smoke + gateway config 样例
 | UI39 | Overview/Settings A10 portal resume hold/resume_hold/logical_skip metrics | feat(ui) |
 | UI40 | security-policies star_expands_wildcard + streaming peak/obligations honesty | feat(ui/api) |
 | UI41 | Overview/Settings A09 PORTAL_STREAM vs PORTAL_CHUNKED metrics | feat(ui) |
+| UI42 | Overview/Settings O01 mask_rows + A05 passthrough_bytes metrics | feat(ui) |

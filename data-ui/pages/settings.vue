@@ -7,6 +7,7 @@ import type {
   ExecutePathMetrics,
   PortalHttpMetrics,
   PortalResumeMetrics,
+  SecurePathMetrics,
   SqlCursorMetricModes,
 } from '~/composables/useAdminApi'
 
@@ -31,6 +32,7 @@ const auditStats = ref<AdminAuditStats | null>(null)
 const sqlCursors = ref<SqlCursorMetricModes | null>(null)
 const portalResume = ref<PortalResumeMetrics | null>(null)
 const portalHttp = ref<PortalHttpMetrics | null>(null)
+const securePath = ref<SecurePathMetrics | null>(null)
 const encodePeak = ref<EncodePeakMetrics | null>(null)
 const executePaths = ref<ExecutePathMetrics | null>(null)
 const probeAt = ref('')
@@ -75,6 +77,7 @@ async function probeGateway() {
       sqlCursors.value = api.parseSqlCursorMetrics(metricsTxt)
       portalResume.value = api.parsePortalResumeMetrics(metricsTxt)
       portalHttp.value = api.parsePortalHttpMetrics(metricsTxt)
+      securePath.value = api.parseSecurePathMetrics(metricsTxt)
       encodePeak.value = api.parseEncodePeakMetrics(metricsTxt)
       executePaths.value = api.parseExecutePathMetrics(metricsTxt)
     }
@@ -82,6 +85,7 @@ async function probeGateway() {
       sqlCursors.value = null
       portalResume.value = null
       portalHttp.value = null
+      securePath.value = null
       encodePeak.value = null
       executePaths.value = null
     }
@@ -309,6 +313,21 @@ async function doReload() {
             </template>
             <template v-else>
               — <span class="hint-inline">(/metrics empty or no portal HTTP traffic yet)</span>
+            </template>
+          </dd>
+        </div>
+        <div class="span-2">
+          <dt>Secure path (O01/A05)</dt>
+          <dd class="mono">
+            <template v-if="securePath && (securePath.mask_rows > 0 || securePath.passthrough_bytes > 0)">
+              mask_rows={{ securePath.mask_rows }}
+              · passthrough_bytes={{ securePath.passthrough_bytes }}
+              <span class="hint-inline">
+                mask_rows counts non-empty mask obligations only; passthrough_bytes is wire payload — not process RSS proof
+              </span>
+            </template>
+            <template v-else>
+              — <span class="hint-inline">(/metrics empty or no mask/passthrough traffic yet)</span>
             </template>
           </dd>
         </div>

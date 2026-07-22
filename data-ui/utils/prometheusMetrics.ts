@@ -70,6 +70,18 @@ export type PortalHttpMetrics = {
   stream_peak_rows: number
 }
 
+/**
+ * O01 / A05 secure-path counters (best-effort).
+ * mask_rows = rows that applied a non-empty mask obligation (not every selected row).
+ * passthrough_bytes = wire payload on GatewayResponse::Wire (not proof of zero-copy RSS).
+ */
+export type SecurePathMetrics = {
+  /** Sum of gateway_mask_rows_total */
+  mask_rows: number
+  /** Sum of gateway_passthrough_bytes_total */
+  passthrough_bytes: number
+}
+
 function promLineValue(ln: string): number {
   const m = ln.match(/\s([0-9]+(?:\.[0-9]+)?)\s*$/)
   return m ? Number(m[1]) || 0 : 0
@@ -255,5 +267,22 @@ export function parsePortalHttpMetrics(text: string): PortalHttpMetrics {
     }
   }
   out.total = out.stream + out.chunked
+  return out
+}
+
+/** Parse O01 mask_rows + A05 passthrough_bytes from Prometheus text. */
+export function parseSecurePathMetrics(text: string): SecurePathMetrics {
+  const out: SecurePathMetrics = {
+    mask_rows: 0,
+    passthrough_bytes: 0,
+  }
+  for (const ln of text.split('\n')) {
+    if (ln.startsWith('#'))
+      continue
+    if (ln.includes('gateway_mask_rows_total'))
+      out.mask_rows += promLineValue(ln)
+    else if (ln.includes('gateway_passthrough_bytes_total'))
+      out.passthrough_bytes += promLineValue(ln)
+  }
   return out
 }

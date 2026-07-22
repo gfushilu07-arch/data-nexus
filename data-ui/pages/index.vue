@@ -13,6 +13,7 @@ import type {
   ExecutePathMetrics,
   PortalHttpMetrics,
   PortalResumeMetrics,
+  SecurePathMetrics,
   SqlCursorMetricModes,
 } from '~/composables/useAdminApi'
 
@@ -37,6 +38,7 @@ const leases = ref<AdminVaultLease[]>([])
 const sqlCursors = ref<SqlCursorMetricModes | null>(null)
 const portalResume = ref<PortalResumeMetrics | null>(null)
 const portalHttp = ref<PortalHttpMetrics | null>(null)
+const securePath = ref<SecurePathMetrics | null>(null)
 const encodePeak = ref<EncodePeakMetrics | null>(null)
 const executePaths = ref<ExecutePathMetrics | null>(null)
 
@@ -125,6 +127,7 @@ async function loadAll() {
       sqlCursors.value = api.parseSqlCursorMetrics(metricsTxt)
       portalResume.value = api.parsePortalResumeMetrics(metricsTxt)
       portalHttp.value = api.parsePortalHttpMetrics(metricsTxt)
+      securePath.value = api.parseSecurePathMetrics(metricsTxt)
       encodePeak.value = api.parseEncodePeakMetrics(metricsTxt)
       executePaths.value = api.parseExecutePathMetrics(metricsTxt)
     }
@@ -132,6 +135,7 @@ async function loadAll() {
       sqlCursors.value = null
       portalResume.value = null
       portalHttp.value = null
+      securePath.value = null
       encodePeak.value = null
       executePaths.value = null
     }
@@ -334,6 +338,28 @@ onUnmounted(() => {
           </template>
           · stream=backend_window; chunked may materialize backend
           · peak logical only
+          · <a
+            class="inline-link"
+            :href="`${apiBase}/metrics`"
+            target="_blank"
+            rel="noreferrer"
+          >/metrics</a>
+        </div>
+      </div>
+      <div
+        v-if="securePath && (securePath.mask_rows > 0 || securePath.passthrough_bytes > 0)"
+        class="stat-card"
+      >
+        <div class="label">
+          Secure path (O01/A05)
+        </div>
+        <div class="value mono">
+          mask_rows={{ securePath.mask_rows }}
+        </div>
+        <div class="sub mono">
+          passthrough_bytes={{ securePath.passthrough_bytes }}
+          · mask_rows = non-empty mask obligation only
+          · wire bytes on passthrough — not RSS proof
           · <a
             class="inline-link"
             :href="`${apiBase}/metrics`"

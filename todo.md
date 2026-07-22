@@ -53,12 +53,12 @@ cd data-proxy
 > A1–A4 / A07 骨架与 socket writer 已交付（见归档）。
 
 - [ ] **A06** Backend→PEP 真行流  
-  - 已有：MySQL/PG `RowStream` + channel（含事务 producer 还 lease）；smoke 双协议 max_rows（含 txn）；**Materialized Query* 升 Streaming**；encode 峰值单测；**`peak_window_rows` + Prometheus `gateway_encode_peak_window_rows`**；**`peak_window_bytes` + `gateway_encode_peak_window_bytes`**（单窗 encode 载荷高水位；smoke 多窗 peak_bytes≪total）；smoke **强制** `execute_path=streaming` + `encode_windows>0` + **peak≤window_rows**；**粗粒度进程内存 smoke**（双协议 50k；cgroup/proc/ps；绝对 cap）；**逻辑 peak 仍权威**；**UI38 Overview/Settings 解析 `/metrics` 展示 logical peak + execute_path 计数（非 RSS）**；**UI40 API `streaming.peak_is_process_rss=false`**  
+  - 已有：MySQL/PG `RowStream` + channel（含事务 producer 还 lease）；smoke 双协议 max_rows（含 txn）；**Materialized Query* 升 Streaming**；encode 峰值单测；**`peak_window_rows` + Prometheus `gateway_encode_peak_window_rows`**；**`peak_window_bytes` + `gateway_encode_peak_window_bytes`**（单窗 encode 载荷高水位；smoke 多窗 peak_bytes≪total）；smoke **强制** `execute_path=streaming` + `encode_windows>0` + **peak≤window_rows**；**粗粒度进程内存 smoke**（双协议 50k；cgroup/proc/ps；绝对 cap）；**逻辑 peak 仍权威**；**UI38 Overview/Settings 解析 `/metrics` 展示 logical peak + execute_path 计数（非 RSS）**；**UI40 API `streaming.peak_is_process_rss=false`**；**UI42 mask_rows + passthrough_bytes 卡片**  
   - 仍欠：控制语句/空结果 Complete 仍可小物化；**无进程/cgroup 精确 1–2 窗字节 CI**（逻辑 window-byte peak 已有；OS RSS 仍噪声大）；portal Complete 见 A09  
   - 路径：`transport`、`server/metrics`、`core_engine`、`smoke-security-stream.sh`、`smoke-security-stream-rss.sh`、`OBSERVABILITY.md`
 
 - [ ] **A08** PostgreSQL wire 透传 + backend TLS  
-  - 已有：idle pool（cap/TTL/SELECT 1）；事务 `tcp_txn`；双协议 TLS；**PG simple Query 透传**；**passthrough 下 extended：优先客户端原包 P/B/E TCP**（`passthrough_client`）；**multi-Execute 连续 client-frame**（首页 hold 无 Sync；续页只中继 Execute；Sync→`PgBackendSync` 刷 Z）；回落 **backend 重编码**（`passthrough_extended`）；否则 **`streaming_demote`**（MySQL COM_STMT）；**UI40 API `streaming.obligations_force_streaming=true`**  
+  - 已有：idle pool（cap/TTL/SELECT 1）；事务 `tcp_txn`；双协议 TLS；**PG simple Query 透传**；**passthrough 下 extended：优先客户端原包 P/B/E TCP**（`passthrough_client`）；**multi-Execute 连续 client-frame**（首页 hold 无 Sync；续页只中继 Execute；Sync→`PgBackendSync` 刷 Z）；回落 **backend 重编码**（`passthrough_extended`）；否则 **`streaming_demote`**（MySQL COM_STMT）；**UI40 API `streaming.obligations_force_streaming=true`**；**UI42 passthrough_bytes 观测卡片**  
   - 仍欠：Streaming 仍用 pool；非自由代理（义务路径强制 Streaming 已有 smoke-security-mask 钉）  
   - 路径：`pg_client_extended_frames` + `pg_ext_tcp_hold`、`client_frames_relay_hold_into`、`PgBackendSync`、`smoke-security-passthrough.sh`
 

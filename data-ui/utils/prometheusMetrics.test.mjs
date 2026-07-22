@@ -9,6 +9,7 @@ import {
   parseExecutePathMetrics,
   parsePortalHttpMetrics,
   parsePortalResumeMetrics,
+  parseSecurePathMetrics,
   parseSqlCursorMetrics,
 } from './prometheusMetrics.ts'
 
@@ -45,6 +46,10 @@ unisql_proxy_gateway_execute_path_total{type="PORTAL_STREAM",execute_path="xprot
 unisql_proxy_gateway_execute_path_total{type="PORTAL_CHUNKED",execute_path="materialized",listener="admin"} 3
 unisql_proxy_gateway_encode_peak_window_rows{type="PORTAL_STREAM",listener="admin"} 2
 unisql_proxy_gateway_encode_peak_window_rows{type="PORTAL_CHUNKED",listener="admin"} 50
+unisql_proxy_gateway_mask_rows_total{listener="pg"} 12
+unisql_proxy_gateway_mask_rows_total{listener="mysql"} 3
+unisql_proxy_gateway_passthrough_bytes_total{listener="pg"} 2048
+unisql_proxy_gateway_passthrough_bytes_total{listener="mysql"} 512
 `
 
 describe('parseEncodePeakMetrics', () => {
@@ -112,5 +117,13 @@ describe('parsePortalHttpMetrics', () => {
     assert.equal(h.total, 11)
     // stream peak ignores PORTAL_CHUNKED=50
     assert.equal(h.stream_peak_rows, 2)
+  })
+})
+
+describe('parseSecurePathMetrics', () => {
+  it('sums mask_rows and passthrough_bytes', () => {
+    const s = parseSecurePathMetrics(SAMPLE)
+    assert.equal(s.mask_rows, 15)
+    assert.equal(s.passthrough_bytes, 2560)
   })
 })

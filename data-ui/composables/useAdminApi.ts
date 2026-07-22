@@ -4,11 +4,13 @@ import {
   parseExecutePathMetrics,
   parsePortalHttpMetrics,
   parsePortalResumeMetrics,
+  parseSecurePathMetrics,
   parseSqlCursorMetrics,
   type EncodePeakMetrics,
   type ExecutePathMetrics,
   type PortalHttpMetrics,
   type PortalResumeMetrics,
+  type SecurePathMetrics,
   type SqlCursorMetricModes,
 } from '~/utils/prometheusMetrics'
 
@@ -19,6 +21,7 @@ export type {
   ExecutePathMetrics,
   PortalHttpMetrics,
   PortalResumeMetrics,
+  SecurePathMetrics,
   SqlCursorMetricModes,
 }
 export {
@@ -26,6 +29,7 @@ export {
   parseExecutePathMetrics,
   parsePortalHttpMetrics,
   parsePortalResumeMetrics,
+  parseSecurePathMetrics,
   parseSqlCursorMetrics,
 }
 
@@ -474,6 +478,7 @@ export function useAdminApi() {
     parseSqlCursorMetrics,
     parsePortalResumeMetrics,
     parsePortalHttpMetrics,
+    parseSecurePathMetrics,
     parseEncodePeakMetrics,
     parseExecutePathMetrics,
     /** Prometheus text (auth unless public_metrics). Soft-fail callers should catch. */
