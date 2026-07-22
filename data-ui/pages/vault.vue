@@ -18,6 +18,8 @@ const project = ref('')
 const environment = ref('dev')
 const ttlSecs = ref(900)
 const policyState = ref<AdminSecurityPolicies['state'] | null>(null)
+const sqlCursorPolicy = ref<AdminSecurityPolicies['sql_cursor'] | null>(null)
+const streamingPolicy = ref<AdminSecurityPolicies['streaming'] | null>(null)
 /** UI24: client-side lease list filters (API returns full page). */
 const statusFilter = ref('')
 const projectFilter = ref('')
@@ -110,6 +112,8 @@ async function load() {
     projects.value = projs
     services.value = svcs
     policyState.value = policies?.state ?? null
+    sqlCursorPolicy.value = policies?.sql_cursor ?? null
+    streamingPolicy.value = policies?.streaming ?? null
     if (!project.value) {
       project.value = projs[0]?.name || svcs[0]?.name || ''
       if (projs[0]?.environment)
@@ -262,6 +266,23 @@ onMounted(() => {
         · vault={{ policyState.vault_path || '—' }}
       </template>
       <span class="hint-inline"> (keys never returned; file backend last-writer-wins, not CRDT)</span>
+    </div>
+    <div
+      v-if="sqlCursorPolicy || streamingPolicy"
+      class="card state-banner mono"
+    >
+      <template v-if="sqlCursorPolicy">
+        A10 sql_cursor process_local={{ sqlCursorPolicy.process_local }}
+        · backend_with_hold={{ sqlCursorPolicy.backend_with_hold }}
+        · forward_fetch_only={{ sqlCursorPolicy.forward_fetch_only }}
+        · session_end_clears={{ sqlCursorPolicy.session_end_clears }}
+      </template>
+      <template v-if="streamingPolicy">
+        · peak_is_process_rss={{ streamingPolicy.peak_is_process_rss ?? false }}
+        · obligations_force_streaming={{ streamingPolicy.obligations_force_streaming ?? true }}
+        · window_rows={{ streamingPolicy.window_rows }}
+      </template>
+      <span class="hint-inline"> (UI48: not backend WITH HOLD; peak logical only)</span>
     </div>
 
     <div class="card form-card">

@@ -9,6 +9,8 @@ const { apiBase, hydrate } = useAdminSettings()
 
 const tickets = ref<AdminTicket[]>([])
 const policyState = ref<AdminSecurityPolicies['state'] | null>(null)
+const sqlCursorPolicy = ref<AdminSecurityPolicies['sql_cursor'] | null>(null)
+const streamingPolicy = ref<AdminSecurityPolicies['streaming'] | null>(null)
 const adminMe = ref<AdminMe | null>(null)
 const status = ref('')
 const statusKind = ref<'ok' | 'error' | ''>('')
@@ -92,6 +94,8 @@ async function load() {
     ])
     tickets.value = list
     policyState.value = policies?.state ?? null
+    sqlCursorPolicy.value = policies?.sql_cursor ?? null
+    streamingPolicy.value = policies?.streaming ?? null
     adminMe.value = me
     const st = policyState.value
     const stateBit = st
@@ -287,6 +291,23 @@ onMounted(() => {
         · ticket={{ policyState.ticket_path || '—' }}
       </template>
       <span class="hint-inline"> (file backend last-writer-wins, not CRDT)</span>
+    </div>
+    <div
+      v-if="sqlCursorPolicy || streamingPolicy"
+      class="card state-banner mono"
+    >
+      <template v-if="sqlCursorPolicy">
+        A10 sql_cursor process_local={{ sqlCursorPolicy.process_local }}
+        · backend_with_hold={{ sqlCursorPolicy.backend_with_hold }}
+        · forward_fetch_only={{ sqlCursorPolicy.forward_fetch_only }}
+        · session_end_clears={{ sqlCursorPolicy.session_end_clears }}
+      </template>
+      <template v-if="streamingPolicy">
+        · peak_is_process_rss={{ streamingPolicy.peak_is_process_rss ?? false }}
+        · obligations_force_streaming={{ streamingPolicy.obligations_force_streaming ?? true }}
+        · window_rows={{ streamingPolicy.window_rows }}
+      </template>
+      <span class="hint-inline"> (UI48: not backend WITH HOLD; peak logical only)</span>
     </div>
 
     <div class="card form-card">

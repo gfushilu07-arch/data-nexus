@@ -177,7 +177,16 @@ pdp=data.get("pdp") or {}
 assert pdp.get("remote_configured") is True, pdp
 assert pdp.get("remote_fail_closed") is True, pdp
 assert "remote_url" not in pdp and "remote_token" not in pdp, pdp
-print("policies remote ok", pdp)
+st=data.get("streaming") or {}
+assert st.get("peak_is_process_rss") is False, st
+assert st.get("obligations_force_streaming") is True, st
+assert data.get("star_expands_wildcard") is False, data.get("star_expands_wildcard")
+sc=data.get("sql_cursor") or {}
+assert sc.get("process_local") is True, sc
+assert sc.get("backend_with_hold") is False, sc
+assert sc.get("forward_fetch_only") is True, sc
+assert sc.get("session_end_clears") is True, sc
+print("policies remote ok", pdp, "streaming_honesty", st.get("peak_is_process_rss"), "sql_cursor", sc)
 PY
 
 echo "==> allow: SELECT 1 via remote allow"
