@@ -3,6 +3,7 @@ import type {
   AdminEndpoint,
   AdminListener,
   AdminPool,
+  AdminSecurityPolicies,
   AdminService,
 } from '~/composables/useAdminApi'
 
@@ -18,6 +19,10 @@ const listeners = ref<AdminListener[]>([])
 const services = ref<AdminService[]>([])
 const endpoints = ref<AdminEndpoint[]>([])
 const pools = ref<AdminPool[]>([])
+const sqlCursorPolicy = ref<AdminSecurityPolicies['sql_cursor'] | null>(null)
+const streamingPolicy = ref<AdminSecurityPolicies['streaming'] | null>(null)
+const starExpandsWildcard = ref(false)
+const securityEnabled = ref<boolean | null>(null)
 
 /** UI30: client-side filters over topology snapshot. */
 const q = ref('')
@@ -120,18 +125,29 @@ async function loadAll() {
   setStatus('Loading…')
   const base = apiBase.value
   try {
-    const [ls, svcs, eps, pls] = await Promise.all([
+    const [ls, svcs, eps, pls, policies] = await Promise.all([
       api.listeners(base),
       api.services(base),
       api.endpoints(base),
       api.pools(base).catch(() => [] as AdminPool[]),
+      api.securityPolicies(base).catch(() => null),
     ])
     listeners.value = ls
     services.value = svcs
     endpoints.value = eps
     pools.value = pls
+    sqlCursorPolicy.value = policies?.sql_cursor ?? null
+    streamingPolicy.value = policies?.streaming ?? null
+    starExpandsWildcard.value = policies?.star_expands_wildcard ?? false
+    securityEnabled.value = policies ? !!policies.enabled : null
+    const sec = securityEnabled.value == null
+      ? ''
+      : ` · security=${securityEnabled.value ? 'on' : 'off'}`
+    const peak = streamingPolicy.value
+      ? ` · peak_rss=${streamingPolicy.value.peak_is_process_rss ?? false}`
+      : ''
     setStatus(
-      `listeners=${ls.length} services=${svcs.length} endpoints=${eps.length} pools=${pls.length} · ${new Date().toLocaleTimeString()}`,
+      `listeners=${ls.length} services=${svcs.length} endpoints=${eps.length} pools=${pls.length}${sec}${peak} · ${new Date().toLocaleTimeString()}`,
       'ok',
     )
   }
@@ -197,6 +213,27 @@ onUnmounted(() => {
         Clear
       </button>
       <span class="hint-inline">UI30 client-side · auto-refresh 15s</span>
+    </div>
+
+    <div
+      v-if="sqlCursorPolicy || streamingPolicy || securityEnabled != null"
+      class="card mono honesty-banner"
+    >
+      <template v-if="securityEnabled != null">
+        security={{ securityEnabled ? 'on' : 'off' }}
+      </template>
+      <template v-if="streamingPolicy">
+        · peak_is_process_rss={{ streamingPolicy.peak_is_process_rss ?? false }}
+        · obligations_force_streaming={{ streamingPolicy.obligations_force_streaming ?? true }}
+        · window_rows={{ streamingPolicy.window_rows }}
+        · passthrough={{ streamingPolicy.passthrough }}
+      </template>
+      <template v-if="sqlCursorPolicy">
+        · sql_cursor process_local={{ sqlCursorPolicy.process_local }}
+        / backend_with_hold={{ sqlCursorPolicy.backend_with_hold }}
+      </template>
+      · star_expands_wildcard={{ starExpandsWildcard }}
+      <span class="hint-inline"> (UI51: topology is routing only; peak logical; cursors process-local, not backend WITH HOLD)</span>
     </div>
 
     <div class="row status-chips">
@@ -479,6 +516,8 @@ onUnmounted(() => {
   min-width: 12rem;
 }
 .hint-inline { color: #6b7280; font-size: .8rem; }
+.honesty-banner { font-size: .82rem; color: #57606a; margin: .5rem 0 .75rem; line-height: 1.4; word-break: break-word; }
+.honesty-banner .hint-inline { margin-left: .25rem; }
 .status-chips { margin: 0 0 .65rem; gap: .4rem; }
 .chip {
   border: 1px solid #d0d7de;

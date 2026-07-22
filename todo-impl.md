@@ -307,3 +307,4 @@ examples/        smoke + gateway config 样例
 | UI48 | Tickets/Vault streaming/sql_cursor honesty + ticket/dual/time/remote smoke pins | feat(ui)/test |
 | UI49 | Cedar streaming/sql_cursor honesty + cedar/vault/stream-rss smoke pins | feat(ui)/test |
 | UI50 | Audit streaming/sample/sql_cursor honesty + config-validate valid pin | feat(ui)/test |
+| UI51 | Topology security-policies honesty banner | feat(ui) |
