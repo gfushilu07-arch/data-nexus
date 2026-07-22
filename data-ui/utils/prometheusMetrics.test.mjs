@@ -1,12 +1,13 @@
 /**
- * UI38: pure-function checks for Prometheus metric parsers (A06/A08/A10).
- * Run: node --test utils/prometheusMetrics.test.mjs
+ * UI38/UI39/UI41: pure-function checks for Prometheus metric parsers.
+ * Run: node --experimental-strip-types --test utils/prometheusMetrics.test.mjs
  */
 import { strict as assert } from 'node:assert'
 import { describe, it } from 'node:test'
 import {
   parseEncodePeakMetrics,
   parseExecutePathMetrics,
+  parsePortalHttpMetrics,
   parsePortalResumeMetrics,
   parseSqlCursorMetrics,
 } from './prometheusMetrics.ts'
@@ -39,12 +40,18 @@ unisql_proxy_gateway_portal_resume_total{mode="sql_cursor_unsupported"} 3
 unisql_proxy_gateway_portal_resume_total{mode="hold"} 9
 unisql_proxy_gateway_portal_resume_total{mode="resume_hold"} 4
 unisql_proxy_gateway_portal_resume_total{mode="logical_skip"} 2
+unisql_proxy_gateway_execute_path_total{type="PORTAL_STREAM",execute_path="streaming",listener="admin"} 6
+unisql_proxy_gateway_execute_path_total{type="PORTAL_STREAM",execute_path="xproto_stream",listener="admin"} 2
+unisql_proxy_gateway_execute_path_total{type="PORTAL_CHUNKED",execute_path="materialized",listener="admin"} 3
+unisql_proxy_gateway_encode_peak_window_rows{type="PORTAL_STREAM",listener="admin"} 2
+unisql_proxy_gateway_encode_peak_window_rows{type="PORTAL_CHUNKED",listener="admin"} 50
 `
 
 describe('parseEncodePeakMetrics', () => {
-  it('takes max peak rows/bytes and sums windows/bytes', () => {
+  it('takes max peak rows/bytes across all series and sums windows/bytes', () => {
     const p = parseEncodePeakMetrics(SAMPLE)
-    assert.equal(p.peak_window_rows, 2)
+    // Includes PORTAL_CHUNKED peak=50 (process-wide high-water; not filtered by type)
+    assert.equal(p.peak_window_rows, 50)
     assert.equal(p.peak_window_bytes, 128)
     assert.equal(p.encode_windows, 8)
     assert.equal(p.encode_bytes, 1400)
@@ -58,18 +65,21 @@ describe('parseEncodePeakMetrics', () => {
 })
 
 describe('parseExecutePathMetrics', () => {
-  it('buckets execute_path counters and totals', () => {
+  it('buckets execute_path counters including portal type series', () => {
     const e = parseExecutePathMetrics(SAMPLE)
-    assert.equal(e.streaming, 10)
+    // protocol streaming 10 + PORTAL_STREAM streaming 6
+    assert.equal(e.streaming, 16)
     assert.equal(e.streaming_demote, 2)
     assert.equal(e.passthrough, 7)
     assert.equal(e.passthrough_client, 3)
     assert.equal(e.passthrough_extended, 1)
     assert.equal(e.passthrough_rewrite, 1)
-    assert.equal(e.xproto_stream, 4)
-    assert.equal(e.materialized, 1)
+    // protocol 4 + PORTAL_STREAM 2
+    assert.equal(e.xproto_stream, 6)
+    // protocol 1 + PORTAL_CHUNKED 3
+    assert.equal(e.materialized, 4)
     assert.equal(e.n_a, 2)
-    assert.equal(e.total, 10 + 2 + 7 + 3 + 1 + 1 + 4 + 1 + 2)
+    assert.equal(e.total, 16 + 2 + 7 + 3 + 1 + 1 + 6 + 4 + 2)
   })
 })
 
@@ -91,5 +101,16 @@ describe('parsePortalResumeMetrics', () => {
     assert.equal(r.resume_hold, 4)
     assert.equal(r.logical_skip, 2)
     assert.equal(r.total, 15)
+  })
+})
+
+describe('parsePortalHttpMetrics', () => {
+  it('splits PORTAL_STREAM vs PORTAL_CHUNKED and stream peak only', () => {
+    const h = parsePortalHttpMetrics(SAMPLE)
+    assert.equal(h.stream, 8)
+    assert.equal(h.chunked, 3)
+    assert.equal(h.total, 11)
+    // stream peak ignores PORTAL_CHUNKED=50
+    assert.equal(h.stream_peak_rows, 2)
   })
 })

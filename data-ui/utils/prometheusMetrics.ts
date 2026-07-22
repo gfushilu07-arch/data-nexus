@@ -54,6 +54,22 @@ export type PortalResumeMetrics = {
   total: number
 }
 
+/**
+ * A09 Admin SQL Portal HTTP path counters (best-effort).
+ * `PORTAL_STREAM` ≈ `x-data-nexus-stream: backend_window` (backend RowStream).
+ * `PORTAL_CHUNKED` ≈ Complete fallback HTTP windows (backend may already materialize).
+ * Peak rows on portal series are still **logical** encode windows, not process RSS.
+ */
+export type PortalHttpMetrics = {
+  /** Sum of gateway_execute_path_total{type="PORTAL_STREAM"} */
+  stream: number
+  /** Sum of gateway_execute_path_total{type="PORTAL_CHUNKED"} */
+  chunked: number
+  total: number
+  /** Max gateway_encode_peak_window_rows on PORTAL_STREAM series */
+  stream_peak_rows: number
+}
+
 function promLineValue(ln: string): number {
   const m = ln.match(/\s([0-9]+(?:\.[0-9]+)?)\s*$/)
   return m ? Number(m[1]) || 0 : 0
@@ -206,5 +222,38 @@ export function parseExecutePathMetrics(text: string): ExecutePathMetrics {
         break
     }
   }
+  return out
+}
+
+/**
+ * Parse A09 Admin portal HTTP stream vs chunked counters (`type=PORTAL_*`).
+ * Also reports logical peak_window_rows on PORTAL_STREAM series only.
+ */
+export function parsePortalHttpMetrics(text: string): PortalHttpMetrics {
+  const out: PortalHttpMetrics = {
+    stream: 0,
+    chunked: 0,
+    total: 0,
+    stream_peak_rows: 0,
+  }
+  for (const ln of text.split('\n')) {
+    if (ln.startsWith('#'))
+      continue
+    if (ln.includes('gateway_execute_path_total')) {
+      if (ln.includes('type="PORTAL_STREAM"'))
+        out.stream += promLineValue(ln)
+      else if (ln.includes('type="PORTAL_CHUNKED"'))
+        out.chunked += promLineValue(ln)
+    }
+    else if (
+      ln.includes('gateway_encode_peak_window_rows')
+      && ln.includes('type="PORTAL_STREAM"')
+    ) {
+      const v = promLineValue(ln)
+      if (v > out.stream_peak_rows)
+        out.stream_peak_rows = v
+    }
+  }
+  out.total = out.stream + out.chunked
   return out
 }

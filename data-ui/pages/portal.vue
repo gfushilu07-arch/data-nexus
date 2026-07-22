@@ -321,6 +321,8 @@ onMounted(async () => {
           Exports use the same PEP path (<code class="mono">csv|ndjson|json</code>).
           Multi-row SELECT should report <code class="mono">stream=backend_window</code>; non-SELECT Complete fallbacks use
           <code class="mono">stream=chunked</code> (HTTP windows; backend ResultSet may already be materialized).
+          Prometheus labels these as <code class="mono">type=PORTAL_STREAM</code> /
+          <code class="mono">type=PORTAL_CHUNKED</code> (UI41 Overview/Settings); peak remains logical, not process RSS.
           CSV exposes the pin via <code class="mono">x-data-nexus-window-rows</code> (no JSON meta).
           Simple-query <code class="mono">DECLARE/FETCH/CLOSE</code> is a <strong>process-local</strong> named cursor
           (<code class="mono">sql_cursor_*</code> metrics): not a backend SQL <code class="mono">WITH HOLD</code> server cursor;

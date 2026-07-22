@@ -11,6 +11,7 @@ import type {
   AdminVaultLease,
   EncodePeakMetrics,
   ExecutePathMetrics,
+  PortalHttpMetrics,
   PortalResumeMetrics,
   SqlCursorMetricModes,
 } from '~/composables/useAdminApi'
@@ -35,6 +36,7 @@ const tickets = ref<AdminTicket[]>([])
 const leases = ref<AdminVaultLease[]>([])
 const sqlCursors = ref<SqlCursorMetricModes | null>(null)
 const portalResume = ref<PortalResumeMetrics | null>(null)
+const portalHttp = ref<PortalHttpMetrics | null>(null)
 const encodePeak = ref<EncodePeakMetrics | null>(null)
 const executePaths = ref<ExecutePathMetrics | null>(null)
 
@@ -122,12 +124,14 @@ async function loadAll() {
     if (metricsTxt) {
       sqlCursors.value = api.parseSqlCursorMetrics(metricsTxt)
       portalResume.value = api.parsePortalResumeMetrics(metricsTxt)
+      portalHttp.value = api.parsePortalHttpMetrics(metricsTxt)
       encodePeak.value = api.parseEncodePeakMetrics(metricsTxt)
       executePaths.value = api.parseExecutePathMetrics(metricsTxt)
     }
     else {
       sqlCursors.value = null
       portalResume.value = null
+      portalHttp.value = null
       encodePeak.value = null
       executePaths.value = null
     }
@@ -303,6 +307,33 @@ onUnmounted(() => {
           · logical_skip={{ portalResume.logical_skip }}
           · prefer RowStream hold; skip re-runs SQL
           · not backend WITH HOLD
+          · <a
+            class="inline-link"
+            :href="`${apiBase}/metrics`"
+            target="_blank"
+            rel="noreferrer"
+          >/metrics</a>
+        </div>
+      </div>
+      <div
+        v-if="portalHttp && portalHttp.total > 0"
+        class="stat-card"
+      >
+        <div class="label">
+          Portal HTTP (A09)
+        </div>
+        <div class="value mono">
+          stream={{ portalHttp.stream }}
+          · chunked={{ portalHttp.chunked }}
+        </div>
+        <div class="sub mono">
+          PORTAL_STREAM={{ portalHttp.stream }}
+          · PORTAL_CHUNKED={{ portalHttp.chunked }}
+          <template v-if="portalHttp.stream_peak_rows > 0">
+            · stream_peak_rows={{ portalHttp.stream_peak_rows }}
+          </template>
+          · stream=backend_window; chunked may materialize backend
+          · peak logical only
           · <a
             class="inline-link"
             :href="`${apiBase}/metrics`"

@@ -5,6 +5,7 @@ import type {
   AdminSecurityPolicies,
   EncodePeakMetrics,
   ExecutePathMetrics,
+  PortalHttpMetrics,
   PortalResumeMetrics,
   SqlCursorMetricModes,
 } from '~/composables/useAdminApi'
@@ -29,6 +30,7 @@ const policies = ref<AdminSecurityPolicies | null>(null)
 const auditStats = ref<AdminAuditStats | null>(null)
 const sqlCursors = ref<SqlCursorMetricModes | null>(null)
 const portalResume = ref<PortalResumeMetrics | null>(null)
+const portalHttp = ref<PortalHttpMetrics | null>(null)
 const encodePeak = ref<EncodePeakMetrics | null>(null)
 const executePaths = ref<ExecutePathMetrics | null>(null)
 const probeAt = ref('')
@@ -72,12 +74,14 @@ async function probeGateway() {
     if (metricsTxt) {
       sqlCursors.value = api.parseSqlCursorMetrics(metricsTxt)
       portalResume.value = api.parsePortalResumeMetrics(metricsTxt)
+      portalHttp.value = api.parsePortalHttpMetrics(metricsTxt)
       encodePeak.value = api.parseEncodePeakMetrics(metricsTxt)
       executePaths.value = api.parseExecutePathMetrics(metricsTxt)
     }
     else {
       sqlCursors.value = null
       portalResume.value = null
+      portalHttp.value = null
       encodePeak.value = null
       executePaths.value = null
     }
@@ -287,6 +291,24 @@ async function doReload() {
             </template>
             <template v-else>
               — <span class="hint-inline">(/metrics empty or no multi-Execute resume yet)</span>
+            </template>
+          </dd>
+        </div>
+        <div class="span-2">
+          <dt>Portal HTTP (A09)</dt>
+          <dd class="mono">
+            <template v-if="portalHttp && portalHttp.total > 0">
+              PORTAL_STREAM={{ portalHttp.stream }}
+              · PORTAL_CHUNKED={{ portalHttp.chunked }}
+              <template v-if="portalHttp.stream_peak_rows > 0">
+                · stream_peak_rows={{ portalHttp.stream_peak_rows }}
+              </template>
+              <span class="hint-inline">
+                stream ≈ backend_window RowStream; chunked = Complete HTTP windows (backend may materialize) — peak still logical
+              </span>
+            </template>
+            <template v-else>
+              — <span class="hint-inline">(/metrics empty or no portal HTTP traffic yet)</span>
             </template>
           </dd>
         </div>

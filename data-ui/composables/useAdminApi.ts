@@ -2,10 +2,12 @@ import { asAdminApiAuthError, type AdminApiAuthError } from '~/utils/adminApiAut
 import {
   parseEncodePeakMetrics,
   parseExecutePathMetrics,
+  parsePortalHttpMetrics,
   parsePortalResumeMetrics,
   parseSqlCursorMetrics,
   type EncodePeakMetrics,
   type ExecutePathMetrics,
+  type PortalHttpMetrics,
   type PortalResumeMetrics,
   type SqlCursorMetricModes,
 } from '~/utils/prometheusMetrics'
@@ -15,12 +17,14 @@ export { asAdminApiAuthError }
 export type {
   EncodePeakMetrics,
   ExecutePathMetrics,
+  PortalHttpMetrics,
   PortalResumeMetrics,
   SqlCursorMetricModes,
 }
 export {
   parseEncodePeakMetrics,
   parseExecutePathMetrics,
+  parsePortalHttpMetrics,
   parsePortalResumeMetrics,
   parseSqlCursorMetrics,
 }
@@ -469,6 +473,7 @@ export function useAdminApi() {
     handleAdminApiAuthError,
     parseSqlCursorMetrics,
     parsePortalResumeMetrics,
+    parsePortalHttpMetrics,
     parseEncodePeakMetrics,
     parseExecutePathMetrics,
     /** Prometheus text (auth unless public_metrics). Soft-fail callers should catch. */
