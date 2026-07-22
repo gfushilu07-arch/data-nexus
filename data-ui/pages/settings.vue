@@ -268,6 +268,29 @@ async function doReload() {
             </template>
           </dd>
         </div>
+        <div class="span-2">
+          <dt>Streaming / star policy (UI40/UI45)</dt>
+          <dd class="mono">
+            <template v-if="policies?.streaming || policies?.star_policy">
+              <template v-if="policies.streaming">
+                window_rows={{ policies.streaming.window_rows }}
+                · passthrough={{ policies.streaming.passthrough }}
+                · peak_is_process_rss={{ policies.streaming.peak_is_process_rss ?? false }}
+                · obligations_force_streaming={{ policies.streaming.obligations_force_streaming ?? true }}
+              </template>
+              <template v-if="policies.star_policy">
+                · star_policy={{ policies.star_policy }}
+                · star_expands_wildcard={{ policies.star_expands_wildcard ?? false }}
+              </template>
+              <span class="hint-inline">
+                peak is logical encode window only; wildcards never expand to strip denied columns; mask forces Streaming even if passthrough=true
+              </span>
+            </template>
+            <template v-else>
+              — <span class="hint-inline">(security-policies unavailable)</span>
+            </template>
+          </dd>
+        </div>
         <div>
           <dt>audit stats</dt>
           <dd class="mono">

@@ -301,3 +301,4 @@ examples/        smoke + gateway config 样例
 | UI42 | Overview/Settings O01 mask_rows + A05 passthrough_bytes metrics | feat(ui) |
 | UI43 | security-policies sql_cursor process-local honesty (not backend WITH HOLD) | feat(ui/api) |
 | UI44 | Overview/Settings surface security-policies sql_cursor honesty config | feat(ui) |
+| UI45 | Overview/Settings streaming/star honesty + stream smoke policies pin | feat(ui)/test |

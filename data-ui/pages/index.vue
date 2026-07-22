@@ -93,6 +93,9 @@ const securityEnabled = computed(() => policies.value?.enabled === true)
 const pdpBackend = computed(() => policies.value?.pdp_backend || policies.value?.pdp?.backend || '—')
 const auditLevel = computed(() => policies.value?.default_audit_level || '—')
 const windowRows = computed(() => policies.value?.streaming?.window_rows)
+const streamingPolicy = computed(() => policies.value?.streaming || null)
+const starPolicy = computed(() => policies.value?.star_policy || null)
+const starExpands = computed(() => policies.value?.star_expands_wildcard ?? false)
 const stateBackend = computed(() => policies.value?.state?.backend || '—')
 const auditSample = computed(() => policies.value?.audit_sample || null)
 const sqlCursorPolicy = computed(() => policies.value?.sql_cursor || null)
@@ -263,6 +266,15 @@ onUnmounted(() => {
           <template v-if="windowRows != null">
             · window_rows={{ windowRows }}
           </template>
+          <template v-if="streamingPolicy">
+            · passthrough={{ streamingPolicy.passthrough }}
+            · peak_is_process_rss={{ streamingPolicy.peak_is_process_rss ?? false }}
+            · obligations_force_streaming={{ streamingPolicy.obligations_force_streaming ?? true }}
+          </template>
+          <template v-if="starPolicy">
+            · star_policy={{ starPolicy }}
+            · expands_wildcard={{ starExpands }}
+          </template>
           · state={{ stateBackend }}
           <template v-if="stateBackend === 'file'">
             · last-writer-wins / crdt=false / vault_password_zeroize (not CRDT; not mlock)
@@ -273,6 +285,40 @@ onUnmounted(() => {
           </template>
         </div>
       </NuxtLink>
+      <div
+        v-if="streamingPolicy || starPolicy != null"
+        class="stat-card"
+      >
+        <div class="label">
+          Streaming / star policy
+        </div>
+        <div class="value mono">
+          <template v-if="streamingPolicy">
+            peak_rss={{ streamingPolicy.peak_is_process_rss ?? false }}
+          </template>
+          <template v-else>
+            —
+          </template>
+        </div>
+        <div class="sub mono">
+          <template v-if="streamingPolicy">
+            obligations_force_streaming={{ streamingPolicy.obligations_force_streaming ?? true }}
+            · passthrough={{ streamingPolicy.passthrough }}
+            · window_rows={{ streamingPolicy.window_rows }}
+          </template>
+          <template v-if="starPolicy">
+            · star_policy={{ starPolicy }}
+            · star_expands_wildcard={{ starExpands }}
+          </template>
+          · peak logical only · * never expands
+          · <NuxtLink
+            class="inline-link"
+            to="/policies"
+          >
+            Policies
+          </NuxtLink>
+        </div>
+      </div>
       <div
         v-if="sqlCursorPolicy"
         class="stat-card"

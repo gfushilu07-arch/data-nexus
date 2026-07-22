@@ -65,6 +65,13 @@ Do **not** treat path counters as proof of end-to-end zero-copy or process RSS b
 
 Related smokes: `smoke-security-stream.sh` (streaming + peak≤window + PortalSuspended resume), `smoke-security-passthrough.sh` (simple passthrough + PG client-frame / MySQL demote), `smoke-security-mask.sh` / `smoke-security-watermark.sh` (mask|watermark + `passthrough=true` still `execute_path=streaming`), `smoke-security-portal*.sh` (backend_window vs chunked).
 
+Admin UI surfaces security-policies honesty without metrics traffic (UI40/UI43–UI45):
+
+| Surface | Fields | Honesty |
+|---------|--------|---------|
+| Streaming / star card | `streaming.peak_is_process_rss=false`, `obligations_force_streaming=true`, `star_expands_wildcard=false` | Logical peak only; mask forces Streaming; `*` never expands |
+| SQL cursor policy card | `sql_cursor.process_local` / `backend_with_hold=false` / … | Process-local DECLARE/FETCH — not backend WITH HOLD |
+
 Admin UI (UI38) soft-parses `/metrics` on Overview + Settings:
 
 | Surface | Series | Honesty |

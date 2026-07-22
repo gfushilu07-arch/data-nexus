@@ -785,6 +785,30 @@ else
   exit 1
 fi
 
+echo "==> UI40/UI43/UI45 security-policies honesty fields (API, not RSS)"
+curl -fsS "http://127.0.0.1:8082/admin/security-policies" >/tmp/dn-stream-security-policies.json
+python3 - <<'PY'
+import json
+data=json.load(open("/tmp/dn-stream-security-policies.json"))
+assert data.get("enabled") is True, data
+st=data.get("streaming") or {}
+assert st.get("peak_is_process_rss") is False, st
+assert st.get("obligations_force_streaming") is True, st
+assert data.get("star_expands_wildcard") is False, data.get("star_expands_wildcard")
+sc=data.get("sql_cursor") or {}
+assert sc.get("process_local") is True, sc
+assert sc.get("backend_with_hold") is False, sc
+assert sc.get("forward_fetch_only") is True, sc
+assert sc.get("session_end_clears") is True, sc
+print(
+    "security-policies honesty ok:",
+    "window_rows", st.get("window_rows"),
+    "passthrough", st.get("passthrough"),
+    "star_policy", data.get("star_policy"),
+    "sql_cursor", sc,
+)
+PY
+
 # A06 honesty: encode windows written and logical peak window rows ≤ configured window_rows=2.
 if echo "$metrics" | grep -q 'gateway_encode_windows_total'; then
   echo "$metrics" | grep 'gateway_encode_windows_total' | head -6 || true
