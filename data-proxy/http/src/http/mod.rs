@@ -505,6 +505,8 @@ struct AdminSecurityPoliciesResponse {
     audit_queue: AdminSecurityAuditQueueSummary,
     /// H05 multi-instance ticket/vault/policy file backend (no secrets).
     state: AdminSecurityStateSummary,
+    /// A10 honesty: simple-query DECLARE/FETCH/CLOSE is process-local only.
+    sql_cursor: AdminSecuritySqlCursorSummary,
 }
 
 #[derive(Debug, Serialize)]
@@ -586,6 +588,19 @@ struct AdminSecurityStreamingSummary {
     /// A08 honesty: result obligations (mask / row_filter / max_rows / watermark) force
     /// Streaming even when `passthrough=true`.
     obligations_force_streaming: bool,
+}
+
+/// A10 honesty: process-local SQL cursor surface (not backend WITH HOLD).
+#[derive(Debug, Serialize)]
+struct AdminSecuritySqlCursorSummary {
+    /// Simple-query `DECLARE/FETCH/CLOSE` is implemented in the gateway process.
+    process_local: bool,
+    /// Always false — not a backend SQL server-side `WITH HOLD` cursor.
+    backend_with_hold: bool,
+    /// MOVE / FETCH ABSOLUTE|RELATIVE|BACKWARD are fail-closed (`sql_cursor_unsupported`).
+    forward_fetch_only: bool,
+    /// Session disconnect / Quit / Drop clears all named cursors.
+    session_end_clears: bool,
 }
 
 /// B08: audit sample knobs (read-only; no secrets).
@@ -1288,6 +1303,12 @@ impl AxumServer {
                             crdt: false,
                             mlock: false,
                             vault_password_zeroize: true,
+                        },
+                        sql_cursor: AdminSecuritySqlCursorSummary {
+                            process_local: true,
+                            backend_with_hold: false,
+                            forward_fetch_only: true,
+                            session_end_clears: true,
                         },
                     })
                 }

@@ -338,6 +338,18 @@ onMounted(() => {
             {{ policy.streaming.max_rows }}
           </dd>
         </div>
+        <div v-if="policy.sql_cursor">
+          <dt>sql_cursor (A10)</dt>
+          <dd class="mono">
+            process_local={{ policy.sql_cursor.process_local }}
+            · backend_with_hold={{ policy.sql_cursor.backend_with_hold }}
+            · forward_fetch_only={{ policy.sql_cursor.forward_fetch_only }}
+            · session_end_clears={{ policy.sql_cursor.session_end_clears }}
+            <span class="hint-inline">
+              simple-query DECLARE/FETCH/CLOSE is process-local; MOVE/ABSOLUTE fail-closed — not a backend WITH HOLD server cursor
+            </span>
+          </dd>
+        </div>
         <div v-if="policy.audit_sample">
           <dt>audit.sample (B08)</dt>
           <dd class="mono">

@@ -120,6 +120,12 @@ assert data["streaming"].get("peak_is_process_rss") is False, data["streaming"]
 assert data["streaming"].get("obligations_force_streaming") is True, data["streaming"]
 # T01 honesty: wildcards never expanded to strip denied columns
 assert data.get("star_expands_wildcard") is False, data.get("star_expands_wildcard")
+# A10 honesty: process-local SQL cursor (not backend WITH HOLD)
+sc = data.get("sql_cursor") or {}
+assert sc.get("process_local") is True, sc
+assert sc.get("backend_with_hold") is False, sc
+assert sc.get("forward_fetch_only") is True, sc
+assert sc.get("session_end_clears") is True, sc
 # B08: sample knobs always present (default off)
 assert "sample_enabled" in data["audit_sample"], data["audit_sample"]
 assert data["audit_sample"]["sample_enabled"] is False, data["audit_sample"]

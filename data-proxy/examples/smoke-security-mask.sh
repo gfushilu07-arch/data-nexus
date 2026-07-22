@@ -126,7 +126,21 @@ assert all("mask_rule" in t and "column" in t for t in data["column_tags"]), dat
 # static watermark token value must not leak if present
 wm=data.get("watermark") or {}
 assert "token" not in wm, wm
-print("ui04 mask policies:", mask_names, "tags", len(data["column_tags"]))
+# UI40: streaming honesty under mask (obligations force Streaming)
+st = data.get("streaming") or {}
+assert st.get("peak_is_process_rss") is False, st
+assert st.get("obligations_force_streaming") is True, st
+# UI43: A10 process-local SQL cursor honesty
+sc = data.get("sql_cursor") or {}
+assert sc.get("process_local") is True, sc
+assert sc.get("backend_with_hold") is False, sc
+assert sc.get("forward_fetch_only") is True, sc
+assert sc.get("session_end_clears") is True, sc
+print(
+    "ui04 mask policies:", mask_names, "tags", len(data["column_tags"]),
+    "streaming_honesty", st.get("obligations_force_streaming"),
+    "sql_cursor", sc,
+)
 PY
 
 mysql_via_gateway() {

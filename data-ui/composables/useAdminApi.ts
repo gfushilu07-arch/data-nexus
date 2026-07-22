@@ -317,6 +317,16 @@ export type AdminSecurityPolicies = {
     /** A08: always true — mask/row_filter/max_rows/watermark force Streaming. */
     obligations_force_streaming?: boolean
   }
+  /**
+   * A10 honesty: simple-query DECLARE/FETCH/CLOSE is process-local only
+   * (not backend SQL WITH HOLD).
+   */
+  sql_cursor?: {
+    process_local: boolean
+    backend_with_hold: boolean
+    forward_fetch_only: boolean
+    session_end_clears: boolean
+  }
   /** B08: L2 result sample knobs (requires default_audit_level=L2 when enabled). */
   audit_sample?: {
     sample_enabled: boolean
