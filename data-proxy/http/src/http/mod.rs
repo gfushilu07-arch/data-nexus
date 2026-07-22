@@ -475,6 +475,9 @@ struct AdminSecurityPoliciesResponse {
     enabled: bool,
     fail_closed: bool,
     star_policy: String,
+    /// T01 honesty: wildcards (`*` / `t.*`) are **never** expanded to strip denied
+    /// columns — `deny` rejects the statement; `allow` also leaves `*` untouched.
+    star_expands_wildcard: bool,
     default_audit_level: String,
     /// F32: max SQL chars stored at L1/L2 (`sql_text`); L0 always strips.
     sql_text_max_chars: u32,
@@ -578,6 +581,11 @@ struct AdminSecurityStreamingSummary {
     #[serde(skip_serializing_if = "Option::is_none")]
     max_bytes: Option<u64>,
     passthrough: bool,
+    /// A06 honesty: peak metrics are logical encode-window high-water, not process RSS.
+    peak_is_process_rss: bool,
+    /// A08 honesty: result obligations (mask / row_filter / max_rows / watermark) force
+    /// Streaming even when `passthrough=true`.
+    obligations_force_streaming: bool,
 }
 
 /// B08: audit sample knobs (read-only; no secrets).
@@ -1151,6 +1159,7 @@ impl AxumServer {
                         enabled: security.enabled,
                         fail_closed: security.fail_closed,
                         star_policy: security.star_policy.clone(),
+                        star_expands_wildcard: false,
                         default_audit_level: security.default_audit_level.clone(),
                         sql_text_max_chars: security.audit.sql_text_max_chars,
                         pdp_backend: security.pdp.backend.clone(),
@@ -1238,6 +1247,8 @@ impl AxumServer {
                             max_rows: security.streaming.max_rows,
                             max_bytes: security.streaming.max_bytes,
                             passthrough: security.streaming.passthrough,
+                            peak_is_process_rss: false,
+                            obligations_force_streaming: true,
                         },
                         audit_sample: AdminSecurityAuditSampleSummary {
                             sample_enabled: security.audit.sample_enabled,

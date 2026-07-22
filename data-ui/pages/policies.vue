@@ -271,8 +271,9 @@ onMounted(() => {
           <dt>star_policy</dt>
           <dd class="mono">
             {{ policy.star_policy }}
+            · expands_wildcard={{ policy.star_expands_wildcard ?? false }}
             <span class="hint-inline">
-              (deny blocks * / t.*; allow also never expands * to strip denied columns — list columns explicitly)
+              (deny blocks * / t.*; allow also never expands * to strip denied columns — list columns explicitly; API star_expands_wildcard=false)
             </span>
           </dd>
         </div>
@@ -317,16 +318,18 @@ onMounted(() => {
           <dt>streaming.passthrough</dt>
           <dd class="mono">
             {{ policy.streaming.passthrough }}
+            · obligations_force_streaming={{ policy.streaming.obligations_force_streaming ?? true }}
             <span class="hint-inline">
-              simple Query wire only when no result obligations; mask/row_filter/max_rows force Streaming
-              even if passthrough=true; extended may passthrough_client / streaming_demote — not free-form TCP bind relay
+              simple Query wire only when no result obligations; mask/row_filter/max_rows/watermark force Streaming
+              even if passthrough=true (API obligations_force_streaming=true); extended may passthrough_client / streaming_demote — not free-form TCP bind relay
             </span>
           </dd>
         </div>
         <div v-if="policy.streaming">
           <dt>streaming peak</dt>
           <dd class="mono">
-            logical encode window ≤ window_rows · peak_window_bytes ≪ total encode_bytes · not process RSS CI
+            peak_is_process_rss={{ policy.streaming.peak_is_process_rss ?? false }}
+            · logical encode window ≤ window_rows · peak_window_bytes ≪ total encode_bytes · not process RSS CI
           </dd>
         </div>
         <div v-if="policy.streaming?.max_rows != null">

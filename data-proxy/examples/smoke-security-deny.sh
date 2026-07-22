@@ -115,6 +115,11 @@ assert isinstance(data["high_risk_rules"], list), data["high_risk_rules"]
 assert isinstance(data["time_rules"], list), data["time_rules"]
 assert "enabled" in data["watermark"], data["watermark"]
 assert "window_rows" in data["streaming"], data["streaming"]
+# A06/A08 honesty: peak is logical; obligations force Streaming under passthrough
+assert data["streaming"].get("peak_is_process_rss") is False, data["streaming"]
+assert data["streaming"].get("obligations_force_streaming") is True, data["streaming"]
+# T01 honesty: wildcards never expanded to strip denied columns
+assert data.get("star_expands_wildcard") is False, data.get("star_expands_wildcard")
 # B08: sample knobs always present (default off)
 assert "sample_enabled" in data["audit_sample"], data["audit_sample"]
 assert data["audit_sample"]["sample_enabled"] is False, data["audit_sample"]

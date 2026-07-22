@@ -119,7 +119,14 @@ data=json.load(open("/tmp/data-nexus-security-column-policies.json"))
 assert data["enabled"] is True, data
 names=sorted(r["name"] for r in data["rules"])
 assert "deny-employee-pii" in names, names
-print("security-policies:", names)
+assert (data.get("star_policy") or "").lower() == "deny", data.get("star_policy")
+assert data.get("star_expands_wildcard") is False, data.get("star_expands_wildcard")
+st = data.get("streaming") or {}
+assert st.get("peak_is_process_rss") is False, st
+assert st.get("obligations_force_streaming") is True, st
+print("security-policies:", names, "star_policy", data.get("star_policy"),
+      "star_expands_wildcard", data.get("star_expands_wildcard"),
+      "streaming_honesty", st.get("peak_is_process_rss"), st.get("obligations_force_streaming"))
 PY
 
 mysql_via_gateway() {

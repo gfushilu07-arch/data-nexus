@@ -271,6 +271,8 @@ export type AdminSecurityPolicies = {
   enabled: boolean
   fail_closed: boolean
   star_policy: string
+  /** T01: always false — `*` / `t.*` never expanded to strip denied columns. */
+  star_expands_wildcard?: boolean
   default_audit_level: string
   /** F32: max chars of sql_text at L1/L2. */
   sql_text_max_chars?: number
@@ -302,6 +304,10 @@ export type AdminSecurityPolicies = {
     max_rows?: number | null
     max_bytes?: number | null
     passthrough: boolean
+    /** A06: always false — peak is logical encode window, not process RSS. */
+    peak_is_process_rss?: boolean
+    /** A08: always true — mask/row_filter/max_rows/watermark force Streaming. */
+    obligations_force_streaming?: boolean
   }
   /** B08: L2 result sample knobs (requires default_audit_level=L2 when enabled). */
   audit_sample?: {
