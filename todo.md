@@ -53,7 +53,7 @@ cd data-proxy
 > A1–A4 / A07 骨架与 socket writer 已交付（见归档）。
 
 - [ ] **A06** Backend→PEP 真行流  
-  - 已有：MySQL/PG `RowStream` + channel（含事务 producer 还 lease）；smoke 双协议 max_rows（含 txn）；**Materialized Query* 升 Streaming**；encode 峰值单测；**`peak_window_rows` + Prometheus `gateway_encode_peak_window_rows`**；**`peak_window_bytes` + `gateway_encode_peak_window_bytes`**（单窗 encode 载荷高水位；smoke 多窗 peak_bytes≪total）；smoke **强制** `execute_path=streaming` + `encode_windows>0` + **peak≤window_rows**；**粗粒度进程内存 smoke**（双协议 50k；cgroup/proc/ps；绝对 cap）；**逻辑 peak 仍权威**  
+  - 已有：MySQL/PG `RowStream` + channel（含事务 producer 还 lease）；smoke 双协议 max_rows（含 txn）；**Materialized Query* 升 Streaming**；encode 峰值单测；**`peak_window_rows` + Prometheus `gateway_encode_peak_window_rows`**；**`peak_window_bytes` + `gateway_encode_peak_window_bytes`**（单窗 encode 载荷高水位；smoke 多窗 peak_bytes≪total）；smoke **强制** `execute_path=streaming` + `encode_windows>0` + **peak≤window_rows**；**粗粒度进程内存 smoke**（双协议 50k；cgroup/proc/ps；绝对 cap）；**逻辑 peak 仍权威**；**UI38 Overview/Settings 解析 `/metrics` 展示 logical peak + execute_path 计数（非 RSS）**  
   - 仍欠：控制语句/空结果 Complete 仍可小物化；**无进程/cgroup 精确 1–2 窗字节 CI**（逻辑 window-byte peak 已有；OS RSS 仍噪声大）；portal Complete 见 A09  
   - 路径：`transport`、`server/metrics`、`core_engine`、`smoke-security-stream.sh`、`smoke-security-stream-rss.sh`、`OBSERVABILITY.md`
 
@@ -136,7 +136,7 @@ cd data-proxy
 
 1. **A10** backend SQL `DECLARE … WITH HOLD` 服务端游标（可选；进程内 `named_cursors` + `sql_cursor_*` + UI 诚实提示已有）  
 2. **H05** CRDT merge / mlock（可选；LWW + Zeroize + `vault_password_zeroize` 诚实字段已有）  
-3. **A06** 进程/cgroup 精确 1–2 窗字节 CI（可选；逻辑 peak_window_bytes 已有）  
+3. **A06** 进程/cgroup 精确 1–2 窗字节 CI（可选；逻辑 peak_window_bytes 已有；**UI38 Overview/Settings 已展示 logical peak + execute_path 计数**）  
 4. 体验小刀；**F30/P0x 延后项未点名勿做**
 
 ```bash

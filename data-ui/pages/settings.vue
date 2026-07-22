@@ -3,6 +3,8 @@ import type {
   AdminAuditStats,
   AdminMe,
   AdminSecurityPolicies,
+  EncodePeakMetrics,
+  ExecutePathMetrics,
   SqlCursorMetricModes,
 } from '~/composables/useAdminApi'
 
@@ -25,6 +27,8 @@ const me = ref<AdminMe | null>(null)
 const policies = ref<AdminSecurityPolicies | null>(null)
 const auditStats = ref<AdminAuditStats | null>(null)
 const sqlCursors = ref<SqlCursorMetricModes | null>(null)
+const encodePeak = ref<EncodePeakMetrics | null>(null)
+const executePaths = ref<ExecutePathMetrics | null>(null)
 const probeAt = ref('')
 
 function setStatus(msg: string, kind: 'ok' | 'error' | '' = '') {
@@ -63,7 +67,16 @@ async function probeGateway() {
     me.value = who
     policies.value = pol
     auditStats.value = astats
-    sqlCursors.value = metricsTxt ? api.parseSqlCursorMetrics(metricsTxt) : null
+    if (metricsTxt) {
+      sqlCursors.value = api.parseSqlCursorMetrics(metricsTxt)
+      encodePeak.value = api.parseEncodePeakMetrics(metricsTxt)
+      executePaths.value = api.parseExecutePathMetrics(metricsTxt)
+    }
+    else {
+      sqlCursors.value = null
+      encodePeak.value = null
+      executePaths.value = null
+    }
     probeAt.value = new Date().toLocaleTimeString()
     setStatus(
       healthz.value === 'unreachable'
@@ -249,6 +262,46 @@ async function doReload() {
               </template>
               <span class="hint-inline">
                 process-local only (not backend WITH HOLD)
+              </span>
+            </template>
+            <template v-else>
+              — <span class="hint-inline">(/metrics unavailable or empty)</span>
+            </template>
+          </dd>
+        </div>
+        <div class="span-2">
+          <dt>Encode peak (A06 logical)</dt>
+          <dd class="mono">
+            <template v-if="encodePeak">
+              peak_window_rows={{ encodePeak.peak_window_rows }}
+              · peak_window_bytes={{ encodePeak.peak_window_bytes }}
+              · encode_windows={{ encodePeak.encode_windows }}
+              · encode_bytes={{ encodePeak.encode_bytes }}
+              <span class="hint-inline">
+                logical encode window only — not process RSS / cgroup CI
+              </span>
+            </template>
+            <template v-else>
+              — <span class="hint-inline">(/metrics unavailable or empty)</span>
+            </template>
+          </dd>
+        </div>
+        <div class="span-2">
+          <dt>Execute paths (A05/A08)</dt>
+          <dd class="mono">
+            <template v-if="executePaths && executePaths.total > 0">
+              streaming={{ executePaths.streaming }}
+              · streaming_demote={{ executePaths.streaming_demote }}
+              · passthrough={{ executePaths.passthrough }}
+              · passthrough_client={{ executePaths.passthrough_client }}
+              · passthrough_extended={{ executePaths.passthrough_extended }}
+              · passthrough_rewrite={{ executePaths.passthrough_rewrite }}
+              · xproto_stream={{ executePaths.xproto_stream }}
+              · materialized={{ executePaths.materialized }}
+              · n/a={{ executePaths.n_a }}
+              · total={{ executePaths.total }}
+              <span class="hint-inline">
+                path counters; obligations still force Streaming even if passthrough=true
               </span>
             </template>
             <template v-else>

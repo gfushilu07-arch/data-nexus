@@ -1,0 +1,82 @@
+/**
+ * UI38: pure-function checks for Prometheus metric parsers (A06/A08/A10).
+ * Run: node --test utils/prometheusMetrics.test.mjs
+ */
+import { strict as assert } from 'node:assert'
+import { describe, it } from 'node:test'
+import {
+  parseEncodePeakMetrics,
+  parseExecutePathMetrics,
+  parseSqlCursorMetrics,
+} from './prometheusMetrics.ts'
+
+const SAMPLE = `
+# HELP gateway_encode_peak_window_rows logical peak
+# TYPE gateway_encode_peak_window_rows gauge
+unisql_proxy_gateway_encode_peak_window_rows{listener="pg",command_type="Query"} 2
+unisql_proxy_gateway_encode_peak_window_rows{listener="mysql",command_type="Query"} 1
+unisql_proxy_gateway_encode_peak_window_bytes{listener="pg"} 128
+unisql_proxy_gateway_encode_peak_window_bytes{listener="mysql"} 64
+unisql_proxy_gateway_encode_windows_total{listener="pg"} 5
+unisql_proxy_gateway_encode_windows_total{listener="mysql"} 3
+unisql_proxy_gateway_encode_bytes_total{listener="pg"} 1000
+unisql_proxy_gateway_encode_bytes_total{listener="mysql"} 400
+unisql_proxy_gateway_execute_path_total{execute_path="streaming",listener="pg"} 10
+unisql_proxy_gateway_execute_path_total{execute_path="streaming_demote",listener="mysql"} 2
+unisql_proxy_gateway_execute_path_total{execute_path="passthrough",listener="pg"} 7
+unisql_proxy_gateway_execute_path_total{execute_path="passthrough_client",listener="pg"} 3
+unisql_proxy_gateway_execute_path_total{execute_path="passthrough_extended",listener="pg"} 1
+unisql_proxy_gateway_execute_path_total{execute_path="passthrough_rewrite",listener="pg"} 1
+unisql_proxy_gateway_execute_path_total{execute_path="xproto_stream",listener="portal"} 4
+unisql_proxy_gateway_execute_path_total{execute_path="materialized",listener="pg"} 1
+unisql_proxy_gateway_execute_path_total{execute_path="n/a",listener="pg"} 2
+unisql_proxy_gateway_portal_resume_total{mode="sql_cursor_declare"} 2
+unisql_proxy_gateway_portal_resume_total{mode="sql_cursor_fetch"} 5
+unisql_proxy_gateway_portal_resume_total{mode="sql_cursor_close"} 1
+unisql_proxy_gateway_portal_resume_total{mode="sql_cursor_session_end"} 1
+unisql_proxy_gateway_portal_resume_total{mode="sql_cursor_unsupported"} 3
+unisql_proxy_gateway_portal_resume_total{mode="hold"} 9
+`
+
+describe('parseEncodePeakMetrics', () => {
+  it('takes max peak rows/bytes and sums windows/bytes', () => {
+    const p = parseEncodePeakMetrics(SAMPLE)
+    assert.equal(p.peak_window_rows, 2)
+    assert.equal(p.peak_window_bytes, 128)
+    assert.equal(p.encode_windows, 8)
+    assert.equal(p.encode_bytes, 1400)
+  })
+
+  it('ignores HELP/TYPE and empty text', () => {
+    const empty = parseEncodePeakMetrics('# HELP x\n')
+    assert.equal(empty.peak_window_rows, 0)
+    assert.equal(empty.encode_windows, 0)
+  })
+})
+
+describe('parseExecutePathMetrics', () => {
+  it('buckets execute_path counters and totals', () => {
+    const e = parseExecutePathMetrics(SAMPLE)
+    assert.equal(e.streaming, 10)
+    assert.equal(e.streaming_demote, 2)
+    assert.equal(e.passthrough, 7)
+    assert.equal(e.passthrough_client, 3)
+    assert.equal(e.passthrough_extended, 1)
+    assert.equal(e.passthrough_rewrite, 1)
+    assert.equal(e.xproto_stream, 4)
+    assert.equal(e.materialized, 1)
+    assert.equal(e.n_a, 2)
+    assert.equal(e.total, 10 + 2 + 7 + 3 + 1 + 1 + 4 + 1 + 2)
+  })
+})
+
+describe('parseSqlCursorMetrics', () => {
+  it('sums sql_cursor_* modes only', () => {
+    const c = parseSqlCursorMetrics(SAMPLE)
+    assert.equal(c.declare, 2)
+    assert.equal(c.fetch, 5)
+    assert.equal(c.close, 1)
+    assert.equal(c.session_end, 1)
+    assert.equal(c.unsupported, 3)
+  })
+})

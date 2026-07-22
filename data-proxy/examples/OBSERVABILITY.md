@@ -65,6 +65,16 @@ Do **not** treat path counters as proof of end-to-end zero-copy or process RSS b
 
 Related smokes: `smoke-security-stream.sh` (streaming + peak≤window + PortalSuspended resume), `smoke-security-passthrough.sh` (simple passthrough + PG client-frame / MySQL demote), `smoke-security-mask.sh` / `smoke-security-watermark.sh` (mask|watermark + `passthrough=true` still `execute_path=streaming`), `smoke-security-portal*.sh` (backend_window vs chunked).
 
+Admin UI (UI38) soft-parses `/metrics` on Overview + Settings:
+
+| Surface | Series | Honesty |
+|---------|--------|---------|
+| Encode peak card | `gateway_encode_peak_window_rows` / `_bytes`, `gateway_encode_windows_total`, `gateway_encode_bytes_total` | **Logical** window high-water only — **not** process RSS |
+| Execute paths card | `gateway_execute_path_total{execute_path=…}` | Cumulative path counters; obligations still force Streaming |
+| SQL cursors card | `gateway_portal_resume_total{mode=sql_cursor_*}` | Process-local DECLARE/FETCH/CLOSE — **not** backend WITH HOLD |
+
+Parsers live in `data-ui/utils/prometheusMetrics.ts` (unit-tested).
+
 ### Secure encode metrics (O01 / A06, always on)
 
 | Metric | Type | Labels | Notes |

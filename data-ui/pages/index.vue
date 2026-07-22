@@ -9,6 +9,8 @@ import type {
   AdminSession,
   AdminTicket,
   AdminVaultLease,
+  EncodePeakMetrics,
+  ExecutePathMetrics,
   SqlCursorMetricModes,
 } from '~/composables/useAdminApi'
 
@@ -31,6 +33,8 @@ const policies = ref<AdminSecurityPolicies | null>(null)
 const tickets = ref<AdminTicket[]>([])
 const leases = ref<AdminVaultLease[]>([])
 const sqlCursors = ref<SqlCursorMetricModes | null>(null)
+const encodePeak = ref<EncodePeakMetrics | null>(null)
+const executePaths = ref<ExecutePathMetrics | null>(null)
 
 function setStatus(msg: string, kind: 'ok' | 'error' | '' = '') {
   status.value = msg
@@ -113,7 +117,16 @@ async function loadAll() {
     policies.value = pol
     tickets.value = tix
     leases.value = vls
-    sqlCursors.value = metricsTxt ? api.parseSqlCursorMetrics(metricsTxt) : null
+    if (metricsTxt) {
+      sqlCursors.value = api.parseSqlCursorMetrics(metricsTxt)
+      encodePeak.value = api.parseEncodePeakMetrics(metricsTxt)
+      executePaths.value = api.parseExecutePathMetrics(metricsTxt)
+    }
+    else {
+      sqlCursors.value = null
+      encodePeak.value = null
+      executePaths.value = null
+    }
     const secBit = pol
       ? ` · security=${pol.enabled ? 'on' : 'off'} pdp=${pol.pdp_backend || '—'}`
       : ''
@@ -267,6 +280,52 @@ onUnmounted(() => {
             target="_blank"
             rel="noreferrer"
           >/metrics</a>
+        </div>
+      </div>
+      <div
+        v-if="encodePeak && (encodePeak.encode_windows > 0 || encodePeak.peak_window_rows > 0)"
+        class="stat-card"
+      >
+        <div class="label">
+          Encode peak (A06 logical)
+        </div>
+        <div class="value mono">
+          peak_rows={{ encodePeak.peak_window_rows }}
+        </div>
+        <div class="sub mono">
+          peak_bytes={{ encodePeak.peak_window_bytes }}
+          · windows={{ encodePeak.encode_windows }}
+          · encode_bytes={{ encodePeak.encode_bytes }}
+          · not process RSS
+          · <a
+            class="inline-link"
+            :href="`${apiBase}/metrics`"
+            target="_blank"
+            rel="noreferrer"
+          >/metrics</a>
+        </div>
+      </div>
+      <div
+        v-if="executePaths && executePaths.total > 0"
+        class="stat-card"
+      >
+        <div class="label">
+          Execute paths (A05/A08)
+        </div>
+        <div class="value mono">
+          stream={{ executePaths.streaming + executePaths.streaming_demote }}
+          · pass={{ executePaths.passthrough + executePaths.passthrough_client + executePaths.passthrough_extended + executePaths.passthrough_rewrite }}
+        </div>
+        <div class="sub mono">
+          streaming={{ executePaths.streaming }}
+          · demote={{ executePaths.streaming_demote }}
+          · passthrough={{ executePaths.passthrough }}
+          · client={{ executePaths.passthrough_client }}
+          · ext={{ executePaths.passthrough_extended + executePaths.passthrough_rewrite }}
+          · xproto={{ executePaths.xproto_stream }}
+          · mat/n-a={{ executePaths.materialized + executePaths.n_a }}
+          · total={{ executePaths.total }}
+          · counters only (not RSS proof)
         </div>
       </div>
       <NuxtLink
