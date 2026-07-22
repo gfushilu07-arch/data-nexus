@@ -124,9 +124,16 @@ assert data.get("star_expands_wildcard") is False, data.get("star_expands_wildca
 st = data.get("streaming") or {}
 assert st.get("peak_is_process_rss") is False, st
 assert st.get("obligations_force_streaming") is True, st
+# UI43: A10 process-local SQL cursor honesty
+sc = data.get("sql_cursor") or {}
+assert sc.get("process_local") is True, sc
+assert sc.get("backend_with_hold") is False, sc
+assert sc.get("forward_fetch_only") is True, sc
+assert sc.get("session_end_clears") is True, sc
 print("security-policies:", names, "star_policy", data.get("star_policy"),
       "star_expands_wildcard", data.get("star_expands_wildcard"),
-      "streaming_honesty", st.get("peak_is_process_rss"), st.get("obligations_force_streaming"))
+      "streaming_honesty", st.get("peak_is_process_rss"), st.get("obligations_force_streaming"),
+      "sql_cursor", sc)
 PY
 
 mysql_via_gateway() {

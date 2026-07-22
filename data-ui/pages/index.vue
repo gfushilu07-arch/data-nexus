@@ -95,6 +95,7 @@ const auditLevel = computed(() => policies.value?.default_audit_level || '—')
 const windowRows = computed(() => policies.value?.streaming?.window_rows)
 const stateBackend = computed(() => policies.value?.state?.backend || '—')
 const auditSample = computed(() => policies.value?.audit_sample || null)
+const sqlCursorPolicy = computed(() => policies.value?.sql_cursor || null)
 
 async function loadAll() {
   setStatus('Loading…')
@@ -266,8 +267,35 @@ onUnmounted(() => {
           <template v-if="stateBackend === 'file'">
             · last-writer-wins / crdt=false / vault_password_zeroize (not CRDT; not mlock)
           </template>
+          <template v-if="sqlCursorPolicy">
+            · sql_cursor process_local={{ sqlCursorPolicy.process_local }}
+            / backend_with_hold={{ sqlCursorPolicy.backend_with_hold }}
+          </template>
         </div>
       </NuxtLink>
+      <div
+        v-if="sqlCursorPolicy"
+        class="stat-card"
+      >
+        <div class="label">
+          SQL cursor policy (A10)
+        </div>
+        <div class="value mono">
+          process_local={{ sqlCursorPolicy.process_local }}
+        </div>
+        <div class="sub mono">
+          backend_with_hold={{ sqlCursorPolicy.backend_with_hold }}
+          · forward_fetch_only={{ sqlCursorPolicy.forward_fetch_only }}
+          · session_end_clears={{ sqlCursorPolicy.session_end_clears }}
+          · not backend WITH HOLD
+          · <NuxtLink
+            class="inline-link"
+            to="/policies"
+          >
+            Policies
+          </NuxtLink>
+        </div>
+      </div>
       <div
         v-if="sqlCursors"
         class="stat-card"

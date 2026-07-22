@@ -241,9 +241,30 @@ async function doReload() {
               <template v-if="policies.state?.backend === 'file'">
                 · last-writer-wins / merge_strategy / crdt=false / mlock=false / vault_password_zeroize=true (not CRDT; Zeroize not mlock)
               </template>
+              <template v-if="policies.sql_cursor">
+                · sql_cursor process_local={{ policies.sql_cursor.process_local }}
+                / backend_with_hold={{ policies.sql_cursor.backend_with_hold }}
+              </template>
             </template>
             <template v-else>
               —
+            </template>
+          </dd>
+        </div>
+        <div class="span-2">
+          <dt>SQL cursor policy (A10 / UI43)</dt>
+          <dd class="mono">
+            <template v-if="policies?.sql_cursor">
+              process_local={{ policies.sql_cursor.process_local }}
+              · backend_with_hold={{ policies.sql_cursor.backend_with_hold }}
+              · forward_fetch_only={{ policies.sql_cursor.forward_fetch_only }}
+              · session_end_clears={{ policies.sql_cursor.session_end_clears }}
+              <span class="hint-inline">
+                from security-policies API (always present when security section loads) — not backend WITH HOLD; metrics below are runtime counters only
+              </span>
+            </template>
+            <template v-else>
+              — <span class="hint-inline">(security-policies unavailable)</span>
             </template>
           </dd>
         </div>
