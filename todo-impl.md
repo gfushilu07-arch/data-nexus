@@ -302,3 +302,4 @@ examples/        smoke + gateway config 样例
 | UI43 | security-policies sql_cursor process-local honesty (not backend WITH HOLD) | feat(ui/api) |
 | UI44 | Overview/Settings surface security-policies sql_cursor honesty config | feat(ui) |
 | UI45 | Overview/Settings streaming/star honesty + stream smoke policies pin | feat(ui)/test |
+| UI46 | Portal streaming/star/sql_cursor honesty + passthrough/portal/watermark smoke pins | feat(ui)/test |

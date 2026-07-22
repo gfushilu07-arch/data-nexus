@@ -21,6 +21,9 @@ const sql = ref('SELECT 1 AS ok')
 const maxRows = ref(100)
 const leaseId = ref('')
 const streamingCfg = ref<AdminSecurityPolicies['streaming'] | null>(null)
+const starPolicy = ref<string | null>(null)
+const starExpandsWildcard = ref(false)
+const sqlCursorCfg = ref<AdminSecurityPolicies['sql_cursor'] | null>(null)
 const result = ref<AdminPortalQueryResult | null>(null)
 const status = ref('')
 const statusKind = ref<'ok' | 'error' | ''>('')
@@ -135,6 +138,9 @@ async function loadMeta() {
   projects.value = projs
   leases.value = ls
   streamingCfg.value = policies?.streaming ?? null
+  starPolicy.value = policies?.star_policy ?? null
+  starExpandsWildcard.value = policies?.star_expands_wildcard ?? false
+  sqlCursorCfg.value = policies?.sql_cursor ?? null
   if (!service.value && svcs[0])
     service.value = svcs[0].name
   // Drop selected lease if it disappeared after prune/revoke.
@@ -268,15 +274,27 @@ onMounted(async () => {
             min="1"
           >
           <span
-            v-if="streamingCfg"
+            v-if="streamingCfg || starPolicy || sqlCursorCfg"
             class="field-hint mono"
           >
-            gateway window_rows={{ streamingCfg.window_rows }}
-            · passthrough={{ streamingCfg.passthrough }}
-            <template v-if="streamingCfg.max_rows != null">
-              · policy max_rows={{ streamingCfg.max_rows }}
+            <template v-if="streamingCfg">
+              gateway window_rows={{ streamingCfg.window_rows }}
+              · passthrough={{ streamingCfg.passthrough }}
+              · peak_is_process_rss={{ streamingCfg.peak_is_process_rss ?? false }}
+              · obligations_force_streaming={{ streamingCfg.obligations_force_streaming ?? true }}
+              <template v-if="streamingCfg.max_rows != null">
+                · policy max_rows={{ streamingCfg.max_rows }}
+              </template>
             </template>
-            · peak=logical window (not RSS)
+            <template v-if="starPolicy">
+              · star_policy={{ starPolicy }}
+              · star_expands_wildcard={{ starExpandsWildcard }}
+            </template>
+            <template v-if="sqlCursorCfg">
+              · sql_cursor process_local={{ sqlCursorCfg.process_local }}
+              / backend_with_hold={{ sqlCursorCfg.backend_with_hold }}
+            </template>
+            · peak=logical window (not RSS); * never expands; cursors not backend WITH HOLD
           </span>
         </label>
         <label class="field">

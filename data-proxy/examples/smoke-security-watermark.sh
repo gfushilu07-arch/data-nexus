@@ -102,4 +102,30 @@ for ln in text.splitlines():
         print(ln)
 PY
 
+echo "==> UI40/UI43 security-policies honesty under watermark+passthrough"
+curl -fsS "http://127.0.0.1:8082/admin/security-policies" >/tmp/dn-wm-security-policies.json
+python3 - <<'PY_POL'
+import json
+data=json.load(open("/tmp/dn-wm-security-policies.json"))
+assert data.get("enabled") is True, data
+st=data.get("streaming") or {}
+# watermark smoke uses passthrough=true but obligations still force Streaming at runtime
+assert st.get("passthrough") is True, st
+assert st.get("peak_is_process_rss") is False, st
+assert st.get("obligations_force_streaming") is True, st
+assert data.get("star_expands_wildcard") is False, data.get("star_expands_wildcard")
+sc=data.get("sql_cursor") or {}
+assert sc.get("process_local") is True, sc
+assert sc.get("backend_with_hold") is False, sc
+wm=data.get("watermark") or {}
+assert wm.get("enabled") is True, wm
+assert "token" not in wm, wm
+print(
+    "watermark security-policies honesty ok:",
+    "passthrough", st.get("passthrough"),
+    "obligations_force_streaming", st.get("obligations_force_streaming"),
+    "watermark.enabled", wm.get("enabled"),
+)
+PY_POL
+
 echo "smoke-security-watermark: OK"

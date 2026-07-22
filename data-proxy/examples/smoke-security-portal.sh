@@ -355,6 +355,31 @@ assert "format" in body or "invalid" in body, body
 print("bad format rejected", code)
 PY
 
+echo "==> UI40/UI43/UI46 security-policies honesty (portal window_rows + peak not RSS)"
+curl -fsS "http://127.0.0.1:8082/admin/security-policies" >/tmp/dn-portal-security-policies.json
+python3 - <<'PY_POL'
+import json
+data=json.load(open("/tmp/dn-portal-security-policies.json"))
+assert data.get("enabled") is True, data
+st=data.get("streaming") or {}
+assert st.get("peak_is_process_rss") is False, st
+assert st.get("obligations_force_streaming") is True, st
+# portal smoke pins window_rows=2 in config
+assert int(st.get("window_rows") or 0) == 2, st
+assert data.get("star_expands_wildcard") is False, data.get("star_expands_wildcard")
+sc=data.get("sql_cursor") or {}
+assert sc.get("process_local") is True, sc
+assert sc.get("backend_with_hold") is False, sc
+assert sc.get("forward_fetch_only") is True, sc
+assert sc.get("session_end_clears") is True, sc
+print(
+    "portal security-policies honesty ok:",
+    "window_rows", st.get("window_rows"),
+    "passthrough", st.get("passthrough"),
+    "sql_cursor", sc,
+)
+PY_POL
+
 echo "==> A09 portal HTTP metrics on /metrics (PORTAL_STREAM path)"
 # Portal Admin path now records gateway_execute_path_total + encode peak under type=PORTAL_*.
 # Still logical peak (not process RSS). Headers remain the primary stream contract.
