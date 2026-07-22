@@ -349,6 +349,25 @@ if [[ "${RSS_VS_FULL_MULT}" -gt 0 && "$DELTA_KB" -gt "$BOUND_VS_FULL_KB" ]]; the
 fi
 echo "A06 memory sanity ok: delta under absolute cap (source=$MEM_SOURCE; not precise window bytes)"
 
+
+echo "==> UI40/UI43/UI49 security-policies honesty fields"
+curl -fsS "http://127.0.0.1:8082/admin/security-policies" >/tmp/dn-ui49-security-policies.json
+python3 - <<'PY_HON'
+import json
+data=json.load(open("/tmp/dn-ui49-security-policies.json"))
+assert data.get("enabled") is True, data
+st=data.get("streaming") or {}
+assert st.get("peak_is_process_rss") is False, st
+assert st.get("obligations_force_streaming") is True, st
+assert data.get("star_expands_wildcard") is False, data.get("star_expands_wildcard")
+sc=data.get("sql_cursor") or {}
+assert sc.get("process_local") is True, sc
+assert sc.get("backend_with_hold") is False, sc
+assert sc.get("forward_fetch_only") is True, sc
+assert sc.get("session_end_clears") is True, sc
+print("UI49 security-policies honesty ok", "window_rows", st.get("window_rows"), "pdp", data.get("pdp_backend") or (data.get("pdp") or {}).get("backend"), "sql_cursor", sc)
+PY_HON
+
 echo "==> metrics: streaming path + multi-window encode + logical peak ≤ window_rows=${WINDOW_ROWS}"
 metrics="$(curl -fsS http://127.0.0.1:8082/metrics || true)"
 if ! echo "$metrics" | grep -q 'execute_path="streaming"'; then

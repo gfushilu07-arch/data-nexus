@@ -90,6 +90,26 @@ mysql_via_gateway() {
     mysql --ssl-mode=DISABLED -h host.docker.internal -P 9088 -uroot -proot -N -e "$sql"
 }
 
+
+echo "==> UI40/UI43/UI49 security-policies honesty fields"
+curl -fsS "http://127.0.0.1:8082/admin/security-policies" >/tmp/dn-ui49-security-policies.json
+python3 - <<'PY_HON'
+import json
+data=json.load(open("/tmp/dn-ui49-security-policies.json"))
+assert data.get("enabled") is True, data
+st=data.get("streaming") or {}
+assert st.get("peak_is_process_rss") is False, st
+assert st.get("obligations_force_streaming") is True, st
+assert data.get("star_expands_wildcard") is False, data.get("star_expands_wildcard")
+sc=data.get("sql_cursor") or {}
+assert sc.get("process_local") is True, sc
+assert sc.get("backend_with_hold") is False, sc
+assert sc.get("forward_fetch_only") is True, sc
+assert sc.get("session_end_clears") is True, sc
+assert (data.get("pdp_backend") or (data.get("pdp") or {}).get("backend")) == "cedar", data.get("pdp")
+print("UI49 security-policies honesty ok", "window_rows", st.get("window_rows"), "pdp", data.get("pdp_backend") or (data.get("pdp") or {}).get("backend"), "sql_cursor", sc)
+PY_HON
+
 echo "==> SELECT 1 allowed (Cedar __none__)"
 out="$(mysql_via_gateway 'SELECT 1;')"
 echo "$out" | tr -d '[:space:]' | grep -qx '1'

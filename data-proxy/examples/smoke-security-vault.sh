@@ -42,6 +42,25 @@ for _ in $(seq 1 120); do
   sleep 1
 done
 
+
+echo "==> UI40/UI43/UI49 security-policies honesty fields"
+curl -fsS "http://127.0.0.1:8082/admin/security-policies" >/tmp/dn-ui49-security-policies.json
+python3 - <<'PY_HON'
+import json
+data=json.load(open("/tmp/dn-ui49-security-policies.json"))
+assert data.get("enabled") is True, data
+st=data.get("streaming") or {}
+assert st.get("peak_is_process_rss") is False, st
+assert st.get("obligations_force_streaming") is True, st
+assert data.get("star_expands_wildcard") is False, data.get("star_expands_wildcard")
+sc=data.get("sql_cursor") or {}
+assert sc.get("process_local") is True, sc
+assert sc.get("backend_with_hold") is False, sc
+assert sc.get("forward_fetch_only") is True, sc
+assert sc.get("session_end_clears") is True, sc
+print("UI49 security-policies honesty ok", "window_rows", st.get("window_rows"), "pdp", data.get("pdp_backend") or (data.get("pdp") or {}).get("backend"), "sql_cursor", sc)
+PY_HON
+
 echo "==> issue lease"
 curl -fsS -X POST "http://127.0.0.1:8082/admin/vault/leases" \
   -H 'content-type: application/json' \

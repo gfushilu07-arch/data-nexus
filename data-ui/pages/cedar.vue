@@ -19,6 +19,19 @@ const pdpPolicyDir = ref('')
 const remoteConfigured = ref(false)
 const remoteFailClosed = ref(true)
 const remoteTimeoutMs = ref(0)
+const sqlCursorPolicy = ref<{
+  process_local: boolean
+  backend_with_hold: boolean
+  forward_fetch_only: boolean
+  session_end_clears: boolean
+} | null>(null)
+const streamingPolicy = ref<{
+  window_rows: number
+  passthrough: boolean
+  peak_is_process_rss?: boolean
+  obligations_force_streaming?: boolean
+} | null>(null)
+const starExpandsWildcard = ref(false)
 
 function setMessage(msg: string, kind: 'ok' | 'error' | '' = '') {
   message.value = msg
@@ -62,6 +75,9 @@ async function load() {
       remoteConfigured.value = !!policies.pdp?.remote_configured
       remoteFailClosed.value = policies.pdp?.remote_fail_closed ?? true
       remoteTimeoutMs.value = policies.pdp?.remote_timeout_ms ?? 0
+      sqlCursorPolicy.value = policies.sql_cursor ?? null
+      streamingPolicy.value = policies.streaming ?? null
+      starExpandsWildcard.value = policies.star_expands_wildcard ?? false
     }
     if (status.value?.message && !status.value.ready) {
       setMessage(status.value.message, 'error')
@@ -264,6 +280,28 @@ onMounted(async () => {
             · remote_configured={{ remoteConfigured }}
             · remote_timeout_ms={{ remoteTimeoutMs || '—' }}
             · remote_fail_closed={{ remoteFailClosed }}
+          </dd>
+        </div>
+        <div
+          v-if="sqlCursorPolicy || streamingPolicy"
+          class="span-2"
+        >
+          <dt>streaming / sql_cursor honesty (UI49)</dt>
+          <dd class="mono">
+            <template v-if="streamingPolicy">
+              peak_is_process_rss={{ streamingPolicy.peak_is_process_rss ?? false }}
+              · obligations_force_streaming={{ streamingPolicy.obligations_force_streaming ?? true }}
+              · window_rows={{ streamingPolicy.window_rows }}
+              · passthrough={{ streamingPolicy.passthrough }}
+            </template>
+            <template v-if="sqlCursorPolicy">
+              · sql_cursor process_local={{ sqlCursorPolicy.process_local }}
+              / backend_with_hold={{ sqlCursorPolicy.backend_with_hold }}
+              / forward_fetch_only={{ sqlCursorPolicy.forward_fetch_only }}
+              / session_end_clears={{ sqlCursorPolicy.session_end_clears }}
+            </template>
+            · star_expands_wildcard={{ starExpandsWildcard }}
+            · peak logical only; cursors not backend WITH HOLD
           </dd>
         </div>
       </dl>
