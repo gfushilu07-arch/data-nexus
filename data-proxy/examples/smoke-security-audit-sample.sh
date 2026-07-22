@@ -88,8 +88,16 @@ assert int(s.get("sample_max_rows") or 0) == 2, s
 # B08 honesty fields: not L3 full-result archive; requires L2
 assert s.get("full_result_l3") is False, s
 assert (s.get("requires_audit_level") or "").upper() == "L2", s
+st=data.get("streaming") or {}
+assert st.get("peak_is_process_rss") is False, st
+assert st.get("obligations_force_streaming") is True, st
+assert data.get("star_expands_wildcard") is False, data.get("star_expands_wildcard")
+sc=data.get("sql_cursor") or {}
+assert sc.get("process_local") is True, sc
+assert sc.get("backend_with_hold") is False, sc
 print("policies audit_sample", s, "sql_text_max_chars", data.get("sql_text_max_chars"))
 print("B08 honesty API: full_result_l3=false requires_audit_level=L2")
+print("UI40/UI43 streaming/sql_cursor honesty", st.get("peak_is_process_rss"), sc)
 PY2
 
 echo "==> security-policies exposes H05 state summary"

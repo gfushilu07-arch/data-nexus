@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AdminSession } from '~/composables/useAdminApi'
+import type { AdminSecurityPolicies, AdminSession } from '~/composables/useAdminApi'
 
 definePageMeta({ layout: 'admin' })
 useHead({ title: 'Sessions · Data Nexus Admin' })
@@ -10,6 +10,8 @@ const { apiBase, hydrate: hydrateSettings } = useAdminSettings()
 const status = ref('')
 const statusKind = ref<'ok' | 'error' | ''>('')
 const sessions = ref<AdminSession[]>([])
+const sqlCursorPolicy = ref<AdminSecurityPolicies['sql_cursor'] | null>(null)
+const streamingPolicy = ref<AdminSecurityPolicies['streaming'] | null>(null)
 
 /** UI25: client-side filters over the loaded session snapshot. */
 const listenerFilter = ref('')
@@ -82,11 +84,20 @@ function setProtocolFilter(name: string) {
 async function loadAll() {
   setStatus('Loading…')
   try {
-    sessions.value = await api.sessions(apiBase.value)
+    const [sess, pol] = await Promise.all([
+      api.sessions(apiBase.value),
+      api.securityPolicies(apiBase.value).catch(() => null),
+    ])
+    sessions.value = sess
+    sqlCursorPolicy.value = pol?.sql_cursor ?? null
+    streamingPolicy.value = pol?.streaming ?? null
     const bits = protocolCounts.value.map(([p, n]) => `${p}=${n}`).join(' ')
     const bit = bits ? ` · ${bits}` : ''
+    const cur = sqlCursorPolicy.value
+      ? ` · sql_cursor process_local=${sqlCursorPolicy.value.process_local}/backend_with_hold=${sqlCursorPolicy.value.backend_with_hold}`
+      : ''
     setStatus(
-      `${sessions.value.length} sessions${bit} · ${new Date().toLocaleTimeString()}`,
+      `${sessions.value.length} sessions${bit}${cur} · ${new Date().toLocaleTimeString()}`,
       'ok',
     )
   }
@@ -189,6 +200,23 @@ onUnmounted(() => {
         Process-local SQL cursors (<code class="mono">DECLARE … [WITH HOLD]</code>) and
         PortalSuspended holds live only while this session is connected — disconnect
         clears them (not a backend server-side <code class="mono">WITH HOLD</code> cursor).
+      </p>
+      <p
+        v-if="sqlCursorPolicy || streamingPolicy"
+        class="hint mono"
+      >
+        <template v-if="sqlCursorPolicy">
+          sql_cursor process_local={{ sqlCursorPolicy.process_local }}
+          · backend_with_hold={{ sqlCursorPolicy.backend_with_hold }}
+          · forward_fetch_only={{ sqlCursorPolicy.forward_fetch_only }}
+          · session_end_clears={{ sqlCursorPolicy.session_end_clears }}
+        </template>
+        <template v-if="streamingPolicy">
+          · peak_is_process_rss={{ streamingPolicy.peak_is_process_rss ?? false }}
+          · obligations_force_streaming={{ streamingPolicy.obligations_force_streaming ?? true }}
+          · window_rows={{ streamingPolicy.window_rows }}
+        </template>
+        · from security-policies (UI47; not backend WITH HOLD; peak logical only)
       </p>
       <div
         v-if="listenerCounts.length"

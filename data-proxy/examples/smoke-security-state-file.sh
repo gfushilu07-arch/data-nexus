@@ -98,6 +98,15 @@ assert (s.get("merge_strategy") or "") == "last_writer_wins", s
 raw=json.dumps(d)
 assert "ticket_encrypt_key" not in raw and "vault_encrypt_key" not in raw
 assert "0123456789abcdef" not in raw
+st=d.get("streaming") or {}
+assert st.get("peak_is_process_rss") is False, st
+assert st.get("obligations_force_streaming") is True, st
+assert d.get("star_expands_wildcard") is False, d.get("star_expands_wildcard")
+sc=d.get("sql_cursor") or {}
+assert sc.get("process_local") is True, sc
+assert sc.get("backend_with_hold") is False, sc
+assert sc.get("forward_fetch_only") is True, sc
+assert sc.get("session_end_clears") is True, sc
 print(
     "policies state file+enc ok",
     s.get("backend"),
@@ -111,6 +120,8 @@ print(
     s.get("mlock"),
     "zeroize",
     s.get("vault_password_zeroize"),
+    "sql_cursor",
+    sc,
 )
 PY
 

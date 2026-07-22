@@ -90,7 +90,17 @@ pdp=data.get("pdp") or {}
 assert pdp.get("backend") in ("local","cedar","remote"), pdp
 assert "remote_configured" in pdp and "remote_fail_closed" in pdp, pdp
 assert "remote_url" not in pdp and "remote_token" not in pdp, pdp
-print("policies audit_queue", q, "pdp", pdp)
+# UI40/UI43 honesty pins (always-on fields)
+st=data.get("streaming") or {}
+assert st.get("peak_is_process_rss") is False, st
+assert st.get("obligations_force_streaming") is True, st
+assert data.get("star_expands_wildcard") is False, data.get("star_expands_wildcard")
+sc=data.get("sql_cursor") or {}
+assert sc.get("process_local") is True, sc
+assert sc.get("backend_with_hold") is False, sc
+assert sc.get("forward_fetch_only") is True, sc
+assert sc.get("session_end_clears") is True, sc
+print("policies audit_queue", q, "pdp", pdp, "streaming_honesty", st.get("peak_is_process_rss"), "sql_cursor", sc)
 PY
 
 echo "==> GET /admin/audit/stats"

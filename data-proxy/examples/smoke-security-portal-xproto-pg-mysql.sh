@@ -221,6 +221,29 @@ assert code.startswith("4") or "error" in body or "denied" in body or "not suppo
 print("portal reverse xproto ddl rejected", code)
 PY
 
+echo "==> UI40/UI43/UI47 security-policies honesty (xproto portal)"
+curl -fsS "http://127.0.0.1:8085/admin/security-policies" >/tmp/dn-xproto-rev-security-policies.json
+python3 - <<'PY_POL'
+import json
+data=json.load(open("/tmp/dn-xproto-rev-security-policies.json"))
+assert data.get("enabled") is True, data
+st=data.get("streaming") or {}
+assert st.get("peak_is_process_rss") is False, st
+assert st.get("obligations_force_streaming") is True, st
+assert int(st.get("window_rows") or 0) == 2, st
+assert data.get("star_expands_wildcard") is False, data.get("star_expands_wildcard")
+sc=data.get("sql_cursor") or {}
+assert sc.get("process_local") is True, sc
+assert sc.get("backend_with_hold") is False, sc
+assert sc.get("forward_fetch_only") is True, sc
+assert sc.get("session_end_clears") is True, sc
+print(
+    "xproto-rev security-policies honesty ok:",
+    "window_rows", st.get("window_rows"),
+    "sql_cursor", sc,
+)
+PY_POL
+
 echo "==> A09 reverse xproto portal metrics PORTAL_STREAM (logical peak ≤ window_rows=2)"
 metrics="$(curl -fsS http://127.0.0.1:8085/metrics 2>/dev/null || true)"
 if ! echo "$metrics" | grep -q 'type="PORTAL_STREAM"'; then

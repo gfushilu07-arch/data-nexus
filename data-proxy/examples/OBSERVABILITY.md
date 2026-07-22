@@ -72,6 +72,7 @@ Admin UI surfaces security-policies honesty without metrics traffic (UI40/UI43�
 | Streaming / star card | `streaming.peak_is_process_rss=false`, `obligations_force_streaming=true`, `star_expands_wildcard=false` | Logical peak only; mask forces Streaming; `*` never expands |
 | SQL cursor policy card | `sql_cursor.process_local` / `backend_with_hold=false` / … | Process-local DECLARE/FETCH — not backend WITH HOLD |
 | Portal Context (UI46) | same streaming/star/sql_cursor fields on SQL Portal | Operators see honesty next to query form without `/metrics` |
+| Sessions (UI47) | `sql_cursor` + streaming peak/obligations from security-policies | Session list reminds process-local cursors; peak logical only |
 
 Admin UI (UI38) soft-parses `/metrics` on Overview + Settings:
 
