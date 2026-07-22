@@ -325,6 +325,9 @@ onMounted(async () => {
           Simple-query <code class="mono">DECLARE/FETCH/CLOSE</code> is a <strong>process-local</strong> named cursor
           (<code class="mono">sql_cursor_*</code> metrics): not a backend SQL <code class="mono">WITH HOLD</code> server cursor;
           disconnect ends the cursor even with <code class="mono">WITH HOLD</code> in the text.
+          Protocol multi-Execute after PortalSuspended prefers held <code class="mono">RowStream</code>
+          (<code class="mono">hold</code>/<code class="mono">resume_hold</code>); <code class="mono">logical_skip</code> re-runs SQL —
+          still not a backend server cursor (UI39 <code class="mono">/metrics</code>).
         </p>
 
         <div

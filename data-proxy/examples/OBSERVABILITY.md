@@ -72,6 +72,7 @@ Admin UI (UI38) soft-parses `/metrics` on Overview + Settings:
 | Encode peak card | `gateway_encode_peak_window_rows` / `_bytes`, `gateway_encode_windows_total`, `gateway_encode_bytes_total` | **Logical** window high-water only — **not** process RSS |
 | Execute paths card | `gateway_execute_path_total{execute_path=…}` | Cumulative path counters; obligations still force Streaming |
 | SQL cursors card | `gateway_portal_resume_total{mode=sql_cursor_*}` | Process-local DECLARE/FETCH/CLOSE — **not** backend WITH HOLD |
+| Portal resume card (UI39) | `gateway_portal_resume_total{mode=hold\|resume_hold\|logical_skip}` | Multi-Execute prefers held `RowStream`; `logical_skip` re-runs SQL — **not** backend WITH HOLD |
 
 Parsers live in `data-ui/utils/prometheusMetrics.ts` (unit-tested).
 

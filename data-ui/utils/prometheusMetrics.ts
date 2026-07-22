@@ -41,6 +41,19 @@ export type ExecutePathMetrics = {
   total: number
 }
 
+/**
+ * A10 PortalSuspended multi-Execute resume modes (best-effort).
+ * Prefer hold/resume_hold (backend RowStream); logical_skip re-runs SQL.
+ * Not a backend SQL WITH HOLD server cursor.
+ */
+export type PortalResumeMetrics = {
+  hold: number
+  resume_hold: number
+  logical_skip: number
+  /** Sum of hold + resume_hold + logical_skip (excludes sql_cursor_*). */
+  total: number
+}
+
 function promLineValue(ln: string): number {
   const m = ln.match(/\s([0-9]+(?:\.[0-9]+)?)\s*$/)
   return m ? Number(m[1]) || 0 : 0
@@ -74,6 +87,36 @@ export function parseSqlCursorMetrics(text: string): SqlCursorMetricModes {
     else if (mode === 'sql_cursor_unsupported')
       out.unsupported += n
   }
+  return out
+}
+
+/**
+ * Parse A10 PortalSuspended resume modes (hold / resume_hold / logical_skip).
+ * Ignores sql_cursor_* (those stay on parseSqlCursorMetrics).
+ */
+export function parsePortalResumeMetrics(text: string): PortalResumeMetrics {
+  const out: PortalResumeMetrics = {
+    hold: 0,
+    resume_hold: 0,
+    logical_skip: 0,
+    total: 0,
+  }
+  for (const ln of text.split('\n')) {
+    if (!ln.includes('gateway_portal_resume_total') || ln.startsWith('#'))
+      continue
+    const m = ln.match(/mode="([^"]+)".*?\s([0-9]+(?:\.[0-9]+)?)\s*$/)
+    if (!m)
+      continue
+    const mode = m[1]
+    const n = Number(m[2]) || 0
+    if (mode === 'hold')
+      out.hold += n
+    else if (mode === 'resume_hold')
+      out.resume_hold += n
+    else if (mode === 'logical_skip')
+      out.logical_skip += n
+  }
+  out.total = out.hold + out.resume_hold + out.logical_skip
   return out
 }
 

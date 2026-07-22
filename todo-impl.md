@@ -295,3 +295,4 @@ examples/        smoke + gateway config 样例
 | T01 | unit: star_policy=allow does not expand/strip SELECT * | test(t01) |
 | UI37 | Audit sample detail B08 full_result_l3=false honesty | feat(ui) |
 | UI38 | Overview/Settings A06 peak + A08 execute_path metrics cards (logical, not RSS) | feat(ui) |
+| UI39 | Overview/Settings A10 portal resume hold/resume_hold/logical_skip metrics | feat(ui) |

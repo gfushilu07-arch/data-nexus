@@ -7,6 +7,7 @@ import { describe, it } from 'node:test'
 import {
   parseEncodePeakMetrics,
   parseExecutePathMetrics,
+  parsePortalResumeMetrics,
   parseSqlCursorMetrics,
 } from './prometheusMetrics.ts'
 
@@ -36,6 +37,8 @@ unisql_proxy_gateway_portal_resume_total{mode="sql_cursor_close"} 1
 unisql_proxy_gateway_portal_resume_total{mode="sql_cursor_session_end"} 1
 unisql_proxy_gateway_portal_resume_total{mode="sql_cursor_unsupported"} 3
 unisql_proxy_gateway_portal_resume_total{mode="hold"} 9
+unisql_proxy_gateway_portal_resume_total{mode="resume_hold"} 4
+unisql_proxy_gateway_portal_resume_total{mode="logical_skip"} 2
 `
 
 describe('parseEncodePeakMetrics', () => {
@@ -78,5 +81,15 @@ describe('parseSqlCursorMetrics', () => {
     assert.equal(c.close, 1)
     assert.equal(c.session_end, 1)
     assert.equal(c.unsupported, 3)
+  })
+})
+
+describe('parsePortalResumeMetrics', () => {
+  it('sums hold/resume_hold/logical_skip and ignores sql_cursor_*', () => {
+    const r = parsePortalResumeMetrics(SAMPLE)
+    assert.equal(r.hold, 9)
+    assert.equal(r.resume_hold, 4)
+    assert.equal(r.logical_skip, 2)
+    assert.equal(r.total, 15)
   })
 })

@@ -68,9 +68,9 @@ cd data-proxy
   - 路径：`http` portal_execute_*_streaming；`security-portal-gateway-config.toml`；`security-portal-xproto{,-pg-mysql}-gateway-config.toml`；`smoke-security-portal{,-xproto,-xproto-pg-mysql}.sh`
 
 - [ ] **A10** 预处理 / 事务透传矩阵  
-  - 已有：MySQL COM_STMT + Streaming + PREPARE 列定义；PG Parse/Bind/Execute + Streaming；Describe 显式 SELECT + `SELECT *` catalog；扩展协议 Execute 不发 Z；**客户端 Execute max_rows → PortalSuspended（s）**；**同 portal multi-Execute 续读**：**优先 backend `RowStream` hold**（`hold_remainder`，不重跑 SQL）；hold 不可用时 **logical skip** 回落；策略 max_rows 仍 C；Bind/Close/Sync 丢弃 hold；unit `a10_hold_remainder_keeps_stream_for_resume` + stream smoke multi-Execute；**Prometheus `gateway_portal_resume_total{mode=hold\|resume_hold\|logical_skip}`**（smoke 强制 hold+resume_hold 或 skip）；**PDP prepared Execute 继承 `streaming.max_rows`**（防 passthrough demote 绕过 cap）；**简单查询 `DECLARE/FETCH/CLOSE` 进程内命名游标**（`named_cursors`；DECLARE 不套 policy max_rows；**进程内** WITH HOLD 跨 COMMIT / 无 WITH HOLD 在 COMMIT 丢弃；**会话结束清空**；**双游标并发**；**同名 DECLARE 拒绝**；**FETCH ALL 耗尽**；**MOVE/FETCH ABSOLUTE 等 fail-closed**；metrics `sql_cursor_*`；**仍非** backend 服务端游标）  
+  - 已有：MySQL COM_STMT + Streaming + PREPARE 列定义；PG Parse/Bind/Execute + Streaming；Describe 显式 SELECT + `SELECT *` catalog；扩展协议 Execute 不发 Z；**客户端 Execute max_rows → PortalSuspended（s）**；**同 portal multi-Execute 续读**：**优先 backend `RowStream` hold**（`hold_remainder`，不重跑 SQL）；hold 不可用时 **logical skip** 回落；策略 max_rows 仍 C；Bind/Close/Sync 丢弃 hold；unit `a10_hold_remainder_keeps_stream_for_resume` + stream smoke multi-Execute；**Prometheus `gateway_portal_resume_total{mode=hold\|resume_hold\|logical_skip}`**（smoke 强制 hold+resume_hold 或 skip）；**UI39 Overview/Settings 解析 hold/resume_hold/logical_skip 卡片**（诚实：非 backend WITH HOLD）；**PDP prepared Execute 继承 `streaming.max_rows`**（防 passthrough demote 绕过 cap）；**简单查询 `DECLARE/FETCH/CLOSE` 进程内命名游标**（`named_cursors`；DECLARE 不套 policy max_rows；**进程内** WITH HOLD 跨 COMMIT / 无 WITH HOLD 在 COMMIT 丢弃；**会话结束清空**；**双游标并发**；**同名 DECLARE 拒绝**；**FETCH ALL 耗尽**；**MOVE/FETCH ABSOLUTE 等 fail-closed**；metrics `sql_cursor_*`；**仍非** backend 服务端游标）  
   - 仍欠：**非** backend SQL `DECLARE … WITH HOLD` 服务端命名游标（进程内游标随 session 消亡；仅 forward FETCH）；复杂 JOIN `*` 依赖 backend prepare  
-  - 路径：`transport` hold/`PrefixedRowStream`、`CoreGatewayConnection.held_portal_stream` + `named_cursors` + `Drop`、`pdp` Execute obligations、`server/metrics` portal_resume、frontend Bind/Close/Sync + `COMMIT;` 分号、`smoke-security-stream.sh`
+  - 路径：`transport` hold/`PrefixedRowStream`、`CoreGatewayConnection.held_portal_stream` + `named_cursors` + `Drop`、`pdp` Execute obligations、`server/metrics` portal_resume、frontend Bind/Close/Sync + `COMMIT;` 分号、`smoke-security-stream.sh`、UI Overview/Settings
 
 ---
 
@@ -134,7 +134,7 @@ cd data-proxy
 
 建议优先级：
 
-1. **A10** backend SQL `DECLARE … WITH HOLD` 服务端游标（可选；进程内 `named_cursors` + `sql_cursor_*` + UI 诚实提示已有）  
+1. **A10** backend SQL `DECLARE … WITH HOLD` 服务端游标（可选；进程内 `named_cursors` + `sql_cursor_*` + **UI39 portal resume hold/skip 卡片**已有）  
 2. **H05** CRDT merge / mlock（可选；LWW + Zeroize + `vault_password_zeroize` 诚实字段已有）  
 3. **A06** 进程/cgroup 精确 1–2 窗字节 CI（可选；逻辑 peak_window_bytes 已有；**UI38 Overview/Settings 已展示 logical peak + execute_path 计数**）  
 4. 体验小刀；**F30/P0x 延后项未点名勿做**

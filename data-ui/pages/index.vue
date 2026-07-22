@@ -11,6 +11,7 @@ import type {
   AdminVaultLease,
   EncodePeakMetrics,
   ExecutePathMetrics,
+  PortalResumeMetrics,
   SqlCursorMetricModes,
 } from '~/composables/useAdminApi'
 
@@ -33,6 +34,7 @@ const policies = ref<AdminSecurityPolicies | null>(null)
 const tickets = ref<AdminTicket[]>([])
 const leases = ref<AdminVaultLease[]>([])
 const sqlCursors = ref<SqlCursorMetricModes | null>(null)
+const portalResume = ref<PortalResumeMetrics | null>(null)
 const encodePeak = ref<EncodePeakMetrics | null>(null)
 const executePaths = ref<ExecutePathMetrics | null>(null)
 
@@ -119,11 +121,13 @@ async function loadAll() {
     leases.value = vls
     if (metricsTxt) {
       sqlCursors.value = api.parseSqlCursorMetrics(metricsTxt)
+      portalResume.value = api.parsePortalResumeMetrics(metricsTxt)
       encodePeak.value = api.parseEncodePeakMetrics(metricsTxt)
       executePaths.value = api.parseExecutePathMetrics(metricsTxt)
     }
     else {
       sqlCursors.value = null
+      portalResume.value = null
       encodePeak.value = null
       executePaths.value = null
     }
@@ -273,6 +277,31 @@ onUnmounted(() => {
           <template v-if="sqlCursors.unsupported">
             · unsupported={{ sqlCursors.unsupported }}
           </template>
+          · not backend WITH HOLD
+          · <a
+            class="inline-link"
+            :href="`${apiBase}/metrics`"
+            target="_blank"
+            rel="noreferrer"
+          >/metrics</a>
+        </div>
+      </div>
+      <div
+        v-if="portalResume && portalResume.total > 0"
+        class="stat-card"
+      >
+        <div class="label">
+          Portal resume (A10)
+        </div>
+        <div class="value mono">
+          hold={{ portalResume.hold + portalResume.resume_hold }}
+          · skip={{ portalResume.logical_skip }}
+        </div>
+        <div class="sub mono">
+          hold={{ portalResume.hold }}
+          · resume_hold={{ portalResume.resume_hold }}
+          · logical_skip={{ portalResume.logical_skip }}
+          · prefer RowStream hold; skip re-runs SQL
           · not backend WITH HOLD
           · <a
             class="inline-link"

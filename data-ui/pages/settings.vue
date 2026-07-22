@@ -5,6 +5,7 @@ import type {
   AdminSecurityPolicies,
   EncodePeakMetrics,
   ExecutePathMetrics,
+  PortalResumeMetrics,
   SqlCursorMetricModes,
 } from '~/composables/useAdminApi'
 
@@ -27,6 +28,7 @@ const me = ref<AdminMe | null>(null)
 const policies = ref<AdminSecurityPolicies | null>(null)
 const auditStats = ref<AdminAuditStats | null>(null)
 const sqlCursors = ref<SqlCursorMetricModes | null>(null)
+const portalResume = ref<PortalResumeMetrics | null>(null)
 const encodePeak = ref<EncodePeakMetrics | null>(null)
 const executePaths = ref<ExecutePathMetrics | null>(null)
 const probeAt = ref('')
@@ -69,11 +71,13 @@ async function probeGateway() {
     auditStats.value = astats
     if (metricsTxt) {
       sqlCursors.value = api.parseSqlCursorMetrics(metricsTxt)
+      portalResume.value = api.parsePortalResumeMetrics(metricsTxt)
       encodePeak.value = api.parseEncodePeakMetrics(metricsTxt)
       executePaths.value = api.parseExecutePathMetrics(metricsTxt)
     }
     else {
       sqlCursors.value = null
+      portalResume.value = null
       encodePeak.value = null
       executePaths.value = null
     }
@@ -266,6 +270,23 @@ async function doReload() {
             </template>
             <template v-else>
               — <span class="hint-inline">(/metrics unavailable or empty)</span>
+            </template>
+          </dd>
+        </div>
+        <div class="span-2">
+          <dt>Portal resume (A10)</dt>
+          <dd class="mono">
+            <template v-if="portalResume && portalResume.total > 0">
+              hold={{ portalResume.hold }}
+              · resume_hold={{ portalResume.resume_hold }}
+              · logical_skip={{ portalResume.logical_skip }}
+              · total={{ portalResume.total }}
+              <span class="hint-inline">
+                multi-Execute prefers held RowStream; logical_skip re-runs SQL — not backend WITH HOLD
+              </span>
+            </template>
+            <template v-else>
+              — <span class="hint-inline">(/metrics empty or no multi-Execute resume yet)</span>
             </template>
           </dd>
         </div>

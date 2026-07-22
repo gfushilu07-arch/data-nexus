@@ -2,16 +2,28 @@ import { asAdminApiAuthError, type AdminApiAuthError } from '~/utils/adminApiAut
 import {
   parseEncodePeakMetrics,
   parseExecutePathMetrics,
+  parsePortalResumeMetrics,
   parseSqlCursorMetrics,
   type EncodePeakMetrics,
   type ExecutePathMetrics,
+  type PortalResumeMetrics,
   type SqlCursorMetricModes,
 } from '~/utils/prometheusMetrics'
 
 export type { AdminApiAuthError }
 export { asAdminApiAuthError }
-export type { EncodePeakMetrics, ExecutePathMetrics, SqlCursorMetricModes }
-export { parseEncodePeakMetrics, parseExecutePathMetrics, parseSqlCursorMetrics }
+export type {
+  EncodePeakMetrics,
+  ExecutePathMetrics,
+  PortalResumeMetrics,
+  SqlCursorMetricModes,
+}
+export {
+  parseEncodePeakMetrics,
+  parseExecutePathMetrics,
+  parsePortalResumeMetrics,
+  parseSqlCursorMetrics,
+}
 
 export type AdminListener = {
   name: string
@@ -450,6 +462,7 @@ export function useAdminApi() {
     asAdminApiAuthError,
     handleAdminApiAuthError,
     parseSqlCursorMetrics,
+    parsePortalResumeMetrics,
     parseEncodePeakMetrics,
     parseExecutePathMetrics,
     /** Prometheus text (auth unless public_metrics). Soft-fail callers should catch. */
