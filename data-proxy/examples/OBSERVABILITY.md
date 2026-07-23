@@ -62,7 +62,7 @@ Do **not** treat path counters as proof of end-to-end zero-copy or process RSS b
 | All traffic is Streaming | Control / empty Complete paths may label `n/a` or `materialized` depending on response shape. Row-returning Query* under obligations/max_rows should hit `streaming`. Extended under passthrough: text-bind rewrite → `passthrough_rewrite`; else `streaming_demote`. |
 | Sample / L2 = full result | B08 samples are bounded rows/bytes and require `default_audit_level=L2`. **Not** L3 full-result archive. |
 | Column ACL / `SELECT *` | T01: `star_policy=deny` rejects `*` / `t.*` (no expansion). `star_policy=allow` also **never expands** wildcards to strip denied columns — only explicit projections are rewritten. Admin `GET /admin/security-policies` exposes **`star_expands_wildcard=false`** always. Streaming summary includes **`peak_is_process_rss=false`** and **`obligations_force_streaming=true`** (UI40). |
-| A10/H05/A06 heavy remainders “done” | Admin always returns **`remainders.backend_sql_with_hold=false`**, **`crdt_merge=false`**, **`mlock=false`**, **`process_rss_window_byte_ci=false`** (UI52–65). Process-local SQL cursors, LWW file state, logical encode peak remain the real guarantees. |
+| A10/H05/A06 heavy remainders “done” | Admin always returns **`remainders.backend_sql_with_hold=false`**, **`crdt_merge=false`**, **`mlock=false`**, **`process_rss_window_byte_ci=false`** (UI52–66). Process-local SQL cursors, LWW file state, logical encode peak remain the real guarantees. |
 
 Related smokes: `smoke-security-stream.sh` (streaming + peak≤window + PortalSuspended resume), `smoke-security-passthrough.sh` (simple passthrough + PG client-frame / MySQL demote), `smoke-security-mask.sh` / `smoke-security-watermark.sh` (mask|watermark + `passthrough=true` still `execute_path=streaming`), `smoke-security-portal*.sh` (backend_window vs chunked).
 
@@ -84,14 +84,15 @@ Admin UI surfaces security-policies honesty without metrics traffic (UI40/UI43�
 | Remainders unit (UI55) | `ui52_security_policies_exposes_remainders_and_cursor_honesty` | Lib test on security-deny config snapshot |
 | Rules sync (UI56) | `.claude/rules` + `todo.md` 已有/仍欠 cite `remainders.*` | Prevent docs drift after honesty API |
 | Security-off honesty (UI57) | unit on default `gateway-config.toml` (`enabled=false`) | Remainders/sql_cursor still present when v1 security off |
-| Stale-span cleanup (UI58) | todo/rules/OBSERVABILITY cite UI52–65 + A-track remainders claim | Keep honesty span numbers current |
+| Stale-span cleanup (UI58) | todo/rules/OBSERVABILITY cite UI52–66 + A-track remainders claim | Keep honesty span numbers current |
 | L0 smoke honesty (UI59) | dual-listener + cross-protocol smokes pin remainders with security off | v1 L0 path still exposes not-delivered flags |
 | Admin-auth honesty (UI60) | JWT required for security-policies; authed response pins remainders | Auth path cannot drop not-delivered flags |
 | Matrix docs (UI61) | `run-smoke-matrix.sh list` + testing-smoke rule document remainders pins | Operators see honesty coverage in smoke inventory |
-| Span hygiene (UI62) | todo/rules/runbook/matrix cite UI52–65 consistently | Avoid stale honesty-span numbers |
+| Span hygiene (UI62) | todo/rules/runbook/matrix cite UI52–66 consistently | Avoid stale honesty-span numbers |
 | Shared honesty helper (UI63) | `examples/assert-security-policies-honesty.py` | Dedup remainders/sql_cursor/streaming pins for L0/auth smokes |
 | L0 helper migration (UI64) | cross-protocol smokes call shared honesty helper | Fewer copy-pasted remainders asserts |
 | Security-core helper (UI65) | deny/column/mask/audit/portal/vault/state/config/remote/ticket call helper | default matrix pins via shared helper |
+| Extended/cedar helper (UI66) | stream/passthrough/watermark/dual/time/xproto/cedar call helper | all/extended/cedar matrix share helper |
 
 Admin UI (UI38) soft-parses `/metrics` on Overview + Settings:
 

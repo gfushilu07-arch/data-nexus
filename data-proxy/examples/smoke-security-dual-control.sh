@@ -86,6 +86,11 @@ assert rem.get("process_rss_window_byte_ci") is False, rem
 print("UI48 security-policies honesty ok", "window_rows", st.get("window_rows"), "sql_cursor", sc)
 PY_HON
 
+python3 "$(cd "$(dirname "$0")" && pwd)/assert-security-policies-honesty.py" \
+  --file /tmp/dn-ui48-security-policies.json \
+  --label "UI66 dual-control" \
+  --expect-enabled true
+
 echo "==> issue dual-control ticket (pending)"
 curl -fsS -X POST "http://127.0.0.1:8082/admin/tickets" \
   -H 'content-type: application/json' \

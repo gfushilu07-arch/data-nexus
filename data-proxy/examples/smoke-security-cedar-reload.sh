@@ -180,6 +180,11 @@ assert (data.get("pdp_backend") or (data.get("pdp") or {}).get("backend")) == "c
 print("UI49 security-policies honesty ok", "window_rows", st.get("window_rows"), "pdp", data.get("pdp_backend") or (data.get("pdp") or {}).get("backend"), "sql_cursor", sc)
 PY_HON
 
+python3 "$(cd "$(dirname "$0")" && pwd)/assert-security-policies-honesty.py" \
+  --file /tmp/dn-ui49-security-policies.json \
+  --label "UI66 cedar-reload" \
+  --expect-enabled true
+
 echo "==> status before"
 curl -fsS "http://127.0.0.1:8082/admin/security/cedar" | tee /tmp/dn-cedar-st1.json
 python3 - <<'PY'

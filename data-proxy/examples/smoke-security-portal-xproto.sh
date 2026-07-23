@@ -216,6 +216,11 @@ print(
 )
 PY_POL
 
+python3 "$(cd "$(dirname "$0")" && pwd)/assert-security-policies-honesty.py" \
+  --file /tmp/dn-xproto-security-policies.json \
+  --label "UI66 portal-xproto" \
+  --expect-enabled true
+
 echo "==> A09 xproto portal metrics PORTAL_STREAM (logical peak ≤ window_rows=2)"
 # Cross-protocol portal should label execute_path=xproto_stream under type=PORTAL_STREAM.
 metrics="$(curl -fsS http://127.0.0.1:8084/metrics 2>/dev/null || true)"

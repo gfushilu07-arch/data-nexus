@@ -133,4 +133,9 @@ print(
 )
 PY_POL
 
+python3 "$(cd "$(dirname "$0")" && pwd)/assert-security-policies-honesty.py" \
+  --file /tmp/dn-wm-security-policies.json \
+  --label "UI66 watermark" \
+  --expect-enabled true
+
 echo "smoke-security-watermark: OK"

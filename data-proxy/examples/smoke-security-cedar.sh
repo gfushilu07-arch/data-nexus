@@ -115,6 +115,11 @@ assert (data.get("pdp_backend") or (data.get("pdp") or {}).get("backend")) == "c
 print("UI49 security-policies honesty ok", "window_rows", st.get("window_rows"), "pdp", data.get("pdp_backend") or (data.get("pdp") or {}).get("backend"), "sql_cursor", sc)
 PY_HON
 
+python3 "$(cd "$(dirname "$0")" && pwd)/assert-security-policies-honesty.py" \
+  --file /tmp/dn-ui49-security-policies.json \
+  --label "UI66 cedar" \
+  --expect-enabled true
+
 echo "==> SELECT 1 allowed (Cedar __none__)"
 out="$(mysql_via_gateway 'SELECT 1;')"
 echo "$out" | tr -d '[:space:]' | grep -qx '1'

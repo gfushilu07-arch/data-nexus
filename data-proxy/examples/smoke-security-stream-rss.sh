@@ -373,6 +373,11 @@ assert rem.get("process_rss_window_byte_ci") is False, rem
 print("UI49 security-policies honesty ok", "window_rows", st.get("window_rows"), "pdp", data.get("pdp_backend") or (data.get("pdp") or {}).get("backend"), "sql_cursor", sc)
 PY_HON
 
+python3 "$(cd "$(dirname "$0")" && pwd)/assert-security-policies-honesty.py" \
+  --file /tmp/dn-ui49-security-policies.json \
+  --label "UI66 stream-rss" \
+  --expect-enabled true
+
 echo "==> metrics: streaming path + multi-window encode + logical peak ≤ window_rows=${WINDOW_ROWS}"
 metrics="$(curl -fsS http://127.0.0.1:8082/metrics || true)"
 if ! echo "$metrics" | grep -q 'execute_path="streaming"'; then

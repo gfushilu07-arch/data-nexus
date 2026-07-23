@@ -249,6 +249,11 @@ print(
 )
 PY_POL
 
+python3 "$(cd "$(dirname "$0")" && pwd)/assert-security-policies-honesty.py" \
+  --file /tmp/dn-xproto-rev-security-policies.json \
+  --label "UI66 portal-xproto-pg-mysql" \
+  --expect-enabled true
+
 echo "==> A09 reverse xproto portal metrics PORTAL_STREAM (logical peak ≤ window_rows=2)"
 metrics="$(curl -fsS http://127.0.0.1:8085/metrics 2>/dev/null || true)"
 if ! echo "$metrics" | grep -q 'type="PORTAL_STREAM"'; then

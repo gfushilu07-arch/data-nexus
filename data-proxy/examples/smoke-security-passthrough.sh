@@ -378,6 +378,11 @@ print(
 )
 PY_POL
 
+python3 "$(cd "$(dirname "$0")" && pwd)/assert-security-policies-honesty.py" \
+  --file /tmp/dn-pt-security-policies.json \
+  --label "UI66 passthrough" \
+  --expect-enabled true
+
 echo "==> A05 Prometheus execute_path + passthrough_bytes"
 curl -fsS "http://127.0.0.1:8082/metrics" | tee /tmp/dn-pt-metrics.txt >/dev/null
 python3 - <<'PY2'

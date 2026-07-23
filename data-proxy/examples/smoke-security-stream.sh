@@ -814,6 +814,11 @@ print(
 )
 PY
 
+python3 "$(cd "$(dirname "$0")" && pwd)/assert-security-policies-honesty.py" \
+  --file /tmp/dn-stream-security-policies.json \
+  --label "UI66 stream" \
+  --expect-enabled true
+
 # A06 honesty: encode windows written and logical peak window rows ≤ configured window_rows=2.
 if echo "$metrics" | grep -q 'gateway_encode_windows_total'; then
   echo "$metrics" | grep 'gateway_encode_windows_total' | head -6 || true

@@ -23,7 +23,7 @@
 - [x] **P2**：双人金库 F18、时间窗 F27、Cedar F26/F26b、OTel B03、审计轮转+OpenDAL B04、portal 导出 B05  
 - [x] **P3 主线**：H01–H04、B04c/B05b/B06/B07、F28、A05、UI01/UI02、smoke 硬化  
 
-### 关键 smoke（矩阵规模；发版前 `all`+`cedar`；**UI52–61 remainders 诚实 pin 已覆盖 security + L0 dual/xproto + admin-auth**）
+### 关键 smoke（矩阵规模；发版前 `all`+`cedar`；**UI52–66 remainders 诚实 pin 已覆盖 security + L0 dual/xproto + admin-auth**）
 
 | 组 | 脚本数 | 内容 |
 |----|:------:|------|
@@ -322,3 +322,4 @@ examples/        smoke + gateway config 样例
 | UI63 | assert-security-policies-honesty.py shared helper + dual/deny/admin-auth use | feat(ui63)/test |
 | UI64 | migrate L0 cross-protocol smokes to honesty helper | test(ui64) |
 | UI65 | security-core smokes call assert-security-policies-honesty helper | test(ui65) |
+| UI66 | security-extended + cedar smokes call honesty helper | test(ui66) |
