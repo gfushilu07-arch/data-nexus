@@ -316,3 +316,4 @@ examples/        smoke + gateway config 样例
 | UI57 | security.enabled=false still exposes remainders + runbook remainders | test(ui57)/docs |
 | UI58 | refresh UI52–57 spans + OBSERVABILITY A-track remainders claim | docs(ui58) |
 | UI59 | L0 dual/xproto smokes pin remainders honesty when security off | test(ui59) |
+| UI60 | admin-auth smoke: security-policies 401 + authed remainders honesty | test(ui60) |
