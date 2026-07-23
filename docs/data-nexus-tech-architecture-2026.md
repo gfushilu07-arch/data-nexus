@@ -817,7 +817,7 @@ audit-analytics = ["datafusion", "arrow"]
 
 | 主题 | 实现态 | API 诚实字段 |
 |------|--------|----------------|
-| PG/MySQL **backend** `DECLARE … WITH HOLD` 服务端游标 | 仅进程内 `named_cursors`；断连即死；forward FETCH only | `remainders.backend_sql_with_hold=false` |
+| PG/MySQL **backend** `DECLARE … WITH HOLD` 服务端游标 | 仅进程内 `named_cursors`；断连即死；forward FETCH only | `remainders.backend_sql_with_hold=false`；配置 `streaming.backend_sql_with_hold=true` **validate 拒绝**（防静默 no-op；设计稿 `docs/a10-backend-sql-with-hold-design.md`） |
 | 多实例 **CRDT** merge | 文件态 full-file replace + advisory lock，**last-writer-wins** | `remainders.crdt_merge=false`（`state.crdt=false`） |
 | Vault 密码 **mlock** / 安全堆 | ZeroizeOnDrop / Zeroizing 擦除；活跃期仍在进程 RAM | `remainders.mlock=false`（`state.mlock=false`） |
 | 进程/cgroup **精确 1–2 窗字节** CI | 逻辑 `peak_window_rows/bytes` 权威；stream-rss 粗绝对 cap | `remainders.process_rss_window_byte_ci=false` |

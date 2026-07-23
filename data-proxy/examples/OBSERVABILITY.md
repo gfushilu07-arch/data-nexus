@@ -63,6 +63,7 @@ Do **not** treat path counters as proof of end-to-end zero-copy or process RSS b
 | Sample / L2 = full result | B08 samples are bounded rows/bytes and require `default_audit_level=L2`. **Not** L3 full-result archive. |
 | Column ACL / `SELECT *` | T01: `star_policy=deny` rejects `*` / `t.*` (no expansion). `star_policy=allow` also **never expands** wildcards to strip denied columns — only explicit projections are rewritten. Admin `GET /admin/security-policies` exposes **`star_expands_wildcard=false`** always. Streaming summary includes **`peak_is_process_rss=false`** and **`obligations_force_streaming=true`** (UI40). |
 | A10/H05/A06 heavy remainders “done” | Admin always returns **`remainders.backend_sql_with_hold=false`**, **`crdt_merge=false`**, **`mlock=false`**, **`process_rss_window_byte_ci=false`** (UI52–71). Process-local SQL cursors, LWW file state, logical encode peak remain the real guarantees. |
+| A10 backend WITH HOLD config | `security.streaming.backend_sql_with_hold` defaults false; **validate rejects true** until implemented (`docs/a10-backend-sql-with-hold-design.md`). Admin mirrors `streaming.backend_sql_with_hold=false`. |
 
 Related smokes: `smoke-security-stream.sh` (streaming + peak≤window + PortalSuspended resume), `smoke-security-passthrough.sh` (simple passthrough + PG client-frame / MySQL demote), `smoke-security-mask.sh` / `smoke-security-watermark.sh` (mask|watermark + `passthrough=true` still `execute_path=streaming`), `smoke-security-portal*.sh` (backend_window vs chunked).
 
