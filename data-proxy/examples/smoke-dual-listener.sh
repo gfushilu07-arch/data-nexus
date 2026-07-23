@@ -109,7 +109,7 @@ PY
 
 echo "==> UI59/UI63 L0 security-policies remainders honesty (security may be off)"
 curl -fsS "http://127.0.0.1:8082/admin/security-policies" >/tmp/dn-ui59-security-policies.json
-python3 "$ROOT/examples/assert-security-policies-honesty.py" \
+python3 "$(cd "$(dirname "$0")" && pwd)/assert-security-policies-honesty.py" \
   --file /tmp/dn-ui59-security-policies.json \
   --label "UI59 L0 dual-listener"
 

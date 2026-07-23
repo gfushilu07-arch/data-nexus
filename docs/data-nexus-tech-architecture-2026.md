@@ -811,7 +811,7 @@ audit-analytics = ["datafusion", "arrow"]
 
 
 
-### 13.3 当前诚实边界（2026-07 实现态，UI52–68）
+### 13.3 当前诚实边界（2026-07 实现态，UI52–69）
 
 下列能力**尚未**按「企业完整交付」宣称；Admin `GET /admin/security-policies` 的 `remainders` 与运维 UI 明确钉 `false`，全 smoke / unit 校验：
 
