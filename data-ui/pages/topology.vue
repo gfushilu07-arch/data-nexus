@@ -23,6 +23,7 @@ const sqlCursorPolicy = ref<AdminSecurityPolicies['sql_cursor'] | null>(null)
 const streamingPolicy = ref<AdminSecurityPolicies['streaming'] | null>(null)
 const starExpandsWildcard = ref(false)
 const securityEnabled = ref<boolean | null>(null)
+const remaindersPolicy = ref<AdminSecurityPolicies['remainders'] | null>(null)
 
 /** UI30: client-side filters over topology snapshot. */
 const q = ref('')
@@ -140,6 +141,7 @@ async function loadAll() {
     streamingPolicy.value = policies?.streaming ?? null
     starExpandsWildcard.value = policies?.star_expands_wildcard ?? false
     securityEnabled.value = policies ? !!policies.enabled : null
+    remaindersPolicy.value = policies?.remainders ?? null
     const sec = securityEnabled.value == null
       ? ''
       : ` · security=${securityEnabled.value ? 'on' : 'off'}`
@@ -234,6 +236,13 @@ onUnmounted(() => {
       </template>
       · star_expands_wildcard={{ starExpandsWildcard }}
       <span class="hint-inline"> (UI51: topology is routing only; peak logical; cursors process-local, not backend WITH HOLD)</span>
+      <template v-if="remaindersPolicy">
+        · remainders WITH_HOLD={{ remaindersPolicy.backend_sql_with_hold }}
+        / crdt={{ remaindersPolicy.crdt_merge }}
+        / mlock={{ remaindersPolicy.mlock }}
+        / rss_ci={{ remaindersPolicy.process_rss_window_byte_ci }}
+        (UI53 not delivered)
+      </template>
     </div>
 
     <div class="row status-chips">

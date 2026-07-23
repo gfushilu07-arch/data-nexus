@@ -11,6 +11,7 @@ const tickets = ref<AdminTicket[]>([])
 const policyState = ref<AdminSecurityPolicies['state'] | null>(null)
 const sqlCursorPolicy = ref<AdminSecurityPolicies['sql_cursor'] | null>(null)
 const streamingPolicy = ref<AdminSecurityPolicies['streaming'] | null>(null)
+const remaindersPolicy = ref<AdminSecurityPolicies['remainders'] | null>(null)
 const adminMe = ref<AdminMe | null>(null)
 const status = ref('')
 const statusKind = ref<'ok' | 'error' | ''>('')
@@ -96,6 +97,7 @@ async function load() {
     policyState.value = policies?.state ?? null
     sqlCursorPolicy.value = policies?.sql_cursor ?? null
     streamingPolicy.value = policies?.streaming ?? null
+    remaindersPolicy.value = policies?.remainders ?? null
     adminMe.value = me
     const st = policyState.value
     const stateBit = st
@@ -308,6 +310,13 @@ onMounted(() => {
         · window_rows={{ streamingPolicy.window_rows }}
       </template>
       <span class="hint-inline"> (UI48: not backend WITH HOLD; peak logical only)</span>
+      <template v-if="remaindersPolicy">
+        · remainders WITH_HOLD={{ remaindersPolicy.backend_sql_with_hold }}
+        / crdt={{ remaindersPolicy.crdt_merge }}
+        / mlock={{ remaindersPolicy.mlock }}
+        / rss_ci={{ remaindersPolicy.process_rss_window_byte_ci }}
+        (UI53 not delivered)
+      </template>
     </div>
 
     <div class="card form-card">

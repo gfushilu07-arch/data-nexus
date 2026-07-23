@@ -12,6 +12,7 @@ const statusKind = ref<'ok' | 'error' | ''>('')
 const sessions = ref<AdminSession[]>([])
 const sqlCursorPolicy = ref<AdminSecurityPolicies['sql_cursor'] | null>(null)
 const streamingPolicy = ref<AdminSecurityPolicies['streaming'] | null>(null)
+const remaindersPolicy = ref<AdminSecurityPolicies['remainders'] | null>(null)
 
 /** UI25: client-side filters over the loaded session snapshot. */
 const listenerFilter = ref('')
@@ -91,6 +92,7 @@ async function loadAll() {
     sessions.value = sess
     sqlCursorPolicy.value = pol?.sql_cursor ?? null
     streamingPolicy.value = pol?.streaming ?? null
+    remaindersPolicy.value = pol?.remainders ?? null
     const bits = protocolCounts.value.map(([p, n]) => `${p}=${n}`).join(' ')
     const bit = bits ? ` · ${bits}` : ''
     const cur = sqlCursorPolicy.value
@@ -217,6 +219,13 @@ onUnmounted(() => {
           · window_rows={{ streamingPolicy.window_rows }}
         </template>
         · from security-policies (UI47; not backend WITH HOLD; peak logical only)
+        <template v-if="remaindersPolicy">
+          · remainders WITH_HOLD={{ remaindersPolicy.backend_sql_with_hold }}
+          / crdt={{ remaindersPolicy.crdt_merge }}
+          / mlock={{ remaindersPolicy.mlock }}
+          / rss_ci={{ remaindersPolicy.process_rss_window_byte_ci }}
+          (UI53 not delivered)
+        </template>
       </p>
       <div
         v-if="listenerCounts.length"

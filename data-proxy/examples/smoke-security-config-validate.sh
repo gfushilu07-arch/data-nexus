@@ -170,6 +170,12 @@ assert sc.get("process_local") is True, sc
 assert sc.get("backend_with_hold") is False, sc
 assert sc.get("forward_fetch_only") is True, sc
 assert sc.get("session_end_clears") is True, sc
+
+rem=data.get("remainders") or {}
+assert rem.get("backend_sql_with_hold") is False, rem
+assert rem.get("crdt_merge") is False, rem
+assert rem.get("mlock") is False, rem
+assert rem.get("process_rss_window_byte_ci") is False, rem
 print("UI50 valid-config security-policies honesty ok", "window_rows", st.get("window_rows"), "sql_cursor", sc)
 PY_HON
 kill "$VALID_PID" 2>/dev/null || true

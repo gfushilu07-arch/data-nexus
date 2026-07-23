@@ -134,7 +134,7 @@ cd data-proxy
 
 建议优先级：
 
-1. **A10** backend SQL `DECLARE … WITH HOLD` 服务端游标（可选；进程内 `named_cursors` + `sql_cursor_*` + **UI39/UI43–51 诚实** + **API `remainders.backend_sql_with_hold=false`** 已有）  
+1. **A10** backend SQL `DECLARE … WITH HOLD` 服务端游标（可选；进程内 `named_cursors` + `sql_cursor_*` + **UI39/UI43–51 诚实** + **API `remainders.backend_sql_with_hold=false`** + **UI53 运维页 remainders 铺开** 已有）  
 2. **H05** CRDT merge / mlock（可选；LWW + Zeroize + **`remainders.crdt_merge=false` / `remainders.mlock=false`** 已有）  
 3. **A06** 进程/cgroup 精确 1–2 窗字节 CI（可选；逻辑 peak_window_bytes 已有；**`remainders.process_rss_window_byte_ci=false`** + stream-rss 粗 cap 已有）  
 4. 体验小刀；**F30/P0x 延后项未点名勿做**

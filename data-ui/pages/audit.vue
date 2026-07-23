@@ -29,6 +29,7 @@ const sqlCursorPolicy = ref<AdminSecurityPolicies['sql_cursor'] | null>(null)
 const streamingPolicy = ref<AdminSecurityPolicies['streaming'] | null>(null)
 const auditSamplePolicy = ref<AdminSecurityPolicies['audit_sample'] | null>(null)
 const starExpandsWildcard = ref(false)
+const remaindersPolicy = ref<AdminSecurityPolicies['remainders'] | null>(null)
 
 function setStatus(msg: string, kind: 'ok' | 'error' | '' = '') {
   status.value = msg
@@ -161,6 +162,7 @@ async function load() {
     streamingPolicy.value = policies?.streaming ?? null
     auditSamplePolicy.value = policies?.audit_sample ?? null
     starExpandsWildcard.value = policies?.star_expands_wildcard ?? false
+    remaindersPolicy.value = policies?.remainders ?? null
     if (res.stats) {
       stats.value = res.stats
     }
@@ -456,6 +458,13 @@ onMounted(() => {
       </template>
       · star_expands_wildcard={{ starExpandsWildcard }}
       <span class="hint-inline"> (UI50: not L3 full archive; peak logical only; cursors not backend WITH HOLD)</span>
+      <template v-if="remaindersPolicy">
+        · remainders WITH_HOLD={{ remaindersPolicy.backend_sql_with_hold }}
+        / crdt={{ remaindersPolicy.crdt_merge }}
+        / mlock={{ remaindersPolicy.mlock }}
+        / rss_ci={{ remaindersPolicy.process_rss_window_byte_ci }}
+        (UI53 not delivered)
+      </template>
     </div>
 
     <div class="card filters">

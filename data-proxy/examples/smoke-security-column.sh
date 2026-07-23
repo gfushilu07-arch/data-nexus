@@ -130,6 +130,12 @@ assert sc.get("process_local") is True, sc
 assert sc.get("backend_with_hold") is False, sc
 assert sc.get("forward_fetch_only") is True, sc
 assert sc.get("session_end_clears") is True, sc
+
+rem=data.get("remainders") or {}
+assert rem.get("backend_sql_with_hold") is False, rem
+assert rem.get("crdt_merge") is False, rem
+assert rem.get("mlock") is False, rem
+assert rem.get("process_rss_window_byte_ci") is False, rem
 print("security-policies:", names, "star_policy", data.get("star_policy"),
       "star_expands_wildcard", data.get("star_expands_wildcard"),
       "streaming_honesty", st.get("peak_is_process_rss"), st.get("obligations_force_streaming"),

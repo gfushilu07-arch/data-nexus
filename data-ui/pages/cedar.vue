@@ -32,6 +32,12 @@ const streamingPolicy = ref<{
   obligations_force_streaming?: boolean
 } | null>(null)
 const starExpandsWildcard = ref(false)
+const remaindersPolicy = ref<{
+  backend_sql_with_hold: boolean
+  crdt_merge: boolean
+  mlock: boolean
+  process_rss_window_byte_ci: boolean
+} | null>(null)
 
 function setMessage(msg: string, kind: 'ok' | 'error' | '' = '') {
   message.value = msg
@@ -78,6 +84,7 @@ async function load() {
       sqlCursorPolicy.value = policies.sql_cursor ?? null
       streamingPolicy.value = policies.streaming ?? null
       starExpandsWildcard.value = policies.star_expands_wildcard ?? false
+      remaindersPolicy.value = policies.remainders ?? null
     }
     if (status.value?.message && !status.value.ready) {
       setMessage(status.value.message, 'error')
@@ -302,6 +309,13 @@ onMounted(async () => {
             </template>
             · star_expands_wildcard={{ starExpandsWildcard }}
             · peak logical only; cursors not backend WITH HOLD
+            <template v-if="remaindersPolicy">
+              · remainders WITH_HOLD={{ remaindersPolicy.backend_sql_with_hold }}
+              / crdt={{ remaindersPolicy.crdt_merge }}
+              / mlock={{ remaindersPolicy.mlock }}
+              / rss_ci={{ remaindersPolicy.process_rss_window_byte_ci }}
+              (UI53 not delivered)
+            </template>
           </dd>
         </div>
       </dl>

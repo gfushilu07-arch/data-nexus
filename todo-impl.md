@@ -309,3 +309,4 @@ examples/        smoke + gateway config 样例
 | UI50 | Audit streaming/sample/sql_cursor honesty + config-validate valid pin | feat(ui)/test |
 | UI51 | Topology security-policies honesty banner | feat(ui) |
 | UI52 | security-policies remainders block for A10/H05/A06 not-delivered flags | feat(ui/api) |
+| UI53 | remainders honesty on Portal/Sessions/Tickets/Vault/Audit/Topology/Cedar + smoke pins | feat(ui)/test |

@@ -20,6 +20,7 @@ const ttlSecs = ref(900)
 const policyState = ref<AdminSecurityPolicies['state'] | null>(null)
 const sqlCursorPolicy = ref<AdminSecurityPolicies['sql_cursor'] | null>(null)
 const streamingPolicy = ref<AdminSecurityPolicies['streaming'] | null>(null)
+const remaindersPolicy = ref<AdminSecurityPolicies['remainders'] | null>(null)
 /** UI24: client-side lease list filters (API returns full page). */
 const statusFilter = ref('')
 const projectFilter = ref('')
@@ -114,6 +115,7 @@ async function load() {
     policyState.value = policies?.state ?? null
     sqlCursorPolicy.value = policies?.sql_cursor ?? null
     streamingPolicy.value = policies?.streaming ?? null
+    remaindersPolicy.value = policies?.remainders ?? null
     if (!project.value) {
       project.value = projs[0]?.name || svcs[0]?.name || ''
       if (projs[0]?.environment)
@@ -283,6 +285,13 @@ onMounted(() => {
         · window_rows={{ streamingPolicy.window_rows }}
       </template>
       <span class="hint-inline"> (UI48: not backend WITH HOLD; peak logical only)</span>
+      <template v-if="remaindersPolicy">
+        · remainders WITH_HOLD={{ remaindersPolicy.backend_sql_with_hold }}
+        / crdt={{ remaindersPolicy.crdt_merge }}
+        / mlock={{ remaindersPolicy.mlock }}
+        / rss_ci={{ remaindersPolicy.process_rss_window_byte_ci }}
+        (UI53 not delivered)
+      </template>
     </div>
 
     <div class="card form-card">

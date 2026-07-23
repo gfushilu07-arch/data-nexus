@@ -24,6 +24,7 @@ const streamingCfg = ref<AdminSecurityPolicies['streaming'] | null>(null)
 const starPolicy = ref<string | null>(null)
 const starExpandsWildcard = ref(false)
 const sqlCursorCfg = ref<AdminSecurityPolicies['sql_cursor'] | null>(null)
+const remaindersPolicy = ref<AdminSecurityPolicies['remainders'] | null>(null)
 const result = ref<AdminPortalQueryResult | null>(null)
 const status = ref('')
 const statusKind = ref<'ok' | 'error' | ''>('')
@@ -141,6 +142,7 @@ async function loadMeta() {
   starPolicy.value = policies?.star_policy ?? null
   starExpandsWildcard.value = policies?.star_expands_wildcard ?? false
   sqlCursorCfg.value = policies?.sql_cursor ?? null
+  remaindersPolicy.value = policies?.remainders ?? null
   if (!service.value && svcs[0])
     service.value = svcs[0].name
   // Drop selected lease if it disappeared after prune/revoke.
@@ -295,6 +297,12 @@ onMounted(async () => {
               / backend_with_hold={{ sqlCursorCfg.backend_with_hold }}
             </template>
             · peak=logical window (not RSS); * never expands; cursors not backend WITH HOLD
+            <template v-if="remaindersPolicy">
+              · remainders backend_WITH_HOLD={{ remaindersPolicy.backend_sql_with_hold }}
+              / crdt={{ remaindersPolicy.crdt_merge }}
+              / mlock={{ remaindersPolicy.mlock }}
+              / rss_window_ci={{ remaindersPolicy.process_rss_window_byte_ci }}
+            </template>
           </span>
         </label>
         <label class="field">
