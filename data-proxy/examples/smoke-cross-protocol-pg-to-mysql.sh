@@ -103,6 +103,33 @@ assert names==["pg-to-mysql"], names
 print("listeners:", names)
 PY
 
+echo "==> UI59 L0 security-policies remainders honesty (security may be off)"
+curl -fsS "http://127.0.0.1:8082/admin/security-policies" >/tmp/dn-ui59-security-policies.json
+python3 - <<'PY_L0'
+import json
+data=json.load(open("/tmp/dn-ui59-security-policies.json"))
+# L0 default: security often off; honesty flags must still be present.
+assert "enabled" in data, data
+assert data.get("star_expands_wildcard") is False, data.get("star_expands_wildcard")
+st=data.get("streaming") or {}
+assert st.get("peak_is_process_rss") is False, st
+assert st.get("obligations_force_streaming") is True, st
+sc=data.get("sql_cursor") or {}
+assert sc.get("process_local") is True, sc
+assert sc.get("backend_with_hold") is False, sc
+rem=data.get("remainders") or {}
+assert rem.get("backend_sql_with_hold") is False, rem
+assert rem.get("crdt_merge") is False, rem
+assert rem.get("mlock") is False, rem
+assert rem.get("process_rss_window_byte_ci") is False, rem
+print(
+    "UI59 L0 security-policies honesty ok",
+    "enabled", data.get("enabled"),
+    "remainders", rem,
+)
+PY_L0
+
+
 psql_via_gateway() {
   local sql="$1"
   docker run --rm --add-host=host.docker.internal:host-gateway postgres:16-alpine \

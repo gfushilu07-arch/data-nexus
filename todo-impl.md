@@ -315,3 +315,4 @@ examples/        smoke + gateway config 样例
 | UI56 | sync rules + todo 已有/仍欠 with remainders API (UI52–55) | docs(ui56) |
 | UI57 | security.enabled=false still exposes remainders + runbook remainders | test(ui57)/docs |
 | UI58 | refresh UI52–57 spans + OBSERVABILITY A-track remainders claim | docs(ui58) |
+| UI59 | L0 dual/xproto smokes pin remainders honesty when security off | test(ui59) |

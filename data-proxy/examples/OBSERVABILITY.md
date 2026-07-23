@@ -85,6 +85,7 @@ Admin UI surfaces security-policies honesty without metrics traffic (UI40/UI43�
 | Rules sync (UI56) | `.claude/rules` + `todo.md` 已有/仍欠 cite `remainders.*` | Prevent docs drift after honesty API |
 | Security-off honesty (UI57) | unit on default `gateway-config.toml` (`enabled=false`) | Remainders/sql_cursor still present when v1 security off |
 | Stale-span cleanup (UI58) | todo/rules/OBSERVABILITY cite UI52–57 + A-track remainders claim | Keep honesty span numbers current |
+| L0 smoke honesty (UI59) | dual-listener + cross-protocol smokes pin remainders with security off | v1 L0 path still exposes not-delivered flags |
 
 Admin UI (UI38) soft-parses `/metrics` on Overview + Settings:
 
