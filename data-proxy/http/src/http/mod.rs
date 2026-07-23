@@ -507,6 +507,9 @@ struct AdminSecurityPoliciesResponse {
     state: AdminSecurityStateSummary,
     /// A10 honesty: simple-query DECLARE/FETCH/CLOSE is process-local only.
     sql_cursor: AdminSecuritySqlCursorSummary,
+    /// Explicit "not delivered yet" flags for heavy remainders (A10/H05/A06).
+    /// Always present so operators/UI never infer completion from adjacent honesty fields.
+    remainders: AdminSecurityRemaindersSummary,
 }
 
 #[derive(Debug, Serialize)]
@@ -601,6 +604,21 @@ struct AdminSecuritySqlCursorSummary {
     forward_fetch_only: bool,
     /// Session disconnect / Quit / Drop clears all named cursors.
     session_end_clears: bool,
+}
+
+/// Heavy remainders still open on the board (always false today — honesty only).
+#[derive(Debug, Serialize)]
+struct AdminSecurityRemaindersSummary {
+    /// A10: backend SQL `DECLARE … WITH HOLD` server-side named cursors — **not** implemented
+    /// (process-local `named_cursors` only).
+    backend_sql_with_hold: bool,
+    /// H05: multi-writer CRDT merge — **not** implemented (last-writer-wins full-file replace).
+    crdt_merge: bool,
+    /// H05: mlock / secure heap for vault passwords — **not** implemented (Zeroize only).
+    mlock: bool,
+    /// A06: process/cgroup CI that proves peak ≤ exact 1–2 window bytes — **not** implemented
+    /// (logical peak_window_* is authoritative; stream-rss is coarse absolute-cap only).
+    process_rss_window_byte_ci: bool,
 }
 
 /// B08: audit sample knobs (read-only; no secrets).
@@ -1309,6 +1327,12 @@ impl AxumServer {
                             backend_with_hold: false,
                             forward_fetch_only: true,
                             session_end_clears: true,
+                        },
+                        remainders: AdminSecurityRemaindersSummary {
+                            backend_sql_with_hold: false,
+                            crdt_merge: false,
+                            mlock: false,
+                            process_rss_window_byte_ci: false,
                         },
                     })
                 }

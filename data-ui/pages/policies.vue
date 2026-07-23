@@ -350,6 +350,18 @@ onMounted(() => {
             </span>
           </dd>
         </div>
+        <div v-if="policy.remainders">
+          <dt>remainders (not delivered)</dt>
+          <dd class="mono">
+            backend_sql_with_hold={{ policy.remainders.backend_sql_with_hold }}
+            · crdt_merge={{ policy.remainders.crdt_merge }}
+            · mlock={{ policy.remainders.mlock }}
+            · process_rss_window_byte_ci={{ policy.remainders.process_rss_window_byte_ci }}
+            <span class="hint-inline">
+              A10/H05/A06 heavy remainders are explicitly false — do not treat adjacent honesty fields as completion
+            </span>
+          </dd>
+        </div>
         <div v-if="policy.audit_sample">
           <dt>audit.sample (B08)</dt>
           <dd class="mono">

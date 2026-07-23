@@ -99,6 +99,7 @@ const starExpands = computed(() => policies.value?.star_expands_wildcard ?? fals
 const stateBackend = computed(() => policies.value?.state?.backend || '—')
 const auditSample = computed(() => policies.value?.audit_sample || null)
 const sqlCursorPolicy = computed(() => policies.value?.sql_cursor || null)
+const remainders = computed(() => policies.value?.remainders || null)
 
 async function loadAll() {
   setStatus('Loading…')
@@ -334,6 +335,29 @@ onUnmounted(() => {
           · forward_fetch_only={{ sqlCursorPolicy.forward_fetch_only }}
           · session_end_clears={{ sqlCursorPolicy.session_end_clears }}
           · not backend WITH HOLD
+          · <NuxtLink
+            class="inline-link"
+            to="/policies"
+          >
+            Policies
+          </NuxtLink>
+        </div>
+      </div>
+      <div
+        v-if="remainders"
+        class="stat-card"
+      >
+        <div class="label">
+          Remainders (not delivered)
+        </div>
+        <div class="value mono">
+          backend_WITH_HOLD={{ remainders.backend_sql_with_hold }}
+        </div>
+        <div class="sub mono">
+          crdt_merge={{ remainders.crdt_merge }}
+          · mlock={{ remainders.mlock }}
+          · process_rss_window_byte_ci={{ remainders.process_rss_window_byte_ci }}
+          · A10/H05/A06 still open — honesty only
           · <NuxtLink
             class="inline-link"
             to="/policies"

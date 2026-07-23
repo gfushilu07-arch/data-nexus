@@ -327,6 +327,16 @@ export type AdminSecurityPolicies = {
     forward_fetch_only: boolean
     session_end_clears: boolean
   }
+  /**
+   * Heavy remainders still open (always false today).
+   * A10 backend SQL WITH HOLD / H05 CRDT+mlock / A06 exact window-byte process RSS CI.
+   */
+  remainders?: {
+    backend_sql_with_hold: boolean
+    crdt_merge: boolean
+    mlock: boolean
+    process_rss_window_byte_ci: boolean
+  }
   /** B08: L2 result sample knobs (requires default_audit_level=L2 when enabled). */
   audit_sample?: {
     sample_enabled: boolean

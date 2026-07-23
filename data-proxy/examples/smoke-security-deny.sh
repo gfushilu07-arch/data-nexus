@@ -126,6 +126,12 @@ assert sc.get("process_local") is True, sc
 assert sc.get("backend_with_hold") is False, sc
 assert sc.get("forward_fetch_only") is True, sc
 assert sc.get("session_end_clears") is True, sc
+# Heavy remainders still open (A10/H05/A06) — always false honesty flags
+rem = data.get("remainders") or {}
+assert rem.get("backend_sql_with_hold") is False, rem
+assert rem.get("crdt_merge") is False, rem
+assert rem.get("mlock") is False, rem
+assert rem.get("process_rss_window_byte_ci") is False, rem
 # B08: sample knobs always present (default off)
 assert "sample_enabled" in data["audit_sample"], data["audit_sample"]
 assert data["audit_sample"]["sample_enabled"] is False, data["audit_sample"]

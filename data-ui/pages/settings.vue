@@ -268,6 +268,21 @@ async function doReload() {
             </template>
           </dd>
         </div>
+        <div
+          v-if="policies?.remainders"
+          class="span-2"
+        >
+          <dt>Remainders (not delivered)</dt>
+          <dd class="mono">
+            backend_sql_with_hold={{ policies.remainders.backend_sql_with_hold }}
+            · crdt_merge={{ policies.remainders.crdt_merge }}
+            · mlock={{ policies.remainders.mlock }}
+            · process_rss_window_byte_ci={{ policies.remainders.process_rss_window_byte_ci }}
+            <span class="hint-inline">
+              A10 backend WITH HOLD / H05 CRDT+mlock / A06 exact window-byte process RSS CI — still open
+            </span>
+          </dd>
+        </div>
         <div class="span-2">
           <dt>Streaming / star policy (UI40/UI45)</dt>
           <dd class="mono">

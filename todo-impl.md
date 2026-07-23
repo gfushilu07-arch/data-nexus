@@ -308,3 +308,4 @@ examples/        smoke + gateway config 样例
 | UI49 | Cedar streaming/sql_cursor honesty + cedar/vault/stream-rss smoke pins | feat(ui)/test |
 | UI50 | Audit streaming/sample/sql_cursor honesty + config-validate valid pin | feat(ui)/test |
 | UI51 | Topology security-policies honesty banner | feat(ui) |
+| UI52 | security-policies remainders block for A10/H05/A06 not-delivered flags | feat(ui/api) |
