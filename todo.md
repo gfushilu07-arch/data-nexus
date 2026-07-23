@@ -137,7 +137,7 @@ cd data-proxy
 
 建议优先级：
 
-1. **A10** backend SQL `DECLARE … WITH HOLD` 服务端游标（可选；进程内 + remainders 诚实 UI52–54 + unit 已有）  
+1. **A10** backend SQL `DECLARE … WITH HOLD` 服务端游标（可选；进程内 + remainders 诚实 UI52–57 + unit on/off 已有）  
 2. **H05** CRDT merge / mlock（可选；LWW + Zeroize + remainders 诚实已有）  
 3. **A06** 进程/cgroup 精确 1–2 窗字节 CI（可选；逻辑 peak + remainders 诚实 + stream-rss 粗 cap 已有）  
 4. 体验小刀；**F30/P0x 延后项未点名勿做**

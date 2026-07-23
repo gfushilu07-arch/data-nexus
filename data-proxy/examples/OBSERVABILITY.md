@@ -82,6 +82,7 @@ Admin UI surfaces security-policies honesty without metrics traffic (UI40/UI43�
 | Remainders smokes (UI54) | all `smoke-security-*.sh` (21) pin `remainders.*=false` | CI cannot silently drop not-delivered flags |
 | Remainders unit (UI55) | `ui52_security_policies_exposes_remainders_and_cursor_honesty` | Lib test on security-deny config snapshot |
 | Rules sync (UI56) | `.claude/rules` + `todo.md` 已有/仍欠 cite `remainders.*` | Prevent docs drift after honesty API |
+| Security-off honesty (UI57) | unit on default `gateway-config.toml` (`enabled=false`) | Remainders/sql_cursor still present when v1 security off |
 
 Admin UI (UI38) soft-parses `/metrics` on Overview + Settings:
 

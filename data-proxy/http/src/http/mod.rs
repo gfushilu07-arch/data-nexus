@@ -5492,4 +5492,29 @@ service = "missing-service"
         assert_eq!(state["mlock"], false);
         assert_eq!(state["vault_password_zeroize"], true);
     }
+
+    /// UI57: remainders / sql_cursor honesty must not disappear when security is off (v1).
+    #[tokio::test]
+    async fn ui57_security_off_still_exposes_remainders_honesty() {
+        // gateway-config.toml has security.enabled=false — L0 default.
+        let (status, value) = get_json("/admin/security-policies").await;
+        assert_eq!(status, StatusCode::OK, "{value}");
+        assert_eq!(value["enabled"], false);
+
+        // Not-delivered flags remain present and false even with security off.
+        let rem = &value["remainders"];
+        assert_eq!(rem["backend_sql_with_hold"], false);
+        assert_eq!(rem["crdt_merge"], false);
+        assert_eq!(rem["mlock"], false);
+        assert_eq!(rem["process_rss_window_byte_ci"], false);
+
+        let sql_cursor = &value["sql_cursor"];
+        assert_eq!(sql_cursor["process_local"], true);
+        assert_eq!(sql_cursor["backend_with_hold"], false);
+
+        let streaming = &value["streaming"];
+        assert_eq!(streaming["peak_is_process_rss"], false);
+        assert_eq!(streaming["obligations_force_streaming"], true);
+        assert_eq!(value["star_expands_wildcard"], false);
+    }
 }
