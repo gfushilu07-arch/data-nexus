@@ -88,6 +88,7 @@ Admin UI surfaces security-policies honesty without metrics traffic (UI40/UI43â€
 | L0 smoke honesty (UI59) | dual-listener + cross-protocol smokes pin remainders with security off | v1 L0 path still exposes not-delivered flags |
 | Admin-auth honesty (UI60) | JWT required for security-policies; authed response pins remainders | Auth path cannot drop not-delivered flags |
 | Matrix docs (UI61) | `run-smoke-matrix.sh list` + testing-smoke rule document remainders pins | Operators see honesty coverage in smoke inventory |
+| Span hygiene (UI62) | todo/rules/runbook/matrix cite UI52â€“61 consistently | Avoid stale honesty-span numbers |
 
 Admin UI (UI38) soft-parses `/metrics` on Overview + Settings:
 

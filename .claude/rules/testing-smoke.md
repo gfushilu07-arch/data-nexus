@@ -37,7 +37,7 @@ cargo build -p data-proxy --bin proxy --features security-cedar
 cargo build -p data-proxy --bin proxy
 ```
 
-## Remainders honesty pins (UI52–60)
+## Remainders honesty pins (UI52–61)
 
 Security smokes and L0 dual/xproto/admin-auth assert `GET /admin/security-policies`:
 

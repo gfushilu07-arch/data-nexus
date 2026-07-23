@@ -23,7 +23,7 @@
 - [x] **P2**：双人金库 F18、时间窗 F27、Cedar F26/F26b、OTel B03、审计轮转+OpenDAL B04、portal 导出 B05  
 - [x] **P3 主线**：H01–H04、B04c/B05b/B06/B07、F28、A05、UI01/UI02、smoke 硬化  
 
-### 关键 smoke（矩阵规模；发版前 `all`+`cedar`；**UI52–60 remainders 诚实 pin 已覆盖 security + L0 dual/xproto + admin-auth**）
+### 关键 smoke（矩阵规模；发版前 `all`+`cedar`；**UI52–61 remainders 诚实 pin 已覆盖 security + L0 dual/xproto + admin-auth**）
 
 | 组 | 脚本数 | 内容 |
 |----|:------:|------|
@@ -318,3 +318,4 @@ examples/        smoke + gateway config 样例
 | UI59 | L0 dual/xproto smokes pin remainders honesty when security off | test(ui59) |
 | UI60 | admin-auth smoke: security-policies 401 + authed remainders honesty | test(ui60) |
 | UI61 | smoke matrix + testing-smoke rule document remainders honesty pins | docs(ui61) |
+| UI62 | bump remainders honesty spans UI52–61 + A09 仍欠 RSS cite | docs(ui62) |
