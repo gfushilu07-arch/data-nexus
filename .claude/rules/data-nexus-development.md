@@ -80,7 +80,7 @@ docs/            架构与路线图（权威细节）
 | Secure / 流式 | 有 mask 等义务 | 窗口内处理；禁止「全量再改」唯一实现 |
 | 跨协议 | 翻译开启 | Streaming 窗口 encode |
 
-**已知债务（改动时优先还）**：Complete/控制语句小物化；Portal Complete 无 RowStream 时 backend 仍可能物化；PG/MySQL extended **非** TCP bind 帧中继（passthrough 下 demote Streaming）；A10 逻辑 skip 续读 **非** backend 真游标；进程 RSS 峰值 CI 未做（仅逻辑 peak_window_rows）。
+**已知债务（改动时优先还）**：Complete/控制语句小物化；Portal Complete 无 RowStream 时 backend 仍可能物化；PG/MySQL extended **非** TCP bind 帧中继（passthrough 下 demote Streaming）；A10 逻辑 skip / 进程内游标 **非** backend `WITH HOLD`（`remainders.backend_sql_with_hold=false`）；H05 **非** CRDT/mlock（`remainders.crdt_merge/mlock=false`）；进程 RSS 精确 1–2 窗 CI 未做（仅逻辑 peak；`remainders.process_rss_window_byte_ci=false`）。
 
 ## 5. 安全与审计
 

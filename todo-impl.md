@@ -312,3 +312,4 @@ examples/        smoke + gateway config 样例
 | UI53 | remainders honesty on Portal/Sessions/Tickets/Vault/Audit/Topology/Cedar + smoke pins | feat(ui)/test |
 | UI54 | remainders.backend_sql_with_hold/crdt/mlock/rss_ci pin on all 21 security smokes | test(ui54) |
 | UI55 | unit: security-policies remainders/sql_cursor/streaming honesty + §4 remainders rows | test(ui55)/docs |
+| UI56 | sync rules + todo 已有/仍欠 with remainders API (UI52–55) | docs(ui56) |

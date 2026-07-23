@@ -34,6 +34,7 @@ backend 行窗口 → 义务(mask/水印/max_rows) → encode 窗口 → socket 
 - A07：`handle_frame_to_writer` + socket `ResponseWriter` 已接。
 - A10 prepared：MySQL COM_STMT_EXECUTE → backend **COM_STMT_PREPARE/EXECUTE 绑定**（连接级 stmt 缓存）+ binary 行解码 + **PREPARE 回传 result 列定义（num_columns + ColumnDefinition）**；PG Bind → QueryParams + Statement 缓存 + Streaming；**Describe 显式 SELECT / `SELECT *` catalog**；**扩展协议 Execute 不发 ReadyForQuery**（仅 Sync 发 Z）→ 同连接 rebind；**smoke**：双协议 prepared max_rows + **psycopg 同连接 rebind** + mysql description；**客户端 Execute max_rows → PortalSuspended（策略截断仍 C）**；**同 portal multi-Execute 续读优先 process-local `RowStream` hold**（`hold_remainder` + `gateway_portal_resume_total{mode=hold|resume_hold}`）；hold 不可用时 **logical_skip**；**简单查询 `DECLARE/FETCH/CLOSE` 进程内命名游标**（`named_cursors` + `sql_cursor_*`；无 WITH HOLD 在 COMMIT 丢弃；WITH HOLD 跨 COMMIT 但**断连/`Drop`/Quit 即死** `sql_cursor_session_end`；**仅 forward FETCH**；`MOVE`/`FETCH ABSOLUTE` 等 **fail-closed** `sql_cursor_unsupported`；**非** backend 服务端游标）；非 free-form TCP 代理。
 - **观测诚实**（`examples/OBSERVABILITY.md` A-track 表）：`execute_path` 不能当 RSS/零拷贝证明；`passthrough_client` 是 unit-scoped 原包中继；Portal `chunked` ≠ `backend_window`；PortalSuspended / SQL cursor ≠ backend `WITH HOLD`（看 `gateway_portal_resume_total`）。
+- **未交付边界 API（UI52–55）**：`GET /admin/security-policies` 的 `remainders` 恒为 `backend_sql_with_hold=false` / `crdt_merge=false` / `mlock=false` / `process_rss_window_byte_ci=false`；全 `smoke-security-*.sh` + unit `ui52_security_policies_exposes_remainders_and_cursor_honesty` 钉住。相邻 `sql_cursor` / `peak_is_process_rss` 诚实字段**不**表示 A10/H05/A06 重债已完成。
 
 ## 实现检查清单
 
@@ -43,7 +44,7 @@ backend 行窗口 → 义务(mask/水印/max_rows) → encode 窗口 → socket 
 2. 有义务时是否仍 `apply_obligations_to_response` 整包？→ 优先 `write_streaming_query_with_obligations` / encode 窗口 mask。
 3. 是否接到 socket writer，而不是只 `CollectingWriter`？
 4. 失败/提前结束是否 drain 流并归还连接？
-5. todo §4 诚实账与 OBSERVABILITY 是否需要更新？
+5. todo §4 诚实账与 OBSERVABILITY 是否需要更新？`remainders.*` 是否仍为 false 且未在文案中暗示已交付？
 
 ## 落点
 
