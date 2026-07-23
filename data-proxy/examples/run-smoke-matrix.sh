@@ -47,6 +47,7 @@ Honesty (UI52–61): every security-* smoke pins security-policies.remainders=fa
 (A10 WITH HOLD / H05 CRDT·mlock / A06 window-byte RSS CI not delivered). L0 dual/
 xproto + admin-auth also pin remainders/sql_cursor/streaming honesty (incl.
 security.enabled=false and JWT-authed admin paths).
+  Shared helper: examples/assert-security-policies-honesty.py (UI63).
 EOF
 }
 

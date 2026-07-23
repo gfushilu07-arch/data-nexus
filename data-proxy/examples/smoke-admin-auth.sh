@@ -158,31 +158,12 @@ code="$(curl -s -o /tmp/dn-ui60-policies-401.json -w "%{http_code}" "$ADMIN/admi
 }
 echo "security-policies without token: $code"
 
-echo "==> UI60 GET /admin/security-policies with token → remainders honesty"
+echo "==> UI60/UI63 GET /admin/security-policies with token → remainders honesty"
 curl -fsS "$ADMIN/admin/security-policies" \
   -H "Authorization: Bearer $TOKEN" >/tmp/dn-ui60-security-policies.json
-python3 - <<'PY_AUTH'
-import json
-data=json.load(open("/tmp/dn-ui60-security-policies.json"))
-assert "enabled" in data, data
-assert data.get("star_expands_wildcard") is False, data.get("star_expands_wildcard")
-st=data.get("streaming") or {}
-assert st.get("peak_is_process_rss") is False, st
-assert st.get("obligations_force_streaming") is True, st
-sc=data.get("sql_cursor") or {}
-assert sc.get("process_local") is True, sc
-assert sc.get("backend_with_hold") is False, sc
-rem=data.get("remainders") or {}
-assert rem.get("backend_sql_with_hold") is False, rem
-assert rem.get("crdt_merge") is False, rem
-assert rem.get("mlock") is False, rem
-assert rem.get("process_rss_window_byte_ci") is False, rem
-print(
-    "UI60 authed security-policies honesty ok",
-    "enabled", data.get("enabled"),
-    "remainders", rem,
-)
-PY_AUTH
+python3 "$(cd "$(dirname "$0")" && pwd)/assert-security-policies-honesty.py" \
+  --file /tmp/dn-ui60-security-policies.json \
+  --label "UI60 admin-auth"
 
 echo "==> GET /metrics still public (public_metrics=true)"
 code="$(curl -s -o /tmp/data-nexus-metrics.txt -w "%{http_code}" "$ADMIN/metrics")"

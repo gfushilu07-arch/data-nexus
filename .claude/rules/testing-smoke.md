@@ -52,6 +52,10 @@ Also pin `sql_cursor.process_local=true` / `backend_with_hold=false` and
 `streaming.peak_is_process_rss=false` / `obligations_force_streaming=true`.
 Do not drop these asserts when editing smokes.
 
+Shared helper (UI63): `examples/assert-security-policies-honesty.py`
+(`--file` / `--url` / `--bearer` / `--expect-enabled`). Prefer it for new L0/auth
+smokes; security-core may keep inline asserts plus an optional helper call.
+
 ## 纪律
 
 1. Smoke 启动前 **pkill** 残留 `/debug/proxy`。

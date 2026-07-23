@@ -159,6 +159,11 @@ print("security-policies:", data["rule_count"], "rules", names,
       "pdp", pdp.get("backend"), "remote_cfg", pdp.get("remote_configured"))
 PY
 
+python3 "$(cd "$(dirname "$0")" && pwd)/assert-security-policies-honesty.py" \
+  --file /tmp/data-nexus-security-policies.json \
+  --expect-enabled true \
+  --label "UI63 deny"
+
 mysql_via_gateway() {
   local sql="$1"
   docker run --rm --add-host=host.docker.internal:host-gateway mysql:8.0 \
