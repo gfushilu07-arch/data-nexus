@@ -125,6 +125,9 @@ cd data-proxy
 | Remote PDP | F31 已交付：表/动作 gate；超时 fail_closed；**非**热路径逐行 mask |
 | Cedar ABAC | F29 已交付：静态 `subject_attrs`/`table_attrs`；非动态 IdP 同步 |
 | 复杂 SQL / 列 ACL | T01：表可抽；**嵌套 SELECT 列表可 strip 列**；`*` / `t.*` **不展开**（deny 整句拒绝；allow 也不展开 strip；unit+Policies 诚实） |
+| A10 backend WITH HOLD | 仅进程内 `named_cursors`；**`remainders.backend_sql_with_hold=false`**（UI52–54）；断连即死；非服务端游标 |
+| H05 CRDT / mlock | 全文件 LWW；Zeroize 非 mlock；**`remainders.crdt_merge=false` / `remainders.mlock=false`** |
+| A06 精确窗字节 CI | 逻辑 `peak_window_*` 权威；stream-rss 仅粗 cap；**`remainders.process_rss_window_byte_ci=false`** |
 
 ---
 
@@ -134,9 +137,9 @@ cd data-proxy
 
 建议优先级：
 
-1. **A10** backend SQL `DECLARE … WITH HOLD` 服务端游标（可选；进程内 `named_cursors` + `sql_cursor_*` + **UI39/UI43–51 诚实** + **API `remainders.backend_sql_with_hold=false`** + **UI53 运维页 remainders 铺开** + **UI54 全 security smoke remainders pin（21/21）** 已有）  
-2. **H05** CRDT merge / mlock（可选；LWW + Zeroize + **`remainders.crdt_merge=false` / `remainders.mlock=false`** 已有）  
-3. **A06** 进程/cgroup 精确 1–2 窗字节 CI（可选；逻辑 peak_window_bytes 已有；**`remainders.process_rss_window_byte_ci=false`** + stream-rss 粗 cap 已有）  
+1. **A10** backend SQL `DECLARE … WITH HOLD` 服务端游标（可选；进程内 + remainders 诚实 UI52–54 + unit 已有）  
+2. **H05** CRDT merge / mlock（可选；LWW + Zeroize + remainders 诚实已有）  
+3. **A06** 进程/cgroup 精确 1–2 窗字节 CI（可选；逻辑 peak + remainders 诚实 + stream-rss 粗 cap 已有）  
 4. 体验小刀；**F30/P0x 延后项未点名勿做**
 
 ```bash

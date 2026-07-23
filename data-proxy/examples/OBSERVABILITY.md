@@ -80,6 +80,7 @@ Admin UI surfaces security-policies honesty without metrics traffic (UI40/UI43â€
 | Remainders (UI52) | `remainders.backend_sql_with_hold=false`, `crdt_merge=false`, `mlock=false`, `process_rss_window_byte_ci=false` | Explicit **not delivered** flags for A10/H05/A06 heavy debts |
 | Remainders surfaces (UI53) | Portal/Sessions/Tickets/Vault/Audit/Topology/Cedar | Same not-delivered flags next to ops workflows |
 | Remainders smokes (UI54) | all `smoke-security-*.sh` (21) pin `remainders.*=false` | CI cannot silently drop not-delivered flags |
+| Remainders unit (UI55) | `ui52_security_policies_exposes_remainders_and_cursor_honesty` | Lib test on security-deny config snapshot |
 
 Admin UI (UI38) soft-parses `/metrics` on Overview + Settings:
 

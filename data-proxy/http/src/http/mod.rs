@@ -5442,4 +5442,54 @@ service = "missing-service"
             other => panic!("expected Query, got {other:?}"),
         }
     }
+
+    fn security_enabled_server() -> AxumServer {
+        let gateway_config = GatewayConfigDocument::from_toml(include_str!(
+            "../../../examples/security-deny-gateway-config.toml"
+        ))
+        .unwrap();
+        AxumServer {
+            pisa_config: PisaProxyConfig {
+                admin: gateway_config.admin.clone(),
+                version: gateway_config.version.clone(),
+                ..PisaProxyConfig::default()
+            },
+            gateway_config: Some(shared_gateway_config(gateway_config)),
+            gateway_config_source: None,
+            runtime_state: None,
+            metrics_manager: MetricsManager::new(),
+        }
+    }
+
+    /// UI40/UI43/UI52: always-on honesty fields on GET /admin/security-policies.
+    #[tokio::test]
+    async fn ui52_security_policies_exposes_remainders_and_cursor_honesty() {
+        let (status, value) =
+            get_json_from(security_enabled_server(), "/admin/security-policies").await;
+        assert_eq!(status, StatusCode::OK, "{value}");
+        assert_eq!(value["enabled"], true);
+        assert_eq!(value["star_expands_wildcard"], false);
+
+        let streaming = &value["streaming"];
+        assert_eq!(streaming["peak_is_process_rss"], false);
+        assert_eq!(streaming["obligations_force_streaming"], true);
+
+        let sql_cursor = &value["sql_cursor"];
+        assert_eq!(sql_cursor["process_local"], true);
+        assert_eq!(sql_cursor["backend_with_hold"], false);
+        assert_eq!(sql_cursor["forward_fetch_only"], true);
+        assert_eq!(sql_cursor["session_end_clears"], true);
+
+        let rem = &value["remainders"];
+        assert_eq!(rem["backend_sql_with_hold"], false);
+        assert_eq!(rem["crdt_merge"], false);
+        assert_eq!(rem["mlock"], false);
+        assert_eq!(rem["process_rss_window_byte_ci"], false);
+
+        // Adjacent state honesty still present (H05) — not CRDT / not mlock.
+        let state = &value["state"];
+        assert_eq!(state["crdt"], false);
+        assert_eq!(state["mlock"], false);
+        assert_eq!(state["vault_password_zeroize"], true);
+    }
 }
