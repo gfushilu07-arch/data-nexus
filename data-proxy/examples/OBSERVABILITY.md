@@ -95,6 +95,7 @@ Admin UI surfaces security-policies honesty without metrics traffic (UI40/UI43�
 | Extended/cedar helper (UI66) | stream/passthrough/watermark/dual/time/xproto/cedar call helper | all/extended/cedar matrix share helper |
 | Span hygiene (UI67) | todo/rules/runbook/matrix cite UI52–68 after full helper wiring | Keep honesty spans current |
 | Architecture honesty (UI68) | tech-architecture §13.3 + audit-architecture §1.4 | Long-form docs cite remainders not-delivered table |
+| Entry-point honesty (UI69) | CLAUDE.md + .claude/README cite §13.3 / remainders | Contributors see not-delivered flags at repo entry |
 
 Admin UI (UI38) soft-parses `/metrics` on Overview + Settings:
 

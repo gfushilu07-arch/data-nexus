@@ -97,6 +97,7 @@
 - 不在 rules 里写长篇架构复述（指向 `docs/`）。
 - 不默认打开 Cedar/OpenDAL/OTel（精简二进制）。
 - 不把「HTTP chunk」说成端到端流式（诚实账在 todo §4）。
+- A10 backend WITH HOLD / H05 CRDT·mlock / A06 精确窗字节 CI：**未交付**（Admin `remainders` + 架构 §13.3）。
 - 不把 Agents 当日常默认路径（评审场景再用）。
 
 ## 维护

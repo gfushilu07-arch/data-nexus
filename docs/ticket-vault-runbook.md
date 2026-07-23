@@ -271,7 +271,7 @@ UI：`/vault`、`/portal`。回归：`smoke-security-portal.sh`、`smoke-securit
 | `security.state.backend=file` | ticket/vault JSON + advisory lock |
 | `ticket_path` / `vault_path` | 共享路径（NFS/共享盘等） |
 | `ticket_encrypt_key` / `vault_encrypt_key` | 64 hex；vault 无密钥则 **不落盘密码** |
-| 进程内 secret | 活跃 lease 的 backend 密码在 RAM；**revoke / prune / store Drop** 时 **ZeroizeOnDrop** 擦除；Admin `security-policies.state` 暴露 **`vault_password_zeroize=true` / `mlock=false`**（**非** mlock / 安全堆）；`backend_identity` 返回 `(user, Zeroizing<String>)`；顶层 **`remainders.mlock=false`**（UI52–66）再次钉住 |
+| 进程内 secret | 活跃 lease 的 backend 密码在 RAM；**revoke / prune / store Drop** 时 **ZeroizeOnDrop** 擦除；Admin `security-policies.state` 暴露 **`vault_password_zeroize=true` / `mlock=false`**（**非** mlock / 安全堆）；`backend_identity` 返回 `(user, Zeroizing<String>)`；顶层 **`remainders.mlock=false`**（UI52–68）再次钉住 |
 | 文件一致性 | 全文件替换 + advisory lock，**last-writer-wins**；Admin 暴露 **`merge_strategy=last_writer_wins` / `crdt=false`**（**非 CRDT**）；顶层 **`remainders.crdt_merge=false`** |
 
 生产模板：[`data-proxy/examples/prod/`](../data-proxy/examples/prod/README.md)。
