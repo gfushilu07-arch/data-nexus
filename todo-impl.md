@@ -328,3 +328,4 @@ examples/        smoke + gateway config 样例
 | UI69 | CLAUDE/README + span bump UI52–71 after architecture honesty | docs(ui69) |
 | UI70 | dual-listener helper path + span UI52–71 | chore(ui70) |
 | UI71 | check-honesty-helper-coverage.sh + §5 honesty-closed product focus | test(ui71)/docs |
+| A10 | streaming.backend_sql_with_hold config gate + design doc (step 0; still not implemented) | feat(a10)/docs |

@@ -591,6 +591,9 @@ struct AdminSecurityStreamingSummary {
     /// A08 honesty: result obligations (mask / row_filter / max_rows / watermark) force
     /// Streaming even when `passthrough=true`.
     obligations_force_streaming: bool,
+    /// A10: mirrors `security.streaming.backend_sql_with_hold` (always false until implemented;
+    /// validate rejects true). See `remainders.backend_sql_with_hold`.
+    backend_sql_with_hold: bool,
 }
 
 /// A10 honesty: process-local SQL cursor surface (not backend WITH HOLD).
@@ -1282,6 +1285,7 @@ impl AxumServer {
                             passthrough: security.streaming.passthrough,
                             peak_is_process_rss: false,
                             obligations_force_streaming: true,
+                            backend_sql_with_hold: security.streaming.backend_sql_with_hold,
                         },
                         audit_sample: AdminSecurityAuditSampleSummary {
                             sample_enabled: security.audit.sample_enabled,
@@ -5473,6 +5477,7 @@ service = "missing-service"
         let streaming = &value["streaming"];
         assert_eq!(streaming["peak_is_process_rss"], false);
         assert_eq!(streaming["obligations_force_streaming"], true);
+        assert_eq!(streaming["backend_sql_with_hold"], false);
 
         let sql_cursor = &value["sql_cursor"];
         assert_eq!(sql_cursor["process_local"], true);
@@ -5515,6 +5520,7 @@ service = "missing-service"
         let streaming = &value["streaming"];
         assert_eq!(streaming["peak_is_process_rss"], false);
         assert_eq!(streaming["obligations_force_streaming"], true);
+        assert_eq!(streaming["backend_sql_with_hold"], false);
         assert_eq!(value["star_expands_wildcard"], false);
     }
 }

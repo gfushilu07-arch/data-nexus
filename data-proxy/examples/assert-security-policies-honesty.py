@@ -51,6 +51,9 @@ def assert_honesty(data: dict[str, Any], expect_enabled: str | None) -> None:
     st = data.get("streaming") or {}
     assert st.get("peak_is_process_rss") is False, st
     assert st.get("obligations_force_streaming") is True, st
+    # Config mirror: always false until A10 backend WITH HOLD ships (validate rejects true).
+    if "backend_sql_with_hold" in st:
+        assert st.get("backend_sql_with_hold") is False, st
 
     sc = data.get("sql_cursor") or {}
     assert sc.get("process_local") is True, sc

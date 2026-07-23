@@ -95,6 +95,21 @@ Path("$B08_CFG").write_text("\n".join(out) + "\n")
 PY
 run_expect_fail "b08-sample-requires-l2" "$B08_CFG" "sample_enabled|default_audit_level|L2"
 
+# --- A10: backend_sql_with_hold=true must reject (not implemented; no silent no-op) ---
+A10_CFG="$TMPDIR_SMOKE/a10-backend-with-hold.toml"
+python3 - <<PY
+from pathlib import Path
+base = Path("$BASE_CFG").read_text()
+out = []
+for line in base.splitlines():
+    out.append(line)
+    if line.strip() == "[security.streaming]":
+        out.append("backend_sql_with_hold = true")
+Path("$A10_CFG").write_text("\n".join(out) + "\n")
+PY
+run_expect_fail "a10-backend-sql-with-hold-not-implemented" "$A10_CFG" "backend_sql_with_hold|not implemented"
+
+
 # --- A08: require + verify without CA must reject (production pin) ---
 A08_CFG="$TMPDIR_SMOKE/a08-require-no-ca.toml"
 python3 - <<PY

@@ -316,6 +316,8 @@ export type AdminSecurityPolicies = {
     peak_is_process_rss?: boolean
     /** A08: always true — mask/row_filter/max_rows/watermark force Streaming. */
     obligations_force_streaming?: boolean
+    /** A10: config knob; always false until backend WITH HOLD is implemented. */
+    backend_sql_with_hold?: boolean
   }
   /**
    * A10 honesty: simple-query DECLARE/FETCH/CLOSE is process-local only

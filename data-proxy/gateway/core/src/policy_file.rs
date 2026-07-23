@@ -213,6 +213,7 @@ mod tests {
             window_rows: 128,
             max_rows: Some(50),
             passthrough: true,
+            backend_sql_with_hold: false,
             max_bytes: None,
         };
         cfg.state.policy_path = path.to_string_lossy().into();

@@ -232,6 +232,16 @@ impl SecurityPolicyConfig {
                 "security.streaming.window_rows must be >= 1".into(),
             ));
         }
+        // A10: backend SQL WITH HOLD is not implemented. Enabling would be a silent no-op
+        // (process-local named_cursors would still run). Fail closed at validate.
+        if self.streaming.backend_sql_with_hold {
+            return Err(GatewayError::Configuration(
+                "security.streaming.backend_sql_with_hold=true is not implemented \
+                 (process-local DECLARE/FETCH/CLOSE only; Admin remainders.backend_sql_with_hold=false). \
+                 Leave false or see docs/a10-backend-sql-with-hold-design.md"
+                    .into(),
+            ));
+        }
 
         if self.audit.queue_capacity == 0 {
             return Err(GatewayError::Configuration(
@@ -532,6 +542,11 @@ pub struct SecurityStreamingConfig {
     pub max_bytes: Option<u64>,
     #[serde(default = "default_true")]
     pub passthrough: bool,
+    /// A10: request backend SQL `DECLARE … WITH HOLD` server cursors.
+    /// **Not implemented** — `validate()` rejects `true` (config must not silently no-op).
+    /// Process-local `named_cursors` remain the only path; Admin `remainders.backend_sql_with_hold=false`.
+    #[serde(default)]
+    pub backend_sql_with_hold: bool,
 }
 
 fn default_window_rows() -> u32 {
@@ -545,6 +560,7 @@ impl Default for SecurityStreamingConfig {
             max_rows: None,
             max_bytes: None,
             passthrough: true,
+            backend_sql_with_hold: false,
         }
     }
 }
@@ -885,6 +901,21 @@ mod tests {
         cfg.audit.sample_max_rows = 5;
         cfg.audit.sample_max_bytes = 4096;
         assert_eq!(cfg.validate(), Ok(()));
+    }
+
+    #[test]
+    fn a10_backend_sql_with_hold_true_rejected() {
+        // Fail-closed: unimplemented capability must not silently no-op.
+        let mut cfg = SecurityPolicyConfig::default();
+        assert!(!cfg.streaming.backend_sql_with_hold);
+        assert_eq!(cfg.validate(), Ok(()));
+        cfg.streaming.backend_sql_with_hold = true;
+        let err = cfg.validate().expect_err("backend_sql_with_hold not implemented");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("backend_sql_with_hold") && msg.contains("not implemented"),
+            "{msg}"
+        );
     }
 
     #[test]

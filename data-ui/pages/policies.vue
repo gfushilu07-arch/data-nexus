@@ -329,6 +329,7 @@ onMounted(() => {
           <dt>streaming peak</dt>
           <dd class="mono">
             peak_is_process_rss={{ policy.streaming.peak_is_process_rss ?? false }}
+            · backend_sql_with_hold={{ policy.streaming.backend_sql_with_hold ?? false }}
             · logical encode window ≤ window_rows · peak_window_bytes ≪ total encode_bytes · not process RSS CI
           </dd>
         </div>
