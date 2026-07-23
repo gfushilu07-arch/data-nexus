@@ -120,6 +120,11 @@ assert sc.get("backend_with_hold") is False, sc
 wm=data.get("watermark") or {}
 assert wm.get("enabled") is True, wm
 assert "token" not in wm, wm
+rem = data.get("remainders") or {}
+assert rem.get("backend_sql_with_hold") is False, rem
+assert rem.get("crdt_merge") is False, rem
+assert rem.get("mlock") is False, rem
+assert rem.get("process_rss_window_byte_ci") is False, rem
 print(
     "watermark security-policies honesty ok:",
     "passthrough", st.get("passthrough"),

@@ -310,3 +310,4 @@ examples/        smoke + gateway config 样例
 | UI51 | Topology security-policies honesty banner | feat(ui) |
 | UI52 | security-policies remainders block for A10/H05/A06 not-delivered flags | feat(ui/api) |
 | UI53 | remainders honesty on Portal/Sessions/Tickets/Vault/Audit/Topology/Cedar + smoke pins | feat(ui)/test |
+| UI54 | remainders.backend_sql_with_hold/crdt/mlock/rss_ci pin on all 21 security smokes | test(ui54) |

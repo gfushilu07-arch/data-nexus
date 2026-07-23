@@ -95,6 +95,11 @@ assert data.get("star_expands_wildcard") is False, data.get("star_expands_wildca
 sc=data.get("sql_cursor") or {}
 assert sc.get("process_local") is True, sc
 assert sc.get("backend_with_hold") is False, sc
+rem = data.get("remainders") or {}
+assert rem.get("backend_sql_with_hold") is False, rem
+assert rem.get("crdt_merge") is False, rem
+assert rem.get("mlock") is False, rem
+assert rem.get("process_rss_window_byte_ci") is False, rem
 print("policies audit_sample", s, "sql_text_max_chars", data.get("sql_text_max_chars"))
 print("B08 honesty API: full_result_l3=false requires_audit_level=L2")
 print("UI40/UI43 streaming/sql_cursor honesty", st.get("peak_is_process_rss"), sc)
