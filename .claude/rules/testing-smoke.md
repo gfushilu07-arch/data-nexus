@@ -37,6 +37,21 @@ cargo build -p data-proxy --bin proxy --features security-cedar
 cargo build -p data-proxy --bin proxy
 ```
 
+## Remainders honesty pins (UI52–60)
+
+Security smokes and L0 dual/xproto/admin-auth assert `GET /admin/security-policies`:
+
+| Field | Value | Meaning |
+|-------|-------|---------|
+| `remainders.backend_sql_with_hold` | `false` | A10 not backend SQL WITH HOLD |
+| `remainders.crdt_merge` | `false` | H05 not CRDT |
+| `remainders.mlock` | `false` | H05 not mlock |
+| `remainders.process_rss_window_byte_ci` | `false` | A06 not exact 1–2 window process RSS CI |
+
+Also pin `sql_cursor.process_local=true` / `backend_with_hold=false` and
+`streaming.peak_is_process_rss=false` / `obligations_force_streaming=true`.
+Do not drop these asserts when editing smokes.
+
 ## 纪律
 
 1. Smoke 启动前 **pkill** 残留 `/debug/proxy`。

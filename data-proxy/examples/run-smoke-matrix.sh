@@ -42,6 +42,11 @@ Groups:
   default             l0 + security-core
   all                 default + security-extended (not cedar)
   list                show this help
+
+Honesty (UI52–60): every security-* smoke pins security-policies.remainders=false
+(A10 WITH HOLD / H05 CRDT·mlock / A06 window-byte RSS CI not delivered). L0 dual/
+xproto + admin-auth also pin remainders/sql_cursor/streaming honesty (incl.
+security.enabled=false and JWT-authed admin paths).
 EOF
 }
 
