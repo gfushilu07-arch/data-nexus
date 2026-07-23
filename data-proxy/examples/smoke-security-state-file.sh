@@ -131,6 +131,11 @@ print(
 )
 PY
 
+python3 "$(cd "$(dirname "$0")" && pwd)/assert-security-policies-honesty.py" \
+  --file /tmp/dn-h05-policies.json \
+  --label "UI65 state-file" \
+  --expect-enabled true
+
 echo "==> issue ticket + vault lease"
 curl -fsS -X POST "http://127.0.0.1:8082/admin/tickets" \
   -H 'content-type: application/json' \

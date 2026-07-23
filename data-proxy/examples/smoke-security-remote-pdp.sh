@@ -194,6 +194,11 @@ assert rem.get("process_rss_window_byte_ci") is False, rem
 print("policies remote ok", pdp, "streaming_honesty", st.get("peak_is_process_rss"), "sql_cursor", sc)
 PY
 
+python3 "$(cd "$(dirname "$0")" && pwd)/assert-security-policies-honesty.py" \
+  --file /tmp/dn-remote-policies.json \
+  --label "UI65 remote-pdp" \
+  --expect-enabled true
+
 echo "==> allow: SELECT 1 via remote allow"
 out="$(mysql_via_gateway 'SELECT 1 AS ok;')"
 echo "$out" | tr -d '[:space:]' | grep -qx '1'

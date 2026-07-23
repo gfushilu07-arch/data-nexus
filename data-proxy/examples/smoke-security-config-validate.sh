@@ -178,6 +178,11 @@ assert rem.get("mlock") is False, rem
 assert rem.get("process_rss_window_byte_ci") is False, rem
 print("UI50 valid-config security-policies honesty ok", "window_rows", st.get("window_rows"), "sql_cursor", sc)
 PY_HON
+
+python3 "$(cd "$(dirname "$0")" && pwd)/assert-security-policies-honesty.py" \
+  --file /tmp/dn-ui50-security-policies.json \
+  --label "UI65 config-validate" \
+  --expect-enabled true
 kill "$VALID_PID" 2>/dev/null || true
 wait "$VALID_PID" 2>/dev/null || true
 echo "valid config started ok (stopped)"

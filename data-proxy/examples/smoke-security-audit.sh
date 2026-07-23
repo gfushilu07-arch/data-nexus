@@ -108,6 +108,11 @@ assert rem.get("process_rss_window_byte_ci") is False, rem
 print("policies audit_queue", q, "pdp", pdp, "streaming_honesty", st.get("peak_is_process_rss"), "sql_cursor", sc)
 PY
 
+python3 "$(cd "$(dirname "$0")" && pwd)/assert-security-policies-honesty.py" \
+  --file /tmp/dn-audit-policies.json \
+  --label "UI65 audit" \
+  --expect-enabled true
+
 echo "==> GET /admin/audit/stats"
 curl -fsS "http://127.0.0.1:8082/admin/audit/stats" | tee /tmp/dn-audit-stats.json
 python3 - <<'PY'

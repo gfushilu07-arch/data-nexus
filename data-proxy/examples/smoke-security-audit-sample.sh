@@ -105,6 +105,11 @@ print("B08 honesty API: full_result_l3=false requires_audit_level=L2")
 print("UI40/UI43 streaming/sql_cursor honesty", st.get("peak_is_process_rss"), sc)
 PY2
 
+python3 "$(cd "$(dirname "$0")" && pwd)/assert-security-policies-honesty.py" \
+  --file /tmp/dn-audit-sample-policies.json \
+  --label "UI65 audit-sample" \
+  --expect-enabled true
+
 echo "==> security-policies exposes H05 state summary"
 curl -fsS "http://127.0.0.1:8082/admin/security-policies" | tee /tmp/dn-audit-sample-policies.json >/dev/null
 python3 - <<'PY2'

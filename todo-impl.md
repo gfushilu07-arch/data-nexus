@@ -321,3 +321,4 @@ examples/        smoke + gateway config 样例
 | UI62 | bump remainders honesty spans UI52–61 + A09 仍欠 RSS cite | docs(ui62) |
 | UI63 | assert-security-policies-honesty.py shared helper + dual/deny/admin-auth use | feat(ui63)/test |
 | UI64 | migrate L0 cross-protocol smokes to honesty helper | test(ui64) |
+| UI65 | security-core smokes call assert-security-policies-honesty helper | test(ui65) |

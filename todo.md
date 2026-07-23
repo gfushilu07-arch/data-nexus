@@ -63,7 +63,7 @@ cd data-proxy
   - 路径：`pg_client_extended_frames` + `pg_ext_tcp_hold`、`client_frames_relay_hold_into`、`PgBackendSync`、`smoke-security-passthrough.sh`
 
 - [ ] **A09** Portal 端到端流式  
-  - 已有：NDJSON + CSV + **JSON** Streaming → `backend_window`；**Complete 回退** 三格式 `chunked`（smoke：INSERT NDJSON/JSON/CSV **强制** `x-data-nexus-stream: chunked`）；JSON 分片文档 UI 可 parse；**同协议 portal smoke 钉 `window_rows=2`**；**跨协议 portal 双向** smoke 同窗；**响应头 `x-data-nexus-window-rows`**；**portal HTTP 记 Prometheus `type=PORTAL_STREAM|PORTAL_CHUNKED`**（同协议 streaming / 跨协议 **xproto_stream** + 逻辑 peak；smoke 强制 PORTAL_STREAM peak≤window，含 xproto 双向）；**UI41 Overview/Settings 解析 PORTAL_STREAM vs PORTAL_CHUNKED + stream peak**（诚实：chunked 可能 backend 已物化；peak 非 RSS）；**UI46 Portal 展示 streaming/star/sql_cursor 诚实 + portal/passthrough/watermark smoke pin security-policies**；**UI47 Sessions 展示 sql_cursor/streaming 诚实 + audit/audit-sample/state-file/xproto×2 smoke pin**；**UI48 Tickets/Vault 同字段 + ticket/dual/time/remote smoke pin**；**UI49 Cedar 页诚实 + cedar/vault/stream-rss smoke pin**；**UI50 Audit 页诚实 + config-validate valid-config pin**；**UI51 Topology 诚实横幅**；**UI52–64 remainders 未交付标志（API/运维页/smoke/unit/L0/auth/matrix docs/helper）**；**OBSERVABILITY** 标明 chunked ≠ backend_window  
+  - 已有：NDJSON + CSV + **JSON** Streaming → `backend_window`；**Complete 回退** 三格式 `chunked`（smoke：INSERT NDJSON/JSON/CSV **强制** `x-data-nexus-stream: chunked`）；JSON 分片文档 UI 可 parse；**同协议 portal smoke 钉 `window_rows=2`**；**跨协议 portal 双向** smoke 同窗；**响应头 `x-data-nexus-window-rows`**；**portal HTTP 记 Prometheus `type=PORTAL_STREAM|PORTAL_CHUNKED`**（同协议 streaming / 跨协议 **xproto_stream** + 逻辑 peak；smoke 强制 PORTAL_STREAM peak≤window，含 xproto 双向）；**UI41 Overview/Settings 解析 PORTAL_STREAM vs PORTAL_CHUNKED + stream peak**（诚实：chunked 可能 backend 已物化；peak 非 RSS）；**UI46 Portal 展示 streaming/star/sql_cursor 诚实 + portal/passthrough/watermark smoke pin security-policies**；**UI47 Sessions 展示 sql_cursor/streaming 诚实 + audit/audit-sample/state-file/xproto×2 smoke pin**；**UI48 Tickets/Vault 同字段 + ticket/dual/time/remote smoke pin**；**UI49 Cedar 页诚实 + cedar/vault/stream-rss smoke pin**；**UI50 Audit 页诚实 + config-validate valid-config pin**；**UI51 Topology 诚实横幅**；**UI52–65 remainders 未交付标志（API/运维页/smoke/unit/L0/auth/security-core helper）**；**OBSERVABILITY** 标明 chunked ≠ backend_window  
   - 仍欠：Complete 路径 ResultSet 在 backend 侧仍可能先物化（无 RowStream 时不可避免）；无进程 RSS 峰值 CI（逻辑 window 已钉；**`remainders.process_rss_window_byte_ci=false`**）  
   - 路径：`http` portal_execute_*_streaming；`security-portal-gateway-config.toml`；`security-portal-xproto{,-pg-mysql}-gateway-config.toml`；`smoke-security-portal{,-xproto,-xproto-pg-mysql}.sh`；UI Overview/Settings
 
@@ -137,7 +137,7 @@ cd data-proxy
 
 建议优先级：
 
-1. **A10** backend SQL `DECLARE … WITH HOLD` 服务端游标（可选；进程内 + remainders 诚实 UI52–64 + unit/L0/auth/helper 已有）  
+1. **A10** backend SQL `DECLARE … WITH HOLD` 服务端游标（可选；进程内 + remainders 诚实 UI52–65 + unit/L0/auth/security-core helper 已有）  
 2. **H05** CRDT merge / mlock（可选；LWW + Zeroize + remainders 诚实已有）  
 3. **A06** 进程/cgroup 精确 1–2 窗字节 CI（可选；逻辑 peak + remainders 诚实 + stream-rss 粗 cap 已有）  
 4. 体验小刀；**F30/P0x 延后项未点名勿做**

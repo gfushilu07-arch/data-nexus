@@ -87,6 +87,11 @@ assert rem.get("process_rss_window_byte_ci") is False, rem
 print("UI48 security-policies honesty ok", "window_rows", st.get("window_rows"), "sql_cursor", sc)
 PY_HON
 
+python3 "$(cd "$(dirname "$0")" && pwd)/assert-security-policies-honesty.py" \
+  --file /tmp/dn-ui48-security-policies.json \
+  --label "UI65 ticket" \
+  --expect-enabled true
+
 echo "==> SELECT 1 still allowed"
 out="$(mysql_via_gateway 'SELECT 1;')"
 echo "$out" | tr -d '[:space:]' | grep -qx '1'

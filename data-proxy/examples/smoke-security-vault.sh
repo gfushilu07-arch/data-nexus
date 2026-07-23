@@ -66,6 +66,11 @@ assert rem.get("process_rss_window_byte_ci") is False, rem
 print("UI49 security-policies honesty ok", "window_rows", st.get("window_rows"), "pdp", data.get("pdp_backend") or (data.get("pdp") or {}).get("backend"), "sql_cursor", sc)
 PY_HON
 
+python3 "$(cd "$(dirname "$0")" && pwd)/assert-security-policies-honesty.py" \
+  --file /tmp/dn-ui49-security-policies.json \
+  --label "UI65 vault" \
+  --expect-enabled true
+
 echo "==> issue lease"
 curl -fsS -X POST "http://127.0.0.1:8082/admin/vault/leases" \
   -H 'content-type: application/json' \

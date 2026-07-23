@@ -43,11 +43,11 @@ Groups:
   all                 default + security-extended (not cedar)
   list                show this help
 
-Honesty (UI52–61): every security-* smoke pins security-policies.remainders=false
+Honesty (UI52–65): every security-* smoke pins security-policies.remainders=false
 (A10 WITH HOLD / H05 CRDT·mlock / A06 window-byte RSS CI not delivered). L0 dual/
 xproto + admin-auth also pin remainders/sql_cursor/streaming honesty (incl.
 security.enabled=false and JWT-authed admin paths).
-  Shared helper: examples/assert-security-policies-honesty.py (UI63).
+  Shared helper: examples/assert-security-policies-honesty.py (UI63–65; L0 + security-core).
 EOF
 }
 

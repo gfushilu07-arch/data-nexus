@@ -386,6 +386,11 @@ print(
 )
 PY_POL
 
+python3 "$(cd "$(dirname "$0")" && pwd)/assert-security-policies-honesty.py" \
+  --file /tmp/dn-portal-security-policies.json \
+  --label "UI65 portal" \
+  --expect-enabled true
+
 echo "==> A09 portal HTTP metrics on /metrics (PORTAL_STREAM path)"
 # Portal Admin path now records gateway_execute_path_total + encode peak under type=PORTAL_*.
 # Still logical peak (not process RSS). Headers remain the primary stream contract.

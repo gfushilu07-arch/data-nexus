@@ -142,6 +142,11 @@ print("security-policies:", names, "star_policy", data.get("star_policy"),
       "sql_cursor", sc)
 PY
 
+python3 "$(cd "$(dirname "$0")" && pwd)/assert-security-policies-honesty.py" \
+  --file /tmp/data-nexus-security-column-policies.json \
+  --label "UI65 column" \
+  --expect-enabled true
+
 mysql_via_gateway() {
   local sql="$1"
   docker run --rm --add-host=host.docker.internal:host-gateway mysql:8.0 \

@@ -149,6 +149,11 @@ print(
 )
 PY
 
+python3 "$(cd "$(dirname "$0")" && pwd)/assert-security-policies-honesty.py" \
+  --file /tmp/data-nexus-security-policies-mask.json \
+  --label "UI65 mask" \
+  --expect-enabled true
+
 mysql_via_gateway() {
   local sql="$1"
   docker run --rm --add-host=host.docker.internal:host-gateway mysql:8.0 \
