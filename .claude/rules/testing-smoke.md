@@ -37,7 +37,7 @@ cargo build -p data-proxy --bin proxy --features security-cedar
 cargo build -p data-proxy --bin proxy
 ```
 
-## Remainders honesty pins (UI52–69)
+## Remainders honesty pins (UI52–71)
 
 Security smokes and L0 dual/xproto/admin-auth assert `GET /admin/security-policies`:
 
@@ -57,6 +57,9 @@ Shared helper (UI63): `examples/assert-security-policies-honesty.py`
 security-core (UI65) and security-extended/cedar (UI66: stream/rss/passthrough/watermark/
 dual-control/time/portal-xproto/cedar).
 Inline asserts may remain for extra field checks; helper is the remainders contract.
+
+Coverage gate (UI71): `examples/check-honesty-helper-coverage.sh` fails if any matrix
+smoke drops the helper call.
 
 ## 纪律
 

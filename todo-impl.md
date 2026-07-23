@@ -23,7 +23,7 @@
 - [x] **P2**：双人金库 F18、时间窗 F27、Cedar F26/F26b、OTel B03、审计轮转+OpenDAL B04、portal 导出 B05  
 - [x] **P3 主线**：H01–H04、B04c/B05b/B06/B07、F28、A05、UI01/UI02、smoke 硬化  
 
-### 关键 smoke（矩阵规模；发版前 `all`+`cedar`；**UI52–69 remainders 诚实 pin 已覆盖 security + L0 dual/xproto + admin-auth**）
+### 关键 smoke（矩阵规模；发版前 `all`+`cedar`；**UI52–71 remainders 诚实 pin 已覆盖 security + L0 dual/xproto + admin-auth**）
 
 | 组 | 脚本数 | 内容 |
 |----|:------:|------|
@@ -318,12 +318,13 @@ examples/        smoke + gateway config 样例
 | UI59 | L0 dual/xproto smokes pin remainders honesty when security off | test(ui59) |
 | UI60 | admin-auth smoke: security-policies 401 + authed remainders honesty | test(ui60) |
 | UI61 | smoke matrix + testing-smoke rule document remainders honesty pins | docs(ui61) |
-| UI62 | bump remainders honesty spans UI52–69 + A09 仍欠 RSS cite | docs(ui62) |
+| UI62 | bump remainders honesty spans UI52–71 + A09 仍欠 RSS cite | docs(ui62) |
 | UI63 | assert-security-policies-honesty.py shared helper + dual/deny/admin-auth use | feat(ui63)/test |
 | UI64 | migrate L0 cross-protocol smokes to honesty helper | test(ui64) |
 | UI65 | security-core smokes call assert-security-policies-honesty helper | test(ui65) |
 | UI66 | security-extended + cedar smokes call honesty helper | test(ui66) |
-| UI67 | bump remainders honesty spans to UI52–69 after helper matrix | docs(ui67) |
+| UI67 | bump remainders honesty spans to UI52–71 after helper matrix | docs(ui67) |
 | UI68 | architecture docs § remainders honesty boundary (tech §13.3 + audit §1.4) | docs(ui68) |
-| UI69 | CLAUDE/README + span bump UI52–69 after architecture honesty | docs(ui69) |
-| UI70 | dual-listener helper path + span UI52–69 | chore(ui70) |
+| UI69 | CLAUDE/README + span bump UI52–71 after architecture honesty | docs(ui69) |
+| UI70 | dual-listener helper path + span UI52–71 | chore(ui70) |
+| UI71 | check-honesty-helper-coverage.sh + §5 honesty-closed product focus | test(ui71)/docs |

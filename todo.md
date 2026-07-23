@@ -53,7 +53,7 @@ cd data-proxy
 > A1–A4 / A07 骨架与 socket writer 已交付（见归档）。
 
 - [ ] **A06** Backend→PEP 真行流  
-  - 已有：MySQL/PG `RowStream` + channel（含事务 producer 还 lease）；smoke 双协议 max_rows（含 txn）；**Materialized Query* 升 Streaming**；encode 峰值单测；**`peak_window_rows` + Prometheus `gateway_encode_peak_window_rows`**；**`peak_window_bytes` + `gateway_encode_peak_window_bytes`**（单窗 encode 载荷高水位；smoke 多窗 peak_bytes≪total）；smoke **强制** `execute_path=streaming` + `encode_windows>0` + **peak≤window_rows**；**粗粒度进程内存 smoke**（双协议 50k；cgroup/proc/ps；绝对 cap）；**逻辑 peak 仍权威**；**UI38 Overview/Settings 解析 `/metrics` 展示 logical peak + execute_path 计数（非 RSS）**；**UI40 API `streaming.peak_is_process_rss=false`**；**UI42 mask_rows + passthrough_bytes 卡片**；**UI45 Overview/Settings streaming/star 诚实配置 + stream smoke pin security-policies**；**UI49 Cedar/vault/stream-rss honesty pin**；**UI52–69 `remainders.process_rss_window_byte_ci=false`（API/UI/smoke/unit/L0/auth）**  
+  - 已有：MySQL/PG `RowStream` + channel（含事务 producer 还 lease）；smoke 双协议 max_rows（含 txn）；**Materialized Query* 升 Streaming**；encode 峰值单测；**`peak_window_rows` + Prometheus `gateway_encode_peak_window_rows`**；**`peak_window_bytes` + `gateway_encode_peak_window_bytes`**（单窗 encode 载荷高水位；smoke 多窗 peak_bytes≪total）；smoke **强制** `execute_path=streaming` + `encode_windows>0` + **peak≤window_rows**；**粗粒度进程内存 smoke**（双协议 50k；cgroup/proc/ps；绝对 cap）；**逻辑 peak 仍权威**；**UI38 Overview/Settings 解析 `/metrics` 展示 logical peak + execute_path 计数（非 RSS）**；**UI40 API `streaming.peak_is_process_rss=false`**；**UI42 mask_rows + passthrough_bytes 卡片**；**UI45 Overview/Settings streaming/star 诚实配置 + stream smoke pin security-policies**；**UI49 Cedar/vault/stream-rss honesty pin**；**UI52–71 `remainders.process_rss_window_byte_ci=false`（API/UI/smoke/unit/L0/auth）**  
   - 仍欠：控制语句/空结果 Complete 仍可小物化；**无进程/cgroup 精确 1–2 窗字节 CI**（逻辑 peak 已有；**`remainders.process_rss_window_byte_ci=false`**；OS RSS 仍噪声大）；portal Complete 见 A09  
   - 路径：`transport`、`server/metrics`、`core_engine`、`smoke-security-stream.sh`、`smoke-security-stream-rss.sh`、`OBSERVABILITY.md`
 
@@ -63,12 +63,12 @@ cd data-proxy
   - 路径：`pg_client_extended_frames` + `pg_ext_tcp_hold`、`client_frames_relay_hold_into`、`PgBackendSync`、`smoke-security-passthrough.sh`
 
 - [ ] **A09** Portal 端到端流式  
-  - 已有：NDJSON + CSV + **JSON** Streaming → `backend_window`；**Complete 回退** 三格式 `chunked`（smoke：INSERT NDJSON/JSON/CSV **强制** `x-data-nexus-stream: chunked`）；JSON 分片文档 UI 可 parse；**同协议 portal smoke 钉 `window_rows=2`**；**跨协议 portal 双向** smoke 同窗；**响应头 `x-data-nexus-window-rows`**；**portal HTTP 记 Prometheus `type=PORTAL_STREAM|PORTAL_CHUNKED`**（同协议 streaming / 跨协议 **xproto_stream** + 逻辑 peak；smoke 强制 PORTAL_STREAM peak≤window，含 xproto 双向）；**UI41 Overview/Settings 解析 PORTAL_STREAM vs PORTAL_CHUNKED + stream peak**（诚实：chunked 可能 backend 已物化；peak 非 RSS）；**UI46 Portal 展示 streaming/star/sql_cursor 诚实 + portal/passthrough/watermark smoke pin security-policies**；**UI47 Sessions 展示 sql_cursor/streaming 诚实 + audit/audit-sample/state-file/xproto×2 smoke pin**；**UI48 Tickets/Vault 同字段 + ticket/dual/time/remote smoke pin**；**UI49 Cedar 页诚实 + cedar/vault/stream-rss smoke pin**；**UI50 Audit 页诚实 + config-validate valid-config pin**；**UI51 Topology 诚实横幅**；**UI52–69 remainders 未交付标志（API/运维页/全 smoke 矩阵 helper）**；**OBSERVABILITY** 标明 chunked ≠ backend_window  
+  - 已有：NDJSON + CSV + **JSON** Streaming → `backend_window`；**Complete 回退** 三格式 `chunked`（smoke：INSERT NDJSON/JSON/CSV **强制** `x-data-nexus-stream: chunked`）；JSON 分片文档 UI 可 parse；**同协议 portal smoke 钉 `window_rows=2`**；**跨协议 portal 双向** smoke 同窗；**响应头 `x-data-nexus-window-rows`**；**portal HTTP 记 Prometheus `type=PORTAL_STREAM|PORTAL_CHUNKED`**（同协议 streaming / 跨协议 **xproto_stream** + 逻辑 peak；smoke 强制 PORTAL_STREAM peak≤window，含 xproto 双向）；**UI41 Overview/Settings 解析 PORTAL_STREAM vs PORTAL_CHUNKED + stream peak**（诚实：chunked 可能 backend 已物化；peak 非 RSS）；**UI46 Portal 展示 streaming/star/sql_cursor 诚实 + portal/passthrough/watermark smoke pin security-policies**；**UI47 Sessions 展示 sql_cursor/streaming 诚实 + audit/audit-sample/state-file/xproto×2 smoke pin**；**UI48 Tickets/Vault 同字段 + ticket/dual/time/remote smoke pin**；**UI49 Cedar 页诚实 + cedar/vault/stream-rss smoke pin**；**UI50 Audit 页诚实 + config-validate valid-config pin**；**UI51 Topology 诚实横幅**；**UI52–71 remainders 未交付标志（API/运维页/全 smoke 矩阵 helper）**；**OBSERVABILITY** 标明 chunked ≠ backend_window  
   - 仍欠：Complete 路径 ResultSet 在 backend 侧仍可能先物化（无 RowStream 时不可避免）；无进程 RSS 峰值 CI（逻辑 window 已钉；**`remainders.process_rss_window_byte_ci=false`**）  
   - 路径：`http` portal_execute_*_streaming；`security-portal-gateway-config.toml`；`security-portal-xproto{,-pg-mysql}-gateway-config.toml`；`smoke-security-portal{,-xproto,-xproto-pg-mysql}.sh`；UI Overview/Settings
 
 - [ ] **A10** 预处理 / 事务透传矩阵  
-  - 已有：MySQL COM_STMT + Streaming + PREPARE 列定义；PG Parse/Bind/Execute + Streaming；Describe 显式 SELECT + `SELECT *` catalog；扩展协议 Execute 不发 Z；**客户端 Execute max_rows → PortalSuspended（s）**；**同 portal multi-Execute 续读**：**优先 backend `RowStream` hold**（`hold_remainder`，不重跑 SQL）；hold 不可用时 **logical skip** 回落；策略 max_rows 仍 C；Bind/Close/Sync 丢弃 hold；unit `a10_hold_remainder_keeps_stream_for_resume` + stream smoke multi-Execute；**Prometheus `gateway_portal_resume_total{mode=hold\|resume_hold\|logical_skip}`**（smoke 强制 hold+resume_hold 或 skip）；**UI39 Overview/Settings 解析 hold/resume_hold/logical_skip 卡片**（诚实：非 backend WITH HOLD）；**UI43 API/Policies `sql_cursor` 诚实字段**（process_local / backend_with_hold=false / forward_fetch_only / session_end_clears；mask+deny+column smoke pin）；**UI44 Overview/Settings 展示 security-policies.sql_cursor 配置诚实（不依赖 metrics 流量）**；**UI47 Sessions 同字段 + core/state/xproto smoke pin**；**PDP prepared Execute 继承 `streaming.max_rows`**（防 passthrough demote 绕过 cap）；**简单查询 `DECLARE/FETCH/CLOSE` 进程内命名游标**（`named_cursors`；DECLARE 不套 policy max_rows；**进程内** WITH HOLD 跨 COMMIT / 无 WITH HOLD 在 COMMIT 丢弃；**会话结束清空**；**双游标并发**；**同名 DECLARE 拒绝**；**FETCH ALL 耗尽**；**MOVE/FETCH ABSOLUTE 等 fail-closed**；metrics `sql_cursor_*`；**仍非** backend 服务端游标；**UI52–69 `remainders.backend_sql_with_hold=false`**）  
+  - 已有：MySQL COM_STMT + Streaming + PREPARE 列定义；PG Parse/Bind/Execute + Streaming；Describe 显式 SELECT + `SELECT *` catalog；扩展协议 Execute 不发 Z；**客户端 Execute max_rows → PortalSuspended（s）**；**同 portal multi-Execute 续读**：**优先 backend `RowStream` hold**（`hold_remainder`，不重跑 SQL）；hold 不可用时 **logical skip** 回落；策略 max_rows 仍 C；Bind/Close/Sync 丢弃 hold；unit `a10_hold_remainder_keeps_stream_for_resume` + stream smoke multi-Execute；**Prometheus `gateway_portal_resume_total{mode=hold\|resume_hold\|logical_skip}`**（smoke 强制 hold+resume_hold 或 skip）；**UI39 Overview/Settings 解析 hold/resume_hold/logical_skip 卡片**（诚实：非 backend WITH HOLD）；**UI43 API/Policies `sql_cursor` 诚实字段**（process_local / backend_with_hold=false / forward_fetch_only / session_end_clears；mask+deny+column smoke pin）；**UI44 Overview/Settings 展示 security-policies.sql_cursor 配置诚实（不依赖 metrics 流量）**；**UI47 Sessions 同字段 + core/state/xproto smoke pin**；**PDP prepared Execute 继承 `streaming.max_rows`**（防 passthrough demote 绕过 cap）；**简单查询 `DECLARE/FETCH/CLOSE` 进程内命名游标**（`named_cursors`；DECLARE 不套 policy max_rows；**进程内** WITH HOLD 跨 COMMIT / 无 WITH HOLD 在 COMMIT 丢弃；**会话结束清空**；**双游标并发**；**同名 DECLARE 拒绝**；**FETCH ALL 耗尽**；**MOVE/FETCH ABSOLUTE 等 fail-closed**；metrics `sql_cursor_*`；**仍非** backend 服务端游标；**UI52–71 `remainders.backend_sql_with_hold=false`**）  
   - 仍欠：**非** backend SQL `DECLARE … WITH HOLD` 服务端命名游标（进程内游标随 session 消亡；仅 forward FETCH；**API remainders 钉 false**）；复杂 JOIN `*` 依赖 backend prepare  
   - 路径：`transport` hold/`PrefixedRowStream`、`CoreGatewayConnection.held_portal_stream` + `named_cursors` + `Drop`、`pdp` Execute obligations、`server/metrics` portal_resume、frontend Bind/Close/Sync + `COMMIT;` 分号、`smoke-security-stream.sh`、UI Overview/Settings
 
@@ -82,7 +82,7 @@ cd data-proxy
   - 路径：`security.rs` validate、`audit` sample attach、`OBSERVABILITY.md`、`smoke-security-audit-sample.sh`、`smoke-security-config-validate.sh`
 
 - [ ] **H05** 多实例状态外置（含 H08 vault 文件加密）  
-  - 已有：ticket/vault JSON+lock+**AES-GCM**；审计 SQLite multi-writer；LocalPdp `policy_path` mtime 轮询；prod `security.state` 模板；**vault `backend_password` ZeroizeOnDrop + revoke zeroize**；**`backend_identity` → `Zeroizing<String>`**；**Admin `security-policies.state` 只读摘要**含 **`last_writer_wins=true` / `merge_strategy=last_writer_wins` / `crdt=false` / `mlock=false` / `vault_password_zeroize=true`**；**smoke `smoke-security-state-file`** 断言 encrypt flags + 密文 + 重启 + mtime 热更 + **LWW/crdt/mlock 诚实字段** + **磁盘 last-writer 全文件替换 reload**；unit last-writer 全文件替换；UI Overview/Settings/Vault/Tickets/Policies 标明 **非 CRDT / 非 mlock**；**UI52–69 `remainders.crdt_merge=false` / `remainders.mlock=false`**  
+  - 已有：ticket/vault JSON+lock+**AES-GCM**；审计 SQLite multi-writer；LocalPdp `policy_path` mtime 轮询；prod `security.state` 模板；**vault `backend_password` ZeroizeOnDrop + revoke zeroize**；**`backend_identity` → `Zeroizing<String>`**；**Admin `security-policies.state` 只读摘要**含 **`last_writer_wins=true` / `merge_strategy=last_writer_wins` / `crdt=false` / `mlock=false` / `vault_password_zeroize=true`**；**smoke `smoke-security-state-file`** 断言 encrypt flags + 密文 + 重启 + mtime 热更 + **LWW/crdt/mlock 诚实字段** + **磁盘 last-writer 全文件替换 reload**；unit last-writer 全文件替换；UI Overview/Settings/Vault/Tickets/Policies 标明 **非 CRDT / 非 mlock**；**UI52–71 `remainders.crdt_merge=false` / `remainders.mlock=false`**  
   - 仍欠：**无 CRDT merge**（全文件替换 last-writer-wins；**remainders.crdt_merge=false**）；活跃 lease 密码仍在进程 RAM（**非 mlock**）；轮询默认 1s（smoke 用 200ms）  
   - 路径：ticket/vault file backend、`vault.rs` zeroize、`http` state summary、`smoke-security-state-file.sh`、prod 模板、runbook
 
@@ -125,7 +125,7 @@ cd data-proxy
 | Remote PDP | F31 已交付：表/动作 gate；超时 fail_closed；**非**热路径逐行 mask |
 | Cedar ABAC | F29 已交付：静态 `subject_attrs`/`table_attrs`；非动态 IdP 同步 |
 | 复杂 SQL / 列 ACL | T01：表可抽；**嵌套 SELECT 列表可 strip 列**；`*` / `t.*` **不展开**（deny 整句拒绝；allow 也不展开 strip；unit+Policies 诚实） |
-| A10 backend WITH HOLD | 仅进程内 `named_cursors`；**`remainders.backend_sql_with_hold=false`**（UI52–69）；断连即死；非服务端游标 |
+| A10 backend WITH HOLD | 仅进程内 `named_cursors`；**`remainders.backend_sql_with_hold=false`**（UI52–71）；断连即死；非服务端游标 |
 | H05 CRDT / mlock | 全文件 LWW；Zeroize 非 mlock；**`remainders.crdt_merge=false` / `remainders.mlock=false`** |
 | A06 精确窗字节 CI | 逻辑 `peak_window_*` 权威；stream-rss 仅粗 cap；**`remainders.process_rss_window_byte_ci=false`**；详见架构 **§13.3** |
 
@@ -133,28 +133,22 @@ cd data-proxy
 
 ## 5. 当前下一动作（唯一焦点）
 
-**>>> A 轨剩余诚实债 或 体验小刀 或 下一产品切片 <<<**
+**>>> 产品重债（A10/H05/A06）真实现；诚实面 UI52–71 已闭环 <<<**
 
-建议优先级：
+| 层 | 状态 |
+|----|------|
+| Admin `remainders.*` + 运维 UI | 已交付（恒 false） |
+| 全 smoke 矩阵 + shared helper | 已交付（26 scripts；`check-honesty-helper-coverage.sh`） |
+| unit on/off | 已交付（ui52 / ui57） |
+| 架构 §13.3 / 审计 §1.4 / CLAUDE 入口 | 已交付 |
 
-1. **A10** backend SQL `DECLARE … WITH HOLD` 服务端游标（可选；进程内 + remainders 诚实 UI52–70 闭环（API/UI/全矩阵 helper/unit/架构/入口）已有）  
-2. **H05** CRDT merge / mlock（可选；LWW + Zeroize + remainders 诚实已有）  
-3. **A06** 进程/cgroup 精确 1–2 窗字节 CI（可选；逻辑 peak + remainders 诚实 + stream-rss 粗 cap 已有）  
-4. 体验小刀；**F30/P0x 延后项未点名勿做**
+建议优先级（**真实现**，勿再堆诚实文档）：
 
-```bash
-# A 轨相关回归入口
-./examples/smoke-security-stream.sh
-./examples/smoke-security-portal.sh
-./examples/smoke-security-portal-xproto.sh
-./examples/smoke-security-portal-xproto-pg-mysql.sh
-./examples/smoke-security-passthrough.sh
-cargo test -p postgresql_protocol a10_decodes_bind
-cargo test -p runtime_gateway --lib a10_prepared_execute_streaming
-cargo test -p http@0.1.0 --lib a09_portal_prepare
-```
+1. **A10** backend SQL `DECLARE … WITH HOLD` 服务端游标（可选；进程内已有）  
+2. **H05** CRDT merge / mlock（可选；LWW + Zeroize 已有）  
+3. **A06** 进程/cgroup 精确 1–2 窗字节 CI（可选；逻辑 peak + 粗 RSS 已有）  
+4. 其他体验小刀；**F30/P0x 延后项未点名勿做**
 
----
 
 ## 6. 完成定义（DoD）
 
