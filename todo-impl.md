@@ -324,3 +324,4 @@ examples/        smoke + gateway config 样例
 | UI65 | security-core smokes call assert-security-policies-honesty helper | test(ui65) |
 | UI66 | security-extended + cedar smokes call honesty helper | test(ui66) |
 | UI67 | bump remainders honesty spans to UI52–66 after helper matrix | docs(ui67) |
+| UI68 | architecture docs § remainders honesty boundary (tech §13.3 + audit §1.4) | docs(ui68) |

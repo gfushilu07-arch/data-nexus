@@ -127,7 +127,7 @@ cd data-proxy
 | 复杂 SQL / 列 ACL | T01：表可抽；**嵌套 SELECT 列表可 strip 列**；`*` / `t.*` **不展开**（deny 整句拒绝；allow 也不展开 strip；unit+Policies 诚实） |
 | A10 backend WITH HOLD | 仅进程内 `named_cursors`；**`remainders.backend_sql_with_hold=false`**（UI52–66）；断连即死；非服务端游标 |
 | H05 CRDT / mlock | 全文件 LWW；Zeroize 非 mlock；**`remainders.crdt_merge=false` / `remainders.mlock=false`** |
-| A06 精确窗字节 CI | 逻辑 `peak_window_*` 权威；stream-rss 仅粗 cap；**`remainders.process_rss_window_byte_ci=false`** |
+| A06 精确窗字节 CI | 逻辑 `peak_window_*` 权威；stream-rss 仅粗 cap；**`remainders.process_rss_window_byte_ci=false`**；详见架构 **§13.3** |
 
 ---
 
@@ -137,7 +137,7 @@ cd data-proxy
 
 建议优先级：
 
-1. **A10** backend SQL `DECLARE … WITH HOLD` 服务端游标（可选；进程内 + remainders 诚实 UI52–66 + unit/L0/auth/security-core/extended/cedar helper 已有）  
+1. **A10** backend SQL `DECLARE … WITH HOLD` 服务端游标（可选；进程内 + remainders 诚实 UI52–68 + helper 矩阵 + 架构文档 §13.3 已有）  
 2. **H05** CRDT merge / mlock（可选；LWW + Zeroize + remainders 诚实已有）  
 3. **A06** 进程/cgroup 精确 1–2 窗字节 CI（可选；逻辑 peak + remainders 诚实 + stream-rss 粗 cap 已有）  
 4. 体验小刀；**F30/P0x 延后项未点名勿做**

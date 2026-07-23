@@ -35,6 +35,19 @@
 
 ---
 
+
+
+### 1.4 与 2026 主文档对齐的诚实边界
+
+性能/游标/多实例状态的未交付边界以 [`data-nexus-tech-architecture-2026.md`](data-nexus-tech-architecture-2026.md) **§13.3** 与 Admin `remainders` 为准：
+
+- 峰值内存证明：**逻辑** encode peak（`peak_window_*`），非精确 process RSS 1–2 窗 CI。  
+- SQL 游标：进程内命名游标，**非** backend `WITH HOLD`。  
+- 多实例 ticket/vault 文件态：**LWW**，非 CRDT；密码 Zeroize 非 mlock。  
+
+审计管线本身（有界队列、L0/L1/L2 载荷、B08 有界样本）不因上列未交付项而宣称「全量合规归档」。
+
+
 ## 2. 总体架构
 
 ### 2.1 逻辑分层

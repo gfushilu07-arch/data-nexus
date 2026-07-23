@@ -809,6 +809,22 @@ audit-analytics = ["datafusion", "arrow"]
 
 ---
 
+
+
+### 13.3 当前诚实边界（2026-07 实现态，UI52–67）
+
+下列能力**尚未**按「企业完整交付」宣称；Admin `GET /admin/security-policies` 的 `remainders` 与运维 UI 明确钉 `false`，全 smoke / unit 校验：
+
+| 主题 | 实现态 | API 诚实字段 |
+|------|--------|----------------|
+| PG/MySQL **backend** `DECLARE … WITH HOLD` 服务端游标 | 仅进程内 `named_cursors`；断连即死；forward FETCH only | `remainders.backend_sql_with_hold=false` |
+| 多实例 **CRDT** merge | 文件态 full-file replace + advisory lock，**last-writer-wins** | `remainders.crdt_merge=false`（`state.crdt=false`） |
+| Vault 密码 **mlock** / 安全堆 | ZeroizeOnDrop / Zeroizing 擦除；活跃期仍在进程 RAM | `remainders.mlock=false`（`state.mlock=false`） |
+| 进程/cgroup **精确 1–2 窗字节** CI | 逻辑 `peak_window_rows/bytes` 权威；stream-rss 粗绝对 cap | `remainders.process_rss_window_byte_ci=false` |
+
+相邻诚实字段（`sql_cursor.process_local`、`streaming.peak_is_process_rss=false`、`obligations_force_streaming=true`）描述的是**已交付行为**，不得解读为上表重债已完成。共享校验：`examples/assert-security-policies-honesty.py`；看板 `todo.md` §4–§5。
+
+
 ## 14. 成功度量
 
 | 指标 | 目标（初值，可调） |
