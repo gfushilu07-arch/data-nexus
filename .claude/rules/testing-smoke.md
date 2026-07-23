@@ -53,8 +53,8 @@ Also pin `sql_cursor.process_local=true` / `backend_with_hold=false` and
 Do not drop these asserts when editing smokes.
 
 Shared helper (UI63): `examples/assert-security-policies-honesty.py`
-(`--file` / `--url` / `--bearer` / `--expect-enabled`). Prefer it for new L0/auth
-smokes; security-core may keep inline asserts plus an optional helper call.
+(`--file` / `--url` / `--bearer` / `--expect-enabled`). Prefer it for L0/auth smokes (dual-listener, cross-protocol×3, admin-auth; UI63/UI64).
+security-core may keep inline asserts plus an optional helper call (deny does both).
 
 ## 纪律
 
