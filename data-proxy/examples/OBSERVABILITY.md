@@ -93,6 +93,7 @@ Admin UI surfaces security-policies honesty without metrics traffic (UI40/UI43â€
 | L0 helper migration (UI64) | cross-protocol smokes call shared honesty helper | Fewer copy-pasted remainders asserts |
 | Security-core helper (UI65) | deny/column/mask/audit/portal/vault/state/config/remote/ticket call helper | default matrix pins via shared helper |
 | Extended/cedar helper (UI66) | stream/passthrough/watermark/dual/time/xproto/cedar call helper | all/extended/cedar matrix share helper |
+| Span hygiene (UI67) | todo/rules/runbook/matrix cite UI52â€“66 after full helper wiring | Keep honesty spans current |
 
 Admin UI (UI38) soft-parses `/metrics` on Overview + Settings:
 

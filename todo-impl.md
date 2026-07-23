@@ -318,8 +318,9 @@ examples/        smoke + gateway config 样例
 | UI59 | L0 dual/xproto smokes pin remainders honesty when security off | test(ui59) |
 | UI60 | admin-auth smoke: security-policies 401 + authed remainders honesty | test(ui60) |
 | UI61 | smoke matrix + testing-smoke rule document remainders honesty pins | docs(ui61) |
-| UI62 | bump remainders honesty spans UI52–61 + A09 仍欠 RSS cite | docs(ui62) |
+| UI62 | bump remainders honesty spans UI52–66 + A09 仍欠 RSS cite | docs(ui62) |
 | UI63 | assert-security-policies-honesty.py shared helper + dual/deny/admin-auth use | feat(ui63)/test |
 | UI64 | migrate L0 cross-protocol smokes to honesty helper | test(ui64) |
 | UI65 | security-core smokes call assert-security-policies-honesty helper | test(ui65) |
 | UI66 | security-extended + cedar smokes call honesty helper | test(ui66) |
+| UI67 | bump remainders honesty spans to UI52–66 after helper matrix | docs(ui67) |
