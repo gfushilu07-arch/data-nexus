@@ -49,3 +49,8 @@ PostgreSQL error identities; the last full run produced 10 passed comparisons.
 A skipped case must include non-empty `reason`, `issue`, and `expires_when` fields.
 The validator rejects missing files, unregistered SQL files, path traversal, duplicate
 IDs, mismatched comments, unknown registry values, and ambiguous top-level outcomes.
+
+The metadata/session/diagnostic tranche currently contains 20 canonical cases
+(`SQLT-META-001` through `SQLT-META-020`) across MySQL and PostgreSQL. The corpus
+budget test prevents this tranche from shrinking while DQL, DML, DDL, and failure
+families are added.

@@ -43,6 +43,366 @@
       "profiles": ["pr", "nightly", "release"]
     },
     {
+      "id": "SQLT-META-003",
+      "sql_file": "metadata/mysql-show-databases.sql",
+      "family": "metadata",
+      "capability": "metadata.show_databases",
+      "dialects": ["mysql"],
+      "frontends": ["mysql_text"],
+      "backends": ["mysql"],
+      "protocols": ["mysql_text"],
+      "statement_mode": "single",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"}
+      ],
+      "side_effect": "none",
+      "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-META-004",
+      "sql_file": "metadata/mysql-show-columns.sql",
+      "family": "metadata",
+      "capability": "metadata.show_columns",
+      "dialects": ["mysql"],
+      "frontends": ["mysql_text"],
+      "backends": ["mysql"],
+      "protocols": ["mysql_text"],
+      "statement_mode": "single",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"}
+      ],
+      "side_effect": "none",
+      "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-META-005",
+      "sql_file": "metadata/mysql-describe-table.sql",
+      "family": "metadata",
+      "capability": "metadata.describe_table",
+      "dialects": ["mysql"],
+      "frontends": ["mysql_text"],
+      "backends": ["mysql"],
+      "protocols": ["mysql_text"],
+      "statement_mode": "single",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"}
+      ],
+      "side_effect": "none",
+      "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-META-006",
+      "sql_file": "metadata/mysql-show-create.sql",
+      "family": "metadata",
+      "capability": "metadata.show_create",
+      "dialects": ["mysql"],
+      "frontends": ["mysql_text"],
+      "backends": ["mysql"],
+      "protocols": ["mysql_text"],
+      "statement_mode": "single",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"}
+      ],
+      "side_effect": "none",
+      "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-META-007",
+      "sql_file": "metadata/mysql-table-status.sql",
+      "family": "metadata",
+      "capability": "metadata.table_status",
+      "dialects": ["mysql"],
+      "frontends": ["mysql_text"],
+      "backends": ["mysql"],
+      "protocols": ["mysql_text"],
+      "statement_mode": "single",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"}
+      ],
+      "side_effect": "none",
+      "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-META-008",
+      "sql_file": "metadata/mysql-explain.sql",
+      "family": "metadata",
+      "capability": "metadata.explain",
+      "dialects": ["mysql"],
+      "frontends": ["mysql_text"],
+      "backends": ["mysql"],
+      "protocols": ["mysql_text"],
+      "statement_mode": "single",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"}
+      ],
+      "side_effect": "none",
+      "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-META-009",
+      "sql_file": "metadata/mysql-session-variables.sql",
+      "family": "metadata",
+      "capability": "session.variables",
+      "dialects": ["mysql"],
+      "frontends": ["mysql_text"],
+      "backends": ["mysql"],
+      "protocols": ["mysql_text"],
+      "statement_mode": "single",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"}
+      ],
+      "side_effect": "none",
+      "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-META-010",
+      "sql_file": "metadata/mysql-set-names.sql",
+      "family": "metadata",
+      "capability": "session.set_names",
+      "dialects": ["mysql"],
+      "frontends": ["mysql_text"],
+      "backends": ["mysql"],
+      "protocols": ["mysql_text"],
+      "statement_mode": "script",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"}
+      ],
+      "side_effect": "session_state",
+      "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-META-011",
+      "sql_file": "metadata/mysql-session-timezone.sql",
+      "family": "metadata",
+      "capability": "session.timezone",
+      "dialects": ["mysql"],
+      "frontends": ["mysql_text"],
+      "backends": ["mysql"],
+      "protocols": ["mysql_text"],
+      "statement_mode": "script",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"}
+      ],
+      "side_effect": "session_state",
+      "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-META-012",
+      "sql_file": "metadata/mysql-use-database.sql",
+      "family": "metadata",
+      "capability": "session.use_database",
+      "dialects": ["mysql"],
+      "frontends": ["mysql_text"],
+      "backends": ["mysql"],
+      "protocols": ["mysql_text"],
+      "statement_mode": "script",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"}
+      ],
+      "side_effect": "session_state",
+      "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-META-013",
+      "sql_file": "metadata/postgres-show-settings.sql",
+      "family": "metadata",
+      "capability": "metadata.show_settings",
+      "dialects": ["postgres"],
+      "frontends": ["pg_simple", "pg_extended"],
+      "backends": ["postgres"],
+      "protocols": ["pg_simple", "pg_extended"],
+      "statement_mode": "single",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"}
+      ],
+      "side_effect": "none",
+      "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-META-014",
+      "sql_file": "metadata/postgres-current-schema.sql",
+      "family": "metadata",
+      "capability": "metadata.current_schema",
+      "dialects": ["postgres"],
+      "frontends": ["pg_simple", "pg_extended", "http_portal"],
+      "backends": ["postgres"],
+      "protocols": ["pg_simple", "pg_extended", "http"],
+      "statement_mode": "single",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"}
+      ],
+      "side_effect": "none",
+      "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-META-015",
+      "sql_file": "metadata/postgres-columns.sql",
+      "family": "metadata",
+      "capability": "metadata.columns",
+      "dialects": ["postgres"],
+      "frontends": ["pg_simple", "pg_extended"],
+      "backends": ["postgres"],
+      "protocols": ["pg_simple", "pg_extended"],
+      "statement_mode": "single",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"}
+      ],
+      "side_effect": "none",
+      "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-META-016",
+      "sql_file": "metadata/postgres-indexes.sql",
+      "family": "metadata",
+      "capability": "metadata.indexes",
+      "dialects": ["postgres"],
+      "frontends": ["pg_simple", "pg_extended"],
+      "backends": ["postgres"],
+      "protocols": ["pg_simple", "pg_extended"],
+      "statement_mode": "single",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"}
+      ],
+      "side_effect": "none",
+      "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-META-017",
+      "sql_file": "metadata/postgres-constraints.sql",
+      "family": "metadata",
+      "capability": "metadata.constraints",
+      "dialects": ["postgres"],
+      "frontends": ["pg_simple", "pg_extended"],
+      "backends": ["postgres"],
+      "protocols": ["pg_simple", "pg_extended"],
+      "statement_mode": "single",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"}
+      ],
+      "side_effect": "none",
+      "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-META-018",
+      "sql_file": "metadata/postgres-pg-settings.sql",
+      "family": "metadata",
+      "capability": "metadata.pg_settings",
+      "dialects": ["postgres"],
+      "frontends": ["pg_simple", "pg_extended"],
+      "backends": ["postgres"],
+      "protocols": ["pg_simple", "pg_extended"],
+      "statement_mode": "single",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"}
+      ],
+      "side_effect": "none",
+      "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-META-019",
+      "sql_file": "metadata/postgres-explain.sql",
+      "family": "metadata",
+      "capability": "metadata.pg_explain",
+      "dialects": ["postgres"],
+      "frontends": ["pg_simple", "pg_extended"],
+      "backends": ["postgres"],
+      "protocols": ["pg_simple", "pg_extended"],
+      "statement_mode": "single",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"}
+      ],
+      "side_effect": "none",
+      "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-META-020",
+      "sql_file": "metadata/postgres-search-path.sql",
+      "family": "metadata",
+      "capability": "session.search_path",
+      "dialects": ["postgres"],
+      "frontends": ["pg_simple"],
+      "backends": ["postgres"],
+      "protocols": ["pg_simple"],
+      "statement_mode": "script",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"}
+      ],
+      "side_effect": "session_state",
+      "profiles": ["nightly", "release"]
+    },
+    {
       "id": "SQLT-DQL-001",
       "sql_file": "dql/select-join-aggregate.sql",
       "family": "dql",

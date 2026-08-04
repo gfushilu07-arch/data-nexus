@@ -128,6 +128,15 @@ class ValidateSqlMatrixTest(unittest.TestCase):
         sql_path.write_text(text.replace("-- Dialect: postgres", "-- Dialect: mysql"), encoding="utf-8")
         self.assert_has_error("dialect comment must match parent directory")
 
+    def test_metadata_family_meets_sqlt3a_budget(self) -> None:
+        manifest = self.manifest()
+        metadata_cases = [case for case in manifest["cases"] if case["family"] == "metadata"]
+        self.assertGreaterEqual(len(metadata_cases), 20)
+        self.assertEqual(
+            {case["id"] for case in metadata_cases},
+            {f"SQLT-META-{index:03d}" for index in range(1, 21)},
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

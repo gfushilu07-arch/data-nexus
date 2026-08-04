@@ -6,7 +6,9 @@ SQLT-2 已补齐固定版本 Docker fixture、版本化双方言 schema/seed/cle
 security-off gateway backend oracle；最近一次验收产物位于
 `/Volumes/fushilu/.caches/data-nexus/sql-matrix/sqlt2-full-20260804/`，10/10 组通过，
 覆盖 read/state、DML+savepoint、DDL 生命周期和稳定错误身份。后续 SQLT-3 至 SQLT-6
-继续补齐 230+ case corpus、wire/策略故障矩阵与分层报告门禁。
+继续补齐 230+ case corpus、wire/策略故障矩阵与分层报告门禁。SQLT-3A 已将
+会话/元数据/诊断家族扩展到 `SQLT-META-001` 至 `SQLT-META-020`，并在固定版本
+Docker 双库中逐条直连执行通过。
 
 本文定义 Data Nexus 的 SQL 行为测试范围。目标不是证明每一种数据库方言都能被
 跨协议翻译，而是对每一种输入明确记录以下四类结果之一：
