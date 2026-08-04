@@ -128,12 +128,26 @@ export DATA_NEXUS_ADMIN_CORS_ORIGINS=https://ui.example.com
 | state mismatch | multiple tabs / clock; restart login |
 | JWKS fetch fail | gateway can reach `jwks_url` (egress / TLS) |
 
-## 6. Local simulation without real IdP
+## 6. Local Docker acceptance
 
-Use **HMAC break-glass** (`examples/admin-auth-gateway-config.toml` + `smoke-admin-auth.sh`) for CI.  
-Full OIDC requires a real or containerized IdP (e.g. Keycloak realm export — out of scope for unit smoke).
+The repository includes a real containerized OIDC acceptance stack:
 
-Optional future: Keycloak docker-compose profile + automated browser smoke (Playwright) — track as UI follow-up.
+```bash
+cd data-proxy
+H04B_CACHE_DIR=/Volumes/fushilu/.caches/data-nexus/h04b \
+  ./examples/smoke-h04b-docker.sh --keep
+```
+
+It starts Keycloak, data-ui, the Rust gateway, a wrong-issuer gateway, and an HTTPS nginx edge.
+The fixture performs discovery, Authorization Code + PKCE, browser callback, JWKS verification,
+issuer/audience/expiry checks, viewer/operator/admin role mapping, rejection paths, and end-session
+logout. Use the Playwright CLI against `https://ui.localhost:8443/login` for the browser portion.
+Builds, certificates, reports, and browser artifacts stay under
+`/Volumes/fushilu/.caches/data-nexus/h04b`; the fixture contains only local test credentials.
+
+This local stack closes the repository code and protocol acceptance boundary. It does not claim
+production readiness: public DNS, a publicly trusted CA, external firewall rules, a production IdP
+tenant, production secrets, and deployment rollback evidence remain separate H04b-4 checks.
 
 ## Related
 

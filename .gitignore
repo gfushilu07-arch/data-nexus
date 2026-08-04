@@ -19,3 +19,4 @@ __pycache__/
 /.workbuddy/
 /HANDOFF.md
 /outputs/
+/.playwright-cli/

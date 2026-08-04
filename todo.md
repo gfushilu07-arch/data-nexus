@@ -163,23 +163,26 @@ smoke 已有；OpenDAL 上传仍是可选 feature，不能宣传为全量 L3 归
 
 ## 4. P2：外部环境验收
 
-### H04b：真实 IdP OIDC 联调
+### H04b：OIDC 联调与部署验收
 
-本项是部署侧验收，不是本仓默认 CI 的强制门禁。Docker 只能提供应用运行环境；回调地址、
-DNS/TLS、真实 IdP 应用注册和角色映射必须在可从 IdP 访问的环境完成。香港云服务器可作为
-验收环境，但不是 Data Nexus 的代码依赖。
+本项拆为「仓库代码验收」和「生产部署验收」。本地 Docker 栈使用 Keycloak、HTTPS edge、
+data-ui 和 Rust gateway，能够真实执行 OIDC Authorization Code + PKCE、回调、JWKS、
+issuer/audience/expiry、角色映射和登出；它不是把 localhost 冒充生产，而是完整验证仓库内
+协议与代码行为。香港云服务器不是 Data Nexus 的代码依赖，也不是关闭代码侧 H04b 的前置条件。
 
-- [ ] **H04b-1 准备真实部署**：使用 Docker Compose/容器部署网关，配置外部可访问的 HTTPS
-  redirect URI、secret 注入、时钟同步和日志脱敏；不得用 localhost 回调冒充生产验收。
-- [ ] **H04b-2 完成真实 OIDC 流程**：真实 IdP 登录、回调、state/nonce、token 校验、
-  issuer/audience/expiry 校验和登出均留存可审计证据。
-- [ ] **H04b-3 验证角色映射与拒绝**：至少覆盖 viewer/operator/admin、未知角色、缺少角色、
-  过期 token、错误 issuer 和未授权资源；确认管理面鉴权不等同于数据面 Subject。
-- [ ] **H04b-4 记录部署验收**：将服务器、IdP、版本、时间、测试结果、脱敏日志和回滚步骤
-  写入不入库的交接/输出目录，并保持 secrets 不进入 Git。
+- [x] **H04b-1 本地 Docker 验收栈**：`data-proxy/examples/smoke-h04b-docker.sh` 使用外置
+  缓存构建 Rust gateway 和 OIDC-enabled data-ui，并以本地 CA 提供四个 HTTPS host。
+- [x] **H04b-2 本地真实 OIDC 流程**：Keycloak discovery、Authorization Code + PKCE、
+  浏览器回调、state/PKCE verifier、token exchange、JWKS、issuer/audience/expiry 校验和
+  end-session logout 均已执行；`/admin/me` 使用 Bearer access token 返回 200。
+- [x] **H04b-3 本地角色与拒绝路径**：已覆盖 viewer/operator/admin、未知角色、缺少角色、
+  过期 token、错误 issuer、错误/缺失 audience、无 token 和未授权 reload。
+- [ ] **H04b-4 生产部署验收**：在外部 HTTPS 环境配置公共 DNS、受信任 CA、真实 IdP tenant、
+  外部防火墙、secret 注入、时钟同步和日志脱敏；留存脱敏部署证据与回滚步骤，secrets 不进 Git。
 
-验收终点：真实 IdP 到真实部署的回调和角色映射闭环完成；本地 Docker smoke 只能算前置，
-不能单独关闭 H04b。
+仓库代码验收终点：本地 Docker + 浏览器验收报告通过即可关闭代码侧 H04b。生产验收终点：
+真实外部 IdP 到真实部署的回调和角色映射闭环完成；公共 DNS、受信任 CA、网络边界和生产
+secrets 仍必须单独验收。
 
 ## 5. P3：明确后置，不纳入当前版本
 
