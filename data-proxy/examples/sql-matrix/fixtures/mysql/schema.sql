@@ -24,5 +24,6 @@ CREATE TABLE sqlt_orders (
 CREATE TABLE sqlt_mutations (
     mutation_id BIGINT NOT NULL PRIMARY KEY,
     description VARCHAR(255) NOT NULL,
-    amount DECIMAL(12, 2) NULL
+    amount DECIMAL(12, 2) NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'new'
 ) ENGINE = InnoDB;

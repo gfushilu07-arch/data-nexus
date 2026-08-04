@@ -221,7 +221,8 @@ fn decode_query_command(
     session: &mut SessionState,
 ) -> GatewayResult<GatewayCommand> {
     let sql = decode_text_payload(payload)?;
-    match sql.trim().to_ascii_lowercase().as_str() {
+    let normalized = sql.trim().to_ascii_lowercase();
+    match normalized.as_str() {
         "begin" | "start transaction" => {
             session.transaction_state = TransactionState::Active;
             Ok(GatewayCommand::Begin)
@@ -234,8 +235,33 @@ fn decode_query_command(
             session.transaction_state = TransactionState::Idle;
             Ok(GatewayCommand::Rollback)
         }
-        _ => Ok(GatewayCommand::Query { sql }),
+        _ => {
+            if let Some(charset) = parse_set_names(&sql) {
+                session.charset = Some(charset);
+            }
+            Ok(GatewayCommand::Query { sql })
+        }
     }
+}
+
+/// Keep backend session initialization in sync with MySQL COM_QUERY `SET NAMES`.
+fn parse_set_names(sql: &str) -> Option<String> {
+    let mut tokens = sql.trim().trim_end_matches(';').split_ascii_whitespace();
+    if !tokens.next()?.eq_ignore_ascii_case("set")
+        || !tokens.next()?.eq_ignore_ascii_case("names")
+    {
+        return None;
+    }
+    let charset = tokens.next()?.trim_matches(|ch| ch == '\'' || ch == '"');
+    let charset = if charset == "=" {
+        tokens.next()?.trim_matches(|ch| ch == '\'' || ch == '"')
+    } else {
+        charset
+    };
+    if charset.is_empty() || tokens.next().is_some() {
+        return None;
+    }
+    Some(charset.to_string())
 }
 
 fn decode_text_payload(payload: &[u8]) -> GatewayResult<String> {
@@ -1220,6 +1246,26 @@ mod tests {
             adapter.decode(&[COM_QUERY, b's', b'e', b'l', b'e', b'c', b't'], &mut session);
 
         assert_eq!(commands, Ok(vec![GatewayCommand::Query { sql: "select".into() }]));
+    }
+
+    #[test]
+    fn decodes_set_names_and_updates_backend_session_charset() {
+        let mut adapter = adapter();
+        let mut session = SessionState::default();
+
+        let commands = adapter.decode(
+            &[
+                COM_QUERY, b'S', b'E', b'T', b' ', b'N', b'A', b'M', b'E', b'S', b' ', b'u',
+                b't', b'f', b'8', b'm', b'b', b'4', b';',
+            ],
+            &mut session,
+        );
+
+        assert_eq!(
+            commands,
+            Ok(vec![GatewayCommand::Query { sql: "SET NAMES utf8mb4;".into() }])
+        );
+        assert_eq!(session.charset, Some("utf8mb4".into()));
     }
 
     #[test]

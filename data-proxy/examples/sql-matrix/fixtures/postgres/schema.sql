@@ -22,5 +22,6 @@ CREATE TABLE sqlt_orders (
 CREATE TABLE sqlt_mutations (
     mutation_id BIGINT PRIMARY KEY,
     description VARCHAR(255) NOT NULL,
-    amount NUMERIC(12, 2)
+    amount NUMERIC(12, 2),
+    status VARCHAR(32) NOT NULL DEFAULT 'new'
 );

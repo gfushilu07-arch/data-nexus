@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "state_queries": {
+    "mysql": "fixtures/mysql/oracle-dml-insert-state.sql",
+    "postgres": "fixtures/postgres/oracle-dml-insert-state.sql"
+  },
+  "results": {
+    "SQLT-DML-003": {
+      "mysql": {"result": "success", "state": "mutation\t3001\tsingle insert\t10.50\tnew\n"},
+      "postgres": {"result": "success", "state": "mutation\t3001\tsingle insert\t10.50\tnew\n"}
+    },
+    "SQLT-DML-004": {
+      "mysql": {"result": "success", "state": "mutation\t3002\tmulti one\t20.00\tqueued\nmutation\t3003\tmulti two\t30.25\tready\n"},
+      "postgres": {"result": "success", "state": "mutation\t3002\tmulti one\t20.00\tqueued\nmutation\t3003\tmulti two\t30.25\tready\n"}
+    },
+    "SQLT-DML-005": {
+      "mysql": {"result": "success", "state": "mutation\t3004\tnullable amount\tNULL\tnull-ok\n"},
+      "postgres": {"result": "success", "state": "mutation\t3004\tnullable amount\tNULL\tnull-ok\n"}
+    },
+    "SQLT-DML-006": {
+      "mysql": {"result": "success", "state": "mutation\t3005\tdefault status\t40.00\tnew\n"},
+      "postgres": {"result": "success", "state": "mutation\t3005\tdefault status\t40.00\tnew\n"}
+    },
+    "SQLT-DML-007": {
+      "mysql": {"result": "success", "state": "mutation\t3006\texact decimal\t1234567890.12\tprecise\n"},
+      "postgres": {"result": "success", "state": "mutation\t3006\texact decimal\t1234567890.12\tprecise\n"}
+    },
+    "SQLT-DML-008": {
+      "mysql": {"result": "success", "state": "mutation\t3007\tquote ' slash \\ utf8 中文\t50.00\ttext\n"}
+    },
+    "SQLT-DML-009": {
+      "postgres": {"result": "success", "state": "mutation\t3008\tquote ' slash \\ utf8 中文\t60.00\ttext\n"}
+    },
+    "SQLT-DML-010": {
+      "mysql": {"result": "success", "state": "mutation\t3101\tAda\t10.00\tcopied\nmutation\t3102\tLin\t10.00\tcopied\nmutation\t3201\tGrace\t20.00\tcopied\nmutation\t3202\tEdsger\t20.00\tcopied\n"},
+      "postgres": {"result": "success", "state": "mutation\t3101\tAda\t10.00\tcopied\nmutation\t3102\tLin\t10.00\tcopied\nmutation\t3201\tGrace\t20.00\tcopied\nmutation\t3202\tEdsger\t20.00\tcopied\n"}
+    },
+    "SQLT-DML-011": {
+      "mysql": {"result": "error", "error": "mysql\t1062\t23000\n", "state": ""},
+      "postgres": {"result": "error", "error": "postgres\t23505\n", "state": ""}
+    },
+    "SQLT-DML-012": {
+      "mysql": {"result": "error", "error": "mysql\t1452\t23000\n", "state": ""},
+      "postgres": {"result": "error", "error": "postgres\t23503\n", "state": ""}
+    },
+    "SQLT-DML-013": {
+      "mysql": {"result": "error", "error": "mysql\t1048\t23000\n", "state": ""},
+      "postgres": {"result": "error", "error": "postgres\t23502\n", "state": ""}
+    },
+    "SQLT-DML-014": {
+      "mysql": {"result": "error", "error": "mysql\t1406\t22001\n", "state": ""},
+      "postgres": {"result": "error", "error": "postgres\t22001\n", "state": ""}
+    }
+  }
+}

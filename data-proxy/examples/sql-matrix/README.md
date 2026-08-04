@@ -73,3 +73,18 @@ differently.
 During corpus development, a bounded ID range can be selected with
 `SQLT_DQL_CASE_FROM` and `SQLT_DQL_CASE_TO`. Final acceptance must leave both unset
 so the complete registered DQL corpus runs.
+
+The SQLT-3C1 INSERT tranche contains 12 focused cases (`SQLT-DML-003` through
+`SQLT-DML-014`) for values, defaults, exact decimals, special text, INSERT SELECT,
+and stable constraint errors. Run its fixed-version direct and security-off gateway
+acceptance with:
+
+```bash
+data-proxy/examples/sql-matrix/run-dml-corpus.sh
+```
+
+Each case and dialect starts from a fresh fixture. Successful executions are compared
+with the exact versioned state in `dml-oracles.json`; failed executions must match the
+MySQL error number and SQLSTATE or PostgreSQL SQLSTATE, and their before/after state
+snapshots must be identical. Use `SQLT_DML_CASE_FROM` and `SQLT_DML_CASE_TO` only for
+bounded development runs. Final acceptance runs the complete default range.

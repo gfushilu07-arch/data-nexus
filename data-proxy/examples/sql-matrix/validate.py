@@ -235,6 +235,69 @@ def _validate_dql_oracles(root: Path, cases: list[Any], errors: list[str]) -> No
                 )
 
 
+def _validate_dml_oracles(root: Path, cases: list[Any], errors: list[str]) -> None:
+    """Validate the per-case state and error contract for the INSERT tranche."""
+    oracles = _load_json(root / "dml-oracles.json", errors)
+    if not isinstance(oracles, dict):
+        errors.append("dml-oracles.json must contain an object")
+        return
+    if oracles.get("schema_version") != 1:
+        errors.append("dml-oracles.json schema_version must be 1")
+    state_queries = oracles.get("state_queries")
+    if not isinstance(state_queries, dict) or set(state_queries) != {"mysql", "postgres"}:
+        errors.append("dml-oracles.json state_queries must define mysql and postgres")
+    else:
+        for dialect, relative in state_queries.items():
+            if not isinstance(relative, str) or not relative.endswith(".sql"):
+                errors.append(f"dml-oracles.json state_queries.{dialect} must be an SQL path")
+                continue
+            path = root / PurePosixPath(relative)
+            try:
+                path.resolve().relative_to(root.resolve())
+            except ValueError:
+                errors.append(f"dml-oracles.json state_queries.{dialect} escapes matrix root")
+            if not path.is_file():
+                errors.append(f"dml-oracles.json state_queries.{dialect} does not exist: {relative}")
+
+    expected: dict[str, set[str]] = {}
+    for case in cases:
+        if (
+            isinstance(case, dict)
+            and case.get("family") == "dml"
+            and isinstance(case.get("id"), str)
+            and case["id"] in {f"SQLT-DML-{index:03d}" for index in range(3, 15)}
+        ):
+            expected[case["id"]] = set(case.get("dialects", []))
+    results = oracles.get("results")
+    if not isinstance(results, dict):
+        errors.append("dml-oracles.json results must be an object")
+        return
+    if set(results) != set(expected):
+        errors.append(
+            f"dml-oracles.json cases must be {sorted(expected)}, got {sorted(results)}"
+        )
+    for case_id, dialects in expected.items():
+        values = results.get(case_id)
+        if not isinstance(values, dict) or set(values) != dialects:
+            errors.append(f"dml-oracles.json results.{case_id} dialects must be {sorted(dialects)}")
+            continue
+        for dialect, value in values.items():
+            label = f"dml-oracles.json results.{case_id}.{dialect}"
+            if not isinstance(value, dict) or value.get("result") not in {"success", "error"}:
+                errors.append(f"{label}.result must be success or error")
+                continue
+            if value["result"] == "success":
+                if not isinstance(value.get("state"), str) or not value["state"].endswith("\n"):
+                    errors.append(f"{label}.state must be a newline-terminated string")
+                if "error" in value:
+                    errors.append(f"{label} success oracle cannot define error")
+            else:
+                if not isinstance(value.get("error"), str) or not value["error"].endswith("\n"):
+                    errors.append(f"{label}.error must be a newline-terminated string")
+                if value.get("state") != "":
+                    errors.append(f"{label}.state must be empty for an error oracle")
+
+
 def _validate_string_array(
     case: dict[str, Any],
     field: str,
@@ -402,6 +465,7 @@ def validate_repository(root: Path) -> list[str]:
         errors.append(f"case root does not exist: {case_root}")
     _validate_fixture_sql_files(root, errors)
     _validate_dql_oracles(root, cases, errors)
+    _validate_dml_oracles(root, cases, errors)
     return errors
 
 
