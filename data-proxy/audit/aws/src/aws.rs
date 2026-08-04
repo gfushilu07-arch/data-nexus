@@ -13,7 +13,10 @@
 // limitations under the License.
 
 use aws_config::meta::region::RegionProviderChain;
-use aws_sdk_cloudwatchlogs::{model::InputLogEvent, Client};
+use aws_sdk_cloudwatchlogs::{
+    model::{InputLogEvent, LogStream},
+    Client,
+};
 use chrono::Utc;
 use tracing::trace;
 
@@ -55,29 +58,64 @@ impl CloudWatchSinker {
 
         let streams =
             self.client.describe_log_streams().log_group_name(input.log_group_name).send().await?;
-        // for s in streams.log_streams().unwrap() {
-        for s in streams.log_streams()? {
-            if s.log_stream_name().unwrap() == log_stream_name.clone() {
-                let next = s.upload_sequence_token().unwrap();
-                let builder = InputLogEvent::builder();
-                let e = builder
-                    .set_message(Some(message.clone()))
-                    .set_timestamp(Some(input.timestamp))
-                    .build();
+        if let Some(stream) =
+            find_log_stream(streams.log_streams().unwrap_or(&[]), &log_stream_name)
+        {
+            let builder = InputLogEvent::builder();
+            let e = builder
+                .set_message(Some(message.clone()))
+                .set_timestamp(Some(input.timestamp))
+                .build();
 
-                let resp = self
-                    .client
-                    .put_log_events()
-                    .set_sequence_token(Some(next.to_string()))
-                    .log_group_name(log_group_name.clone())
-                    .log_stream_name(log_stream_name)
-                    .log_events(e)
-                    .send()
-                    .await?;
-                trace!("aws resp {:?}", resp);
-                break;
-            }
+            let resp = self
+                .client
+                .put_log_events()
+                .set_sequence_token(stream.upload_sequence_token().map(str::to_owned))
+                .log_group_name(log_group_name.clone())
+                .log_stream_name(log_stream_name)
+                .log_events(e)
+                .send()
+                .await?;
+            trace!("aws resp {:?}", resp);
         }
         Ok(())
+    }
+}
+
+fn find_log_stream<'a>(streams: &'a [LogStream], name: &str) -> Option<&'a LogStream> {
+    streams.iter().find(|stream| stream.log_stream_name() == Some(name))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::find_log_stream;
+    use aws_sdk_cloudwatchlogs::model::LogStream;
+
+    #[test]
+    fn find_log_stream_handles_empty_and_malformed_entries() {
+        let streams = vec![
+            LogStream::builder().build(),
+            LogStream::builder().log_stream_name("target").build(),
+        ];
+
+        assert!(find_log_stream(&[], "target").is_none());
+        assert_eq!(
+            find_log_stream(&streams, "target").and_then(LogStream::upload_sequence_token),
+            None
+        );
+        assert!(find_log_stream(&streams, "missing").is_none());
+    }
+
+    #[test]
+    fn find_log_stream_preserves_sequence_token() {
+        let streams = vec![LogStream::builder()
+            .log_stream_name("target")
+            .upload_sequence_token("sequence-1")
+            .build()];
+
+        assert_eq!(
+            find_log_stream(&streams, "target").and_then(LogStream::upload_sequence_token),
+            Some("sequence-1")
+        );
     }
 }
