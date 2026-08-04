@@ -1,5 +1,9 @@
 # Data Nexus
 
+Data Nexus 是 Rust 项目。产品源码位于 `data-proxy/` Cargo workspace；该目录名是
+仓库内的历史物理布局，不表示另一个产品。根目录遗留的仓颉实现不参与当前构建、
+测试、看板记账或交付验收，开发当前项目不得要求 Cangjie/CJPM 工具链。
+
 开发时请阅读并遵守：
 
 ## 必读
@@ -23,7 +27,9 @@
 ## 工具链
 
 - rustc：**1.94.1**（`data-proxy/rust-toolchain.toml`）
-- 构建缓存：`data-proxy/docs/build-cache.md`（外置 `CARGO_TARGET_DIR`）
+- 构建缓存：`data-proxy/docs/build-cache.md`（固定为
+  `/Volumes/fushilu/.caches/data-nexus/cargo-target`）
+- 当前 shell 若设置了其他 `CARGO_TARGET_DIR`，运行 Cargo 时必须显式覆盖为上述目录。
 
 ## Superpowers（默认链路）
 

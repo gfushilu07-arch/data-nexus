@@ -34,7 +34,10 @@ v2.2        真流式封顶 + 企业策略/合规         ⏳ 本文件唯一焦
 | 配置勿静默 no-op | 未实现能力必须校验失败 |
 | 诚实边界 | 部分完成标「部分」，见 §3 |
 
-**工具链**：`CARGO_TARGET_DIR` 外置；rustc **1.94.1**。
+**项目与工具链**：Data Nexus 当前实现是 `data-proxy/` Cargo workspace；只使用 Rust
+**1.94.1**，不需要仓颉/CJPM。`CARGO_TARGET_DIR` 固定为
+`/Volumes/fushilu/.caches/data-nexus/cargo-target`；若 shell 已设置其他值，执行 Cargo
+命令时必须显式覆盖。
 
 **Smoke（本机门禁）**
 

@@ -10,3 +10,12 @@ target
 .cargo-target/
 .cargo-target-*/
 data-proxy/target/
+
+# Python verifier/test bytecode
+__pycache__/
+*.py[cod]
+
+# Local WorkBuddy state and generated handoff artifacts
+/.workbuddy/
+/HANDOFF.md
+/outputs/

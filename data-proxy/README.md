@@ -1,24 +1,23 @@
-# Introduction
+# Data Nexus Rust Workspace
 
-## Data-Proxy
-A high performance Rust data plane used as SQL traffic proxy, support various of traffic governance capabilities.
-## Feature
-- [ ] mysql8使用`mysql_native_password`插件连接错误
-  - [ ] https://github.com/database-mesh/pisanix/pull/170/commits/1141d1a19072ea831cd4167f5d14c39735e08396
-  - [ ] https://github.com/database-mesh/pisanix/pull/172/files/915e1f0edd5f4fe66425b2eaac121e7d41f1cef2
+本目录是 Data Nexus 当前产品的 Rust workspace，不是独立于 Data Nexus 的另一个项目。
+目录名 `data-proxy` 来自早期代码布局，产品名称与根看板统一使用 **Data Nexus**。
 
-- [ ] 支持postgresql
+主要能力包括 MySQL/PostgreSQL 协议网关、路由与连接池、安全策略、结果义务、
+审计、Admin API、Portal API 和可选 OpenTelemetry/Cedar/OpenDAL 集成。
 
+## 构建
 
+Rust 版本由 [`rust-toolchain.toml`](rust-toolchain.toml) 固定，Cargo 产物必须写入
+`/Volumes/fushilu/.caches/data-nexus/cargo-target`。
 
-### Database traffic governance
+```shell
+CARGO_TARGET_DIR=/Volumes/fushilu/.caches/data-nexus/cargo-target \
+  cargo build --package data-proxy --bin proxy
+CARGO_TARGET_DIR=/Volumes/fushilu/.caches/data-nexus/cargo-target \
+  cargo test --workspace
+```
 
-Applications access databases with SQL, so Pisanix will hijack all SQL traffic. This is a great opportunity to do a lot of things around traffic, like loadbalancing and SQL firewall.
-
-### Observability
-
-In the past, metrics could be retrieved from database instances and display in kinds of charts. Now with Pisanix, DBAs could have more chances to achieve better observability.
-
-### Programmable
-
-For DBAs who could and would like to solve problems with programming. Pisanix supports many kinds of plugin mechanism, like Lua and Wasm. People will have the chance to 'reshape' the expected behavior of databases.
+未完成任务以根目录 [`todo.md`](../todo.md) 为准，已交付记录见
+[`todo-impl.md`](../todo-impl.md)。开发规则见
+[`data-nexus-development.md`](../.claude/rules/data-nexus-development.md)。
