@@ -139,13 +139,24 @@ export function useAdminAuth() {
 
   async function logout() {
     const method = authMethod.value
+    let idToken: string | undefined
+    if (import.meta.client && method === 'oidc') {
+      try {
+        const raw = localStorage.getItem(AUTH_KEY)
+        const parsed = raw ? JSON.parse(raw) as AuthSession : {}
+        idToken = parsed.id_token
+      }
+      catch {
+        // Continue with local session cleanup.
+      }
+    }
     authenticated.value = false
     authMethod.value = null
     if (import.meta.client) localStorage.removeItem(AUTH_KEY)
     if (method === 'oidc') {
       try {
         const { endSession } = useOidc()
-        await endSession()
+        await endSession(idToken)
       }
       catch {
         // ignore

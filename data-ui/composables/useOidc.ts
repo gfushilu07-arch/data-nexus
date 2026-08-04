@@ -127,17 +127,21 @@ export function useOidc() {
     return stored.next || '/'
   }
 
-  async function endSession() {
+  async function endSession(idToken?: string) {
     if (!enabled.value || !import.meta.client) return
     try {
-      const raw = localStorage.getItem(AUTH_KEY)
-      const parsed = raw ? JSON.parse(raw) as { id_token?: string } : {}
+      let token = idToken
+      if (!token) {
+        const raw = localStorage.getItem(AUTH_KEY)
+        const parsed = raw ? JSON.parse(raw) as { id_token?: string } : {}
+        token = parsed.id_token
+      }
       const meta = await discovery()
       if (meta.end_session_endpoint) {
         const params = new URLSearchParams({
           post_logout_redirect_uri: window.location.origin + '/login',
         })
-        if (parsed.id_token) params.set('id_token_hint', parsed.id_token)
+        if (token) params.set('id_token_hint', token)
         window.location.assign(`${meta.end_session_endpoint}?${params.toString()}`)
         return
       }
