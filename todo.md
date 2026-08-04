@@ -113,6 +113,36 @@ smoke 和粗粒度 RSS/cgroup cap 已有；逻辑高水位是当前权威指标�
 验收终点：portal smoke 在双协议、三格式、事务/错误/断连矩阵中通过，流式响应不发生
 无界累积，所有已知限制都有对应 API/UI honesty 字段。
 
+### SQLT：SQL 类型、协议与策略全量测试矩阵
+
+测试规划见 [`docs/sql-test-matrix.md`](docs/sql-test-matrix.md)。本专项横跨 A06/A08/A09/
+A10/T01，不替代各功能实现；它负责用统一 case manifest、真实 backend oracle 和分层矩阵
+证明“支持、改写、拒绝、不支持”四类行为。首版最低 230 个 canonical SQL case，展开后
+PR/nightly/release 分别不少于 350/1,500/3,000 次执行。
+
+- [ ] **SQLT-1 建立 capability 与 case manifest**：为每个 SQL case 分配稳定 ID，记录语句
+  家族、方言、frontend/backend、协议、事务、策略、参数、预期分类和能力标签；`unknown=0`，
+  skip 必须有原因、issue 和到期条件。
+- [ ] **SQLT-2 建立可重复 fixture 与 oracle**：Docker 启动固定版本 MySQL/PostgreSQL，
+  以版本化 schema/seed/cleanup 隔离 case；规范化比较网关和直连 backend 的结果、错误、
+  影响行数、事务/schema 状态，产物写入外置缓存。
+- [ ] **SQLT-3 完成 SQL corpus**：至少覆盖会话/元数据 20、DQL 80、DML 35、DDL 30、
+  TCL/prepared/cursor 35、非法/恶意/unsupported 30；每个适用家族包含 allow、rewrite、
+  deny、unsupported 和副作用断言。
+- [ ] **SQLT-4 完成 wire 与跨协议矩阵**：覆盖 MySQL text/binary prepared、PG simple/
+  extended、HTTP portal、xproto，以及 MySQL/MySQL、PG/PG、MySQL/PG、PG/MySQL；A08/A09/
+  A10/T01 高风险组合全量运行，其余维度使用可审计 pairwise。
+- [ ] **SQLT-5 完成治理与故障矩阵**：覆盖 security off、allow/deny、column strip、mask、
+  row filter、watermark、max rows、ticket、Remote PDP/Cedar、审计 L0/L1/L2，以及取消、
+  断连、backend 重启、pool/lease 回收、长字段和大结果有界性。
+- [ ] **SQLT-6 接入分层门禁与报告**：新增 parser/command/mysql-wire/pg-wire/nightly/
+  release 分组，输出 manifest/results/normalized-output/audit/metrics/logs/summary；PR 快速失败，
+  nightly 扩展覆盖，release 禁止 unknown 和无原因 skip。
+
+验收终点：不少于 230 个 canonical cases 和 3,000 次发布矩阵执行全部得到结构化结果；
+成功路径与直连 oracle 等价，拒绝/unsupported 无后端副作用，事务、审计、metrics 和资源
+回收断言通过，失败可用单个 case ID 稳定复现。
+
 ## 3. P1：产品重债
 
 ### H05：多实例状态与 Vault 内存边界
