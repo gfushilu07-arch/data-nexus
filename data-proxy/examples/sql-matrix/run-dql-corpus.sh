@@ -9,6 +9,8 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 CACHE_ROOT="${DATA_NEXUS_SQL_MATRIX_CACHE:-/Volumes/fushilu/.caches/data-nexus/sql-matrix}"
 RUN_ID="${SQLT_DQL_RUN_ID:-dql-$(date -u +%Y%m%dT%H%M%SZ)}"
 RUN_DIR="$CACHE_ROOT/$RUN_ID"
+CASE_FROM="${SQLT_DQL_CASE_FROM:-SQLT-DQL-000}"
+CASE_TO="${SQLT_DQL_CASE_TO:-SQLT-DQL-999}"
 COMPOSE_PROJECT="sqlt3b-${RUN_ID//[^a-zA-Z0-9]/}"
 COMPOSE=(docker compose -p "$COMPOSE_PROJECT" -f "$ROOT/fixtures/docker-compose.yml")
 
@@ -121,13 +123,14 @@ PY
     sed -n '1,80p' "$err" >&2 || true
     sed -n '1,120p' "$RUN_DIR/logs/${case_id}-${dialect}.diff" >&2 2>/dev/null || true
   fi
-done < <(python3 - "$ROOT/manifest.json" <<'PY'
+done < <(python3 - "$ROOT/manifest.json" "$CASE_FROM" "$CASE_TO" <<'PY'
 import json
 import sys
 
 manifest = json.load(open(sys.argv[1], encoding="utf-8"))
+case_from, case_to = sys.argv[2:]
 for case in manifest["cases"]:
-    if case["family"] != "dql":
+    if case["family"] != "dql" or not case_from <= case["id"] <= case_to:
         continue
     for dialect in case["dialects"]:
         print(f'{case["id"]}\t{dialect}\t{case["sql_file"]}')
@@ -150,4 +153,4 @@ Path(summary).write_text(json.dumps({
 PY
 
 echo "SQLT-3B DQL corpus: $pass_count/$case_count passed"
-[[ "$fail_count" == 0 ]]
+[[ "$case_count" -gt 0 && "$fail_count" == 0 ]]

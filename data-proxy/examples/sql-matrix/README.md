@@ -55,8 +55,8 @@ The metadata/session/diagnostic tranche currently contains 20 canonical cases
 budget test prevents this tranche from shrinking while DQL, DML, DDL, and failure
 families are added.
 
-The SQLT-3B DQL tranche currently contains 48 canonical cases
-(`SQLT-DQL-001` through `SQLT-DQL-048`). Run its direct fixed-version backend
+The SQLT-3B DQL tranche currently contains 64 canonical cases
+(`SQLT-DQL-001` through `SQLT-DQL-064`). Run its direct fixed-version backend
 acceptance with:
 
 ```bash
@@ -69,3 +69,7 @@ its declared dialect, and strictly compares normalized output with the versioned
 `results.jsonl` and `summary.json` to the external cache. It does not claim
 cross-dialect equality; MySQL and PostgreSQL represent some literals and types
 differently.
+
+During corpus development, a bounded ID range can be selected with
+`SQLT_DQL_CASE_FROM` and `SQLT_DQL_CASE_TO`. Final acceptance must leave both unset
+so the complete registered DQL corpus runs.

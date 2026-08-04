@@ -137,13 +137,13 @@ class ValidateSqlMatrixTest(unittest.TestCase):
             {f"SQLT-META-{index:03d}" for index in range(1, 21)},
         )
 
-    def test_dql_family_is_expanding_under_sqlt3b2(self) -> None:
+    def test_dql_family_is_expanding_under_sqlt3b3(self) -> None:
         manifest = self.manifest()
         dql_cases = [case for case in manifest["cases"] if case["family"] == "dql"]
-        self.assertGreaterEqual(len(dql_cases), 48)
+        self.assertGreaterEqual(len(dql_cases), 64)
         self.assertEqual(
             {case["id"] for case in dql_cases},
-            {f"SQLT-DQL-{index:03d}" for index in range(1, 49)},
+            {f"SQLT-DQL-{index:03d}" for index in range(1, 65)},
         )
 
     def test_dql_oracle_must_cover_every_declared_dialect(self) -> None:

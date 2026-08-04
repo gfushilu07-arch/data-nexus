@@ -191,6 +191,64 @@
     "SQLT-DQL-048": {
       "mysql": "1001\tNULL\t1002\n1002\t1001\t1003\n1003\t1002\t2001\n2001\t1003\t2002\n2002\t2001\t2003\n2003\t2002\tNULL\n",
       "postgres": "1001\tNULL\t1002\n1002\t1001\t1003\n1003\t1002\t2001\n2001\t1003\t2002\n2002\t2001\t2003\n2003\t2002\tNULL\n"
+    },
+    "SQLT-DQL-049": {
+      "mysql": "101\tAda-10\n102\tLin-10\n201\tGrace-20\n202\tEdsger-20\n",
+      "postgres": "101\tAda-10\n102\tLin-10\n201\tGrace-20\n202\tEdsger-20\n"
+    },
+    "SQLT-DQL-050": {
+      "mysql": "101\t3\tAd\n102\t3\tLi\n201\t5\tGr\n202\t6\tEd\n",
+      "postgres": "101\t3\tAd\n102\t3\tLi\n201\t5\tGr\n202\t6\tEd\n"
+    },
+    "SQLT-DQL-051": {
+      "mysql": "DATA NEXUS\n",
+      "postgres": "DATA NEXUS\n"
+    },
+    "SQLT-DQL-052": {
+      "mysql": "1001\t37.50\t12.5\n1002\t49.99\t100.0\n1003\t35.00\t15.0\n2001\t7.75\t42.3\n2002\t42.25\t7.8\n2003\t70.00\t120.0\n",
+      "postgres": "1001\t37.50\t12.5\n1002\t49.99\t100.0\n1003\t35.00\t15.0\n2001\t7.75\t42.3\n2002\t42.25\t7.8\n2003\t70.00\t120.0\n"
+    },
+    "SQLT-DQL-053": {
+      "mysql": "1001\t1\t100\n1002\t2\t100\n1003\t3\t100\n2001\t1\t400\n2002\t2\t400\n2003\t3\t400\n",
+      "postgres": "1001\t1\t100\n1002\t2\t100\n1003\t3\t100\n2001\t1\t400\n2002\t2\t400\n2003\t3\t400\n"
+    },
+    "SQLT-DQL-054": {
+      "mysql": "101\tpresent\tada@example.test\n102\tmissing\tnot-provided@example.test\n201\tpresent\tgrace@example.test\n202\tpresent\tedsger@example.test\n",
+      "postgres": "101\tpresent\tada@example.test\n102\tmissing\tnot-provided@example.test\n201\tpresent\tgrace@example.test\n202\tpresent\tedsger@example.test\n"
+    },
+    "SQLT-DQL-055": {
+      "mysql": "NULL\t9\t3\n",
+      "postgres": "NULL\t9\t3\n"
+    },
+    "SQLT-DQL-056": {
+      "mysql": "42\t12.50\n",
+      "postgres": "42\t12.50\n"
+    },
+    "SQLT-DQL-057": {
+      "mysql": "1001\t2026\t1\n1002\t2026\t1\n1003\t2026\t1\n2001\t2026\t2\n2002\t2026\t2\n2003\t2026\t2\n",
+      "postgres": "1001\t2026\t1\n1002\t2026\t1\n1003\t2026\t1\n2001\t2026\t2\n2002\t2026\t2\n2003\t2026\t2\n"
+    },
+    "SQLT-DQL-058": {
+      "postgres": "1001\t2026-01-01 00:00:00\n1002\t2026-01-01 00:00:00\n1003\t2026-01-01 00:00:00\n2001\t2026-02-01 00:00:00\n2002\t2026-02-01 00:00:00\n2003\t2026-02-01 00:00:00\n"
+    },
+    "SQLT-DQL-059": {
+      "mysql": "1001\t2026-01\n1002\t2026-01\n1003\t2026-01\n2001\t2026-02\n2002\t2026-02\n2003\t2026-02\n"
+    },
+    "SQLT-DQL-060": {
+      "postgres": "Ada\tobject\nGrace\tobject\n"
+    },
+    "SQLT-DQL-061": {
+      "mysql": "Ada\tOBJECT\nGrace\tOBJECT\n"
+    },
+    "SQLT-DQL-062": {
+      "postgres": "101\tada@example.test\n201\tgrace@example.test\n"
+    },
+    "SQLT-DQL-063": {
+      "mysql": "101\tada@example.test\n201\tgrace@example.test\n"
+    },
+    "SQLT-DQL-064": {
+      "mysql": "1001\t10\t12.50\n1002\t10\t112.49\n1003\t10\t127.49\n2001\t20\t42.25\n2002\t20\t50.00\n2003\t20\t170.00\n",
+      "postgres": "1001\t10\t12.50\n1002\t10\t112.49\n1003\t10\t127.49\n2001\t20\t42.25\n2002\t20\t50.00\n2003\t20\t170.00\n"
     }
   }
 }
