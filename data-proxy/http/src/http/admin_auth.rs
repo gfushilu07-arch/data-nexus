@@ -287,6 +287,12 @@ fn validate_with_key(
         validation.validate_aud = false;
     } else {
         validation.set_audience(&[config.audience.as_str()]);
+        let mut required = vec!["exp", "sub"];
+        if !config.issuer.is_empty() {
+            required.push("iss");
+        }
+        required.push("aud");
+        validation.set_required_spec_claims(&required);
     }
 
     let data = decode::<Value>(token, &key, &validation)
@@ -414,6 +420,69 @@ mod tests {
     fn enabled_requires_token_for_reload() {
         let cfg = enabled_hmac();
         let err = authenticate_request(&cfg, None, "POST", "/admin/reload").unwrap_err();
+        assert!(matches!(err, AdminAuthError::Unauthorized(_)));
+    }
+
+    #[test]
+    fn audience_is_required_when_configured() {
+        use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
+
+        let cfg = enabled_hmac();
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system time")
+            .as_secs();
+        let claims = serde_json::json!({
+            "sub": "audience-test",
+            "iss": cfg.issuer,
+            "exp": now + 3600,
+            "roles": ["admin"],
+        });
+        let token = encode(
+            &Header::new(Algorithm::HS256),
+            &claims,
+            &EncodingKey::from_secret(cfg.jwt_secret.as_bytes()),
+        )
+        .expect("encode token");
+        let err = authenticate_request(
+            &cfg,
+            Some(&format!("Bearer {token}")),
+            "POST",
+            "/admin/reload",
+        )
+        .unwrap_err();
+        assert!(matches!(err, AdminAuthError::Unauthorized(_)));
+    }
+
+    #[test]
+    fn wrong_audience_is_rejected() {
+        use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
+
+        let cfg = enabled_hmac();
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system time")
+            .as_secs();
+        let claims = serde_json::json!({
+            "sub": "audience-test",
+            "iss": cfg.issuer,
+            "aud": "another-api",
+            "exp": now + 3600,
+            "roles": ["admin"],
+        });
+        let token = encode(
+            &Header::new(Algorithm::HS256),
+            &claims,
+            &EncodingKey::from_secret(cfg.jwt_secret.as_bytes()),
+        )
+        .expect("encode token");
+        let err = authenticate_request(
+            &cfg,
+            Some(&format!("Bearer {token}")),
+            "POST",
+            "/admin/reload",
+        )
+        .unwrap_err();
         assert!(matches!(err, AdminAuthError::Unauthorized(_)));
     }
 
