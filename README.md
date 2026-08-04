@@ -17,9 +17,6 @@ Data Nexus 是一个使用 Rust 开发的数据库协议网关。当前产品实
 | `todo.md` | 唯一开发看板与下一任务 |
 | `todo-impl.md` | 已交付功能归档 |
 
-根目录遗留的 `cjpm.toml`、`src/*.cj` 和相关工具属于早期仓颉实现，不是当前
-Data Nexus Rust 产品的构建、测试或交付依据。开发当前项目不需要仓颉/CJPM 工具链。
-
 ## 工具链
 
 - Rust `1.94.1`，由 `data-proxy/rust-toolchain.toml` 固定。
