@@ -123,6 +123,19 @@ fn get_or_fetch(jwks_url: &str, cache_ttl: Duration) -> Result<CacheEntry, Admin
 }
 
 fn fetch_jwks(jwks_url: &str) -> Result<JwksDocument, AdminAuthError> {
+    // Admin authentication is synchronous but runs on Tokio workers. Keep the
+    // blocking reqwest runtime entirely on an OS thread so dropping it cannot
+    // panic inside the async request context.
+    let jwks_url = jwks_url.to_owned();
+    std::thread::Builder::new()
+        .name("dn-admin-jwks".into())
+        .spawn(move || fetch_jwks_blocking(&jwks_url))
+        .map_err(|e| AdminAuthError::Misconfigured(format!("JWKS worker spawn failed: {e}")))?
+        .join()
+        .map_err(|_| AdminAuthError::Unauthorized("JWKS worker thread panicked".into()))?
+}
+
+fn fetch_jwks_blocking(jwks_url: &str) -> Result<JwksDocument, AdminAuthError> {
     let client = reqwest::blocking::Client::builder()
         .timeout(Duration::from_secs(10))
         .build()
@@ -205,5 +218,36 @@ impl Clone for CacheEntry {
             keys: self.keys.clone(),
             default: self.default.clone(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+
+    use super::fetch_jwks;
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn fetch_is_safe_inside_tokio_runtime() {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind JWKS server");
+        let address = listener.local_addr().expect("JWKS server address");
+        let server = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().expect("accept JWKS request");
+            let mut request = [0_u8; 1024];
+            let _ = stream.read(&mut request).expect("read JWKS request");
+            let body = r#"{"keys":[]}"#;
+            write!(
+                stream,
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                body.len(),
+                body
+            )
+            .expect("write JWKS response");
+        });
+
+        let document = fetch_jwks(&format!("http://{address}/certs")).expect("fetch JWKS");
+        assert!(document.keys.is_empty());
+        server.join().expect("JWKS server thread");
     }
 }
