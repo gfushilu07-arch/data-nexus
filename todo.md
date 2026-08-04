@@ -1,186 +1,227 @@
-# Data Nexus 开发看板（未完成）
+# Data Nexus 开发规划
 
-**已交付归档** → [`todo-impl.md`](todo-impl.md)  
-**架构与规则**（细节以文档为准，本文件只排未完成债）：
+本文件是 Data Nexus 的**未完成任务看板**。已交付的切片和提交记录统一见
+[`todo-impl.md`](todo-impl.md)；不在本文件重复复制历史实现。
 
-| 文档 | 用途 |
-|------|------|
-| `docs/data-nexus-protocol-gateway-plan.md` | L0 / v1 协议网关底座 |
-| `docs/data-security-roadmap.md` | 产品对标 + S0–S6 |
-| `docs/data-nexus-tech-architecture-2026.md` | **v2 技术主文档** |
-| `docs/data-audit-architecture.md` | 审计 / 流式专项 |
-| `docs/ticket-vault-runbook.md` | Ticket/Vault 运维 |
-| `data-proxy/docs/build-cache.md` | Cargo target 外置缓存 |
-| `.claude/rules/data-nexus-development.md` | 开发强制规则 |
-| `CLAUDE.md` | 规则与技能入口 |
+## 0. 使用规则与工具链
 
----
+- Data Nexus 当前实现是 Rust workspace，目录名 `data-proxy/` 只是历史目录名，
+  不是另一个产品。
+- Rust 工具链固定为 `1.94.1`，以 [`data-proxy/rust-toolchain.toml`](data-proxy/rust-toolchain.toml)
+  为准；不使用仓颉工具链。仓颉 SDK 仅在未来确有 SDK 兼容需求时保留，不能作为本项目
+  binary 的构建前置条件。
+- 所有 Cargo 命令必须在 `data-proxy/` 中执行，并显式使用：
+  `/Volumes/fushilu/.caches/data-nexus/cargo-target`。
+- 所有编译、测试、smoke、覆盖率和临时导出物必须写入
+  `/Volumes/fushilu/.caches/data-nexus/` 的子目录，不得在仓库内生成大体积 target 或输出物。
+- 每个独立功能单独提交，提交标题必须带任务 ID；完成整项后从本文件删除，迁入
+  [`todo-impl.md`](todo-impl.md)。本文件不保留 `- [x]`。
+- 只有一个 `NOW` 任务。其他任务可以并行准备，但不得把“设计完成”当成“实现完成”。
 
-## 0. 版本与原则
-
-```text
-v1 / L0     协议中转 + 管理面 + 观测          ✅ 见 todo-impl.md
-v2 MVP      访问 + 脱敏 + 权限 + 审计         ✅ 见 todo-impl.md
-v2.1        生产化 / 运维硬化                 ✅ 见 todo-impl.md
-v2.2        真流式封顶 + 企业策略/合规         ⏳ 本文件唯一焦点
-```
-
-| 原则 | 说明 |
-|------|------|
-| 默认关安全 | `security.enabled=false` 不破坏 v1 |
-| 身份分离 | 管理面鉴权 ≠ 数据面 Subject |
-| 门户经 PEP | 禁止 UI/API 直连生产库 |
-| 审计不堵查询 | 有界队列；worker 落盘/索引 |
-| 配置勿静默 no-op | 未实现能力必须校验失败 |
-| 诚实边界 | 部分完成标「部分」，见 §3 |
-
-**项目与工具链**：Data Nexus 当前实现是 `data-proxy/` Cargo workspace；使用 Rust
-**1.94.1**。`CARGO_TARGET_DIR` 固定为
-`/Volumes/fushilu/.caches/data-nexus/cargo-target`；若 shell 已设置其他值，执行 Cargo
-命令时必须显式覆盖。
-
-**Smoke（本机门禁）**
+常用本机门禁：
 
 ```bash
 cd data-proxy
-./examples/run-smoke-matrix.sh default   # CI 默认
-./examples/run-smoke-matrix.sh all       # + extended
-./examples/run-smoke-matrix.sh cedar     # 需 --features security-cedar
+CARGO_TARGET_DIR=/Volumes/fushilu/.caches/data-nexus/cargo-target \
+  cargo check --workspace
+./examples/run-smoke-matrix.sh default
+./examples/run-smoke-matrix.sh all
+./examples/run-smoke-matrix.sh cedar
 ```
 
----
+`cedar` 仅在启用 `security-cedar` feature 时运行；OpenDAL、OTel 等可选 feature
+不得改变默认精简构建的行为。
 
-## 1. P0 — 真流式 / 热路径封顶
+## 1. NOW：A10 backend SQL `DECLARE ... WITH HOLD`
 
-> 目标：backend 行流 → 义务 → 编码 → 客户端；峰值内存 ≈ 1～2 个窗口。  
-> A1–A4 / A07 骨架与 socket writer 已交付（见归档）。
+目标：在 PostgreSQL、简单查询、无数据义务的条件下，将命名游标交给同一条 backend
+连接管理，使 `WITH HOLD` 能跨 `COMMIT` 存活到 `CLOSE` 或会话结束。设计稿见
+[`docs/a10-backend-sql-with-hold-design.md`](docs/a10-backend-sql-with-hold-design.md)。
 
-- [ ] **A06** Backend→PEP 真行流  
-  - 已有：MySQL/PG `RowStream` + channel（含事务 producer 还 lease）；smoke 双协议 max_rows（含 txn）；**Materialized Query* 升 Streaming**；encode 峰值单测；**`peak_window_rows` + Prometheus `gateway_encode_peak_window_rows`**；**`peak_window_bytes` + `gateway_encode_peak_window_bytes`**（单窗 encode 载荷高水位；smoke 多窗 peak_bytes≪total）；smoke **强制** `execute_path=streaming` + `encode_windows>0` + **peak≤window_rows**；**粗粒度进程内存 smoke**（双协议 50k；cgroup/proc/ps；绝对 cap）；**逻辑 peak 仍权威**；**UI38 Overview/Settings 解析 `/metrics` 展示 logical peak + execute_path 计数（非 RSS）**；**UI40 API `streaming.peak_is_process_rss=false`**；**UI42 mask_rows + passthrough_bytes 卡片**；**UI45 Overview/Settings streaming/star 诚实配置 + stream smoke pin security-policies**；**UI49 Cedar/vault/stream-rss honesty pin**；**UI52–71 `remainders.process_rss_window_byte_ci=false`（API/UI/smoke/unit/L0/auth）**  
-  - 仍欠：控制语句/空结果 Complete 仍可小物化；**无进程/cgroup 精确 1–2 窗字节 CI**（逻辑 peak 已有；**`remainders.process_rss_window_byte_ci=false`**；OS RSS 仍噪声大）；portal Complete 见 A09  
-  - 路径：`transport`、`server/metrics`、`core_engine`、`smoke-security-stream.sh`、`smoke-security-stream-rss.sh`、`OBSERVABILITY.md`
+当前基线：网关已有进程内 `named_cursors`，支持 forward `FETCH` 和明确的
+`PortalSuspended` 续读；`security.streaming.backend_sql_with_hold=true` 当前会被
+`validate()` 拒绝，`remainders.backend_sql_with_hold=false` 必须保持诚实。
 
-- [ ] **A08** PostgreSQL wire 透传 + backend TLS  
-  - 已有：idle pool（cap/TTL/SELECT 1）；事务 `tcp_txn`；双协议 TLS；**PG simple Query 透传**；**passthrough 下 extended：优先客户端原包 P/B/E TCP**（`passthrough_client`）；**multi-Execute 连续 client-frame**（首页 hold 无 Sync；续页只中继 Execute；Sync→`PgBackendSync` 刷 Z）；回落 **backend 重编码**（`passthrough_extended`）；否则 **`streaming_demote`**（MySQL COM_STMT）；**UI40 API `streaming.obligations_force_streaming=true`**；**UI42 passthrough_bytes 观测卡片**；**UI45 Overview/Settings 展示 obligations_force_streaming + stream smoke pin**；**UI46 passthrough/watermark smoke pin security-policies honesty**  
-  - 仍欠：Streaming 仍用 pool；非自由代理（义务路径强制 Streaming 已有 smoke-security-mask 钉）  
-  - 路径：`pg_client_extended_frames` + `pg_ext_tcp_hold`、`client_frames_relay_hold_into`、`PgBackendSync`、`smoke-security-passthrough.sh`
+- [ ] **A10-1 实现 PG backend 游标路由**：在无 mask、row filter、watermark、
+  max_rows 等义务时，把 `DECLARE`、`FETCH`、`CLOSE` 发送到同一 backend lease，
+  并保证连接在游标生命周期内不会回池复用。
+- [ ] **A10-2 完成事务和会话生命周期**：验证无 `WITH HOLD` 的游标在 `COMMIT`
+  后失效，有 `WITH HOLD` 的游标跨 `COMMIT` 保留；`CLOSE`、`Drop`、`Quit` 清理
+  backend 游标并释放连接，断连不得泄漏。
+- [ ] **A10-3 处理义务冲突与配置门**：有数据义务时 fail-closed 或明确回落到
+  process-local 路径；补齐错误码、日志和配置校验，禁止静默启用半成品。
+- [ ] **A10-4 增加验证矩阵**：覆盖单游标、双并发游标、重复 `DECLARE`、`FETCH ALL`、
+  跨 `COMMIT`、重连失效、协议错误和 backend 断开；同时覆盖安全配置开启/关闭。
+- [ ] **A10-5 完成发布收口**：更新 API/UI/运维文档和 honesty helper，只有 A10-1
+  至 A10-4 全部通过后才把 `remainders.backend_sql_with_hold` 改为 `true`，并运行
+  默认、extended、security、xproto 全矩阵。
 
-- [ ] **A09** Portal 端到端流式  
-  - 已有：NDJSON + CSV + **JSON** Streaming → `backend_window`；**Complete 回退** 三格式 `chunked`（smoke：INSERT NDJSON/JSON/CSV **强制** `x-data-nexus-stream: chunked`）；JSON 分片文档 UI 可 parse；**同协议 portal smoke 钉 `window_rows=2`**；**跨协议 portal 双向** smoke 同窗；**响应头 `x-data-nexus-window-rows`**；**portal HTTP 记 Prometheus `type=PORTAL_STREAM|PORTAL_CHUNKED`**（同协议 streaming / 跨协议 **xproto_stream** + 逻辑 peak；smoke 强制 PORTAL_STREAM peak≤window，含 xproto 双向）；**UI41 Overview/Settings 解析 PORTAL_STREAM vs PORTAL_CHUNKED + stream peak**（诚实：chunked 可能 backend 已物化；peak 非 RSS）；**UI46 Portal 展示 streaming/star/sql_cursor 诚实 + portal/passthrough/watermark smoke pin security-policies**；**UI47 Sessions 展示 sql_cursor/streaming 诚实 + audit/audit-sample/state-file/xproto×2 smoke pin**；**UI48 Tickets/Vault 同字段 + ticket/dual/time/remote smoke pin**；**UI49 Cedar 页诚实 + cedar/vault/stream-rss smoke pin**；**UI50 Audit 页诚实 + config-validate valid-config pin**；**UI51 Topology 诚实横幅**；**UI52–71 remainders 未交付标志（API/运维页/全 smoke 矩阵 helper）**；**OBSERVABILITY** 标明 chunked ≠ backend_window  
-  - 仍欠：Complete 路径 ResultSet 在 backend 侧仍可能先物化（无 RowStream 时不可避免）；无进程 RSS 峰值 CI（逻辑 window 已钉；**`remainders.process_rss_window_byte_ci=false`**）  
-  - 路径：`http` portal_execute_*_streaming；`security-portal-gateway-config.toml`；`security-portal-xproto{,-pg-mysql}-gateway-config.toml`；`smoke-security-portal{,-xproto,-xproto-pg-mysql}.sh`；UI Overview/Settings
+验收终点：真实 backend PostgreSQL smoke 能证明服务端游标跨 `COMMIT` 存活、关闭可回收，
+安全义务路径不会绕过 PEP；所有 Cargo 与测试产物都位于外置缓存目录。
 
-- [ ] **A10** 预处理 / 事务透传矩阵  
-  - 已有：MySQL COM_STMT + Streaming + PREPARE 列定义；PG Parse/Bind/Execute + Streaming；Describe 显式 SELECT + `SELECT *` catalog；扩展协议 Execute 不发 Z；**客户端 Execute max_rows → PortalSuspended（s）**；**同 portal multi-Execute 续读**：**优先 backend `RowStream` hold**（`hold_remainder`，不重跑 SQL）；hold 不可用时 **logical skip** 回落；策略 max_rows 仍 C；Bind/Close/Sync 丢弃 hold；unit `a10_hold_remainder_keeps_stream_for_resume` + stream smoke multi-Execute；**Prometheus `gateway_portal_resume_total{mode=hold\|resume_hold\|logical_skip}`**（smoke 强制 hold+resume_hold 或 skip）；**UI39 Overview/Settings 解析 hold/resume_hold/logical_skip 卡片**（诚实：非 backend WITH HOLD）；**UI43 API/Policies `sql_cursor` 诚实字段**（process_local / backend_with_hold=false / forward_fetch_only / session_end_clears；mask+deny+column smoke pin）；**UI44 Overview/Settings 展示 security-policies.sql_cursor 配置诚实（不依赖 metrics 流量）**；**UI47 Sessions 同字段 + core/state/xproto smoke pin**；**PDP prepared Execute 继承 `streaming.max_rows`**（防 passthrough demote 绕过 cap）；**简单查询 `DECLARE/FETCH/CLOSE` 进程内命名游标**（`named_cursors`；DECLARE 不套 policy max_rows；**进程内** WITH HOLD 跨 COMMIT / 无 WITH HOLD 在 COMMIT 丢弃；**会话结束清空**；**双游标并发**；**同名 DECLARE 拒绝**；**FETCH ALL 耗尽**；**MOVE/FETCH ABSOLUTE 等 fail-closed**；metrics `sql_cursor_*`；**仍非** backend 服务端游标；**UI52–71 `remainders.backend_sql_with_hold=false`**；**`streaming.backend_sql_with_hold` 默认 false，true 时 validate 拒绝（a10 步0）**）  
-  - 仍欠：**非** backend SQL `DECLARE … WITH HOLD` 服务端命名游标（进程内游标随 session 消亡；仅 forward FETCH；**API remainders 钉 false**）；复杂 JOIN `*` 依赖 backend prepare  
-  - 路径：`transport` hold/`PrefixedRowStream`、`CoreGatewayConnection.held_portal_stream` + `named_cursors` + `Drop`、`pdp` Execute obligations、`server/metrics` portal_resume、frontend Bind/Close/Sync + `COMMIT;` 分号、`smoke-security-stream.sh`、UI Overview/Settings
+## 2. P0：当前发布阻塞
 
----
+### A06：Backend 到 PEP 的精确窗口内存证明
 
-## 2. P1 — 策略 / 合规 / 运维
+当前基线：MySQL/PG `RowStream`、encode 逻辑 `peak_window_rows/bytes`、双协议多窗口
+smoke 和粗粒度 RSS/cgroup cap 已有；逻辑高水位是当前权威指标，
+`remainders.process_rss_window_byte_ci=false` 仍需保持。
 
-- [ ] **B08** L2 样本 / 大 payload  
-  - 已有：物化 ResultSet + Streaming 首窗（脱敏后）；`sample_enabled` 默认关；OpenDAL 可选；**validate：`sample_enabled` 必须 `default_audit_level=L2`**（防静默 no-op）；`OBSERVABILITY.md` + prod 模板诚实说明；smoke `smoke-security-audit-sample.sh` 断言 `sample_body` 有界且 **truncated 当 seed>max_rows**；UI 标明 **非 L3**；**`smoke-security-config-validate` 拒绝 L0+sample_enabled**；API/UI 暴露 **`requires_audit_level=L2` / `full_result_l3=false`**  
-  - 仍欠：勿宣传「全量 L2 / L3 合规样本」；OpenDAL 上传仍需 feature；高 QPS 默认仍应关  
-  - 路径：`security.rs` validate、`audit` sample attach、`OBSERVABILITY.md`、`smoke-security-audit-sample.sh`、`smoke-security-config-validate.sh`
+- [ ] **A06-1 建立可重复的进程/cgroup 测量夹具**：固定数据规模、窗口大小、并发度、
+  allocator/采样周期，分别覆盖 Linux cgroup、`/proc` 和 macOS 可用采样方式。
+- [ ] **A06-2 增加精确窗口字节 CI**：证明 steady-state 峰值接近 1～2 个窗口，
+  同时断言没有完整结果集物化；区分 encode payload、进程 RSS 和 OS 噪声。
+- [ ] **A06-3 补齐双协议和失败路径**：MySQL、PostgreSQL、事务、mask、长字段、空结果、
+  控制语句、客户端提前断开均有边界测试和可诊断失败信息。
+- [ ] **A06-4 完成诚实字段切换**：测量门禁稳定后才更新 `remainders`、metrics、UI、
+  smoke 文档和架构文；在此之前不得把逻辑 peak 宣传成 RSS 证明。
 
-- [ ] **H05** 多实例状态外置（含 H08 vault 文件加密）  
-  - 已有：ticket/vault JSON+lock+**AES-GCM**；审计 SQLite multi-writer；LocalPdp `policy_path` mtime 轮询；prod `security.state` 模板；**vault `backend_password` ZeroizeOnDrop + revoke zeroize**；**`backend_identity` → `Zeroizing<String>`**；**Admin `security-policies.state` 只读摘要**含 **`last_writer_wins=true` / `merge_strategy=last_writer_wins` / `crdt=false` / `mlock=false` / `vault_password_zeroize=true`**；**smoke `smoke-security-state-file`** 断言 encrypt flags + 密文 + 重启 + mtime 热更 + **LWW/crdt/mlock 诚实字段** + **磁盘 last-writer 全文件替换 reload**；unit last-writer 全文件替换；UI Overview/Settings/Vault/Tickets/Policies 标明 **非 CRDT / 非 mlock**；**UI52–71 `remainders.crdt_merge=false` / `remainders.mlock=false`**  
-  - 仍欠：**无 CRDT merge**（全文件替换 last-writer-wins；**remainders.crdt_merge=false**）；活跃 lease 密码仍在进程 RAM（**非 mlock**）；轮询默认 1s（smoke 用 200ms）  
-  - 路径：ticket/vault file backend、`vault.rs` zeroize、`http` state summary、`smoke-security-state-file.sh`、prod 模板、runbook
+验收终点：CI 可在固定运行环境中稳定给出 1～2 窗字节结论，或明确记录受 OS/allocator
+影响的不可证明边界；默认安全关闭路径和 v1 行为不回归。
 
-- [ ] **H04b** 真 IdP OIDC 联调  
-  - 已有：文档 + 模板  
-  - 仍欠：部署侧真实回调与角色映射验收（**本仓不强制**）  
-  - 路径：部署 runbook / 运维侧
+### A08：PostgreSQL wire 透传与 backend TLS 完整性
 
-- [ ] **T01** 列 ACL / 复杂 SQL 用例矩阵  
-  - 已有：extract/PDP 单测；WHERE/HAVING/EXISTS/IN/标量子查询表提取；column smoke WHERE IN deny；**嵌套 SELECT 列表列 strip**（多层 derived table 单测 + `smoke-security-column` multi-level E2E）；**`*` / `t.*` / alias `e.*` 在 star_policy=deny 下拒绝**（smoke + unit；**不展开**为列再 strip）；**star_policy=allow 也不展开/strip**（unit `star_policy_allow_does_not_expand_or_strip_wildcard`）；**UI40 API/Policies `star_expands_wildcard=false` + streaming `peak_is_process_rss=false` / `obligations_force_streaming=true`**（deny/column smoke pin）；**UI45 Overview/Settings 展示 star/streaming 诚实 + stream smoke pin**  
-  - 仍欠：**`*` / `t.*` 仍不展开**（allow 时也不自动 strip 隐式列）；相关子查询表达式/极端方言仍 heuristic  
-  - 路径：`object_extract`、`pdp::rewrite_select_strip_columns`、`smoke-security-column.sh`、`http` security-policies
+当前基线：idle pool、事务 lease、双协议 TLS、PG simple Query 透传，以及 extended
+原包/重编码/Streaming demote 路径已交付；义务路径已强制 Streaming。
 
-- [ ] **F30** 敏感识别增强 — **延后**  
-  - 现状：仅 `column_tags` + mask 规则  
-  - 非目标：全量 DLP  
-  - 未点名勿静默当完成
+- [ ] **A08-1 解决 Streaming 与 pool 的生命周期契约**：明确何时可复用连接、何时必须
+  独占 lease，覆盖 PortalSuspended、多 Execute、事务和客户端断连。
+- [ ] **A08-2 完成 PostgreSQL extended wire 矩阵**：Parse/Bind/Describe/Execute/
+  Sync、多 Execute 连续帧、参数重写、ReadyForQuery、错误和回落路径都要有协议级断言。
+- [ ] **A08-3 完成 backend TLS 生产门禁**：校验证书/CA、hostname、require TLS、
+  不支持 TLS 的 backend 回落策略；配置错误必须 fail-closed，并覆盖 MySQL 与 PG。
+- [ ] **A08-4 固化透传诚实观测**：区分 `passthrough_client`、`passthrough_extended`、
+  `streaming_demote` 和重编码，检查字节计数、watermark、mask/row-filter 不被绕过。
 
----
+验收终点：默认、TLS、extended、事务、跨协议 portal、义务路径 smoke 全通过，且连接
+归还/释放没有泄漏或跨请求污染。
 
-## 3. P3 — 边界扩展（明确后置）
+### A09：Portal 端到端流式
 
-- [ ] **P01** 新协议（Redis/…）— **延后**
-- [ ] **P02** 深终端 Agent — **不做/后置**
-- [ ] **P03** 审计 Parquet/分析（DataFusion 可选）— **延后**
-- [ ] **P04** Sharding rewrite（`gateway_core` stub）— **延后**
+当前基线：NDJSON、CSV、JSON 的 `backend_window`、Complete `chunked` 回退、同协议和
+跨协议 portal smoke、`x-data-nexus-window-rows` 及 PORTAL_STREAM/CHUNKED 观测已存在。
 
----
+- [ ] **A09-1 消除可消除的 Complete 物化**：为 portal 的 backend 无 RowStream、空结果、
+  控制语句和 INSERT/UPDATE 等路径定义清晰边界；能用窗口传输的路径不得先聚合完整结果。
+- [ ] **A09-2 完成三格式一致性**：NDJSON、JSON 分片、CSV 在同协议及 PG↔MySQL 双向
+  portal 中保持窗口、顺序、错误、响应头和结束帧一致。
+- [ ] **A09-3 增加端到端资源验证**：HTTP 和 xproto 均检查窗口上限、逻辑 peak、断连取消、
+  backend lease 回收和审计不阻塞查询。
+- [ ] **A09-4 收口 UI、metrics 与文档**：明确 `backend_window` 与 `chunked` 的差异，
+  不把 HTTP 分块或逻辑 peak 宣称为 backend 真流式/RSS 证明。
 
-## 4. 已知限制（诚实账，勿当已交付宣传）
+验收终点：portal smoke 在双协议、三格式、事务/错误/断连矩阵中通过，流式响应不发生
+无界累积，所有已知限制都有对应 API/UI honesty 字段。
 
-| 主题 | 限制 |
-|------|------|
-| Portal「流式」 | A09 NDJSON+CSV+JSON：Streaming → `backend_window`（**双向跨协议 portal** MySQL↔PG）；**Complete → `chunked`**；**`x-data-nexus-window-rows` 头**（CSV 可钉窗）；backend 无 RowStream 时仍可能先物化；无进程峰值 CI |
-| 脱敏大数据 | A06 Streaming 真窗口（含 txn）；Query* Materialized 已升 Streaming；**逻辑 peak_window_rows + peak_window_bytes**（多窗 smoke peak_bytes≪total）；**粗粒度内存 smoke**（双协议；cgroup/proc/ps；多窗 encode 下限）；非进程精确 1–2 窗字节；控制语句/Complete 小结果仍可物化 |
-| PG/MySQL backend TLS | A08：simple Query `passthrough`；**extended 优先 `passthrough_client`（客户端原包单元 TCP）**；回落 `passthrough_extended`；MySQL COM_STMT `streaming_demote`；multi-Execute hold 仍 Streaming |
-| 预处理语句 | A10：协议 smoke + mysql description + **psycopg 同连接 rebind** + **PortalSuspended + multi-Execute 续读（优先 RowStream hold；logical skip 回落；`gateway_portal_resume_total`）**；**简单查询 DECLARE/FETCH/CLOSE 进程内游标**（`sql_cursor_*`；无 WITH HOLD 在 COMMIT 丢弃；WITH HOLD 跨 COMMIT 但**断连即死**；**非** backend 服务端游标）；策略截断仍 C |
-| 多副本 | H05：file+lock+可选 AES-GCM；全文件替换 last-writer-wins（`merge_strategy`/`crdt=false` API）；活跃 vault 密码在 RAM；revoke/prune/Drop **Zeroize**（`vault_password_zeroize=true`，**非 mlock**）；`backend_identity` 返回 Zeroizing |
-| L2 样本 | B08：默认关；有界 rows/bytes；**sample_enabled 强制 L2**；OpenDAL 需 feature；**非全量 L3** |
-| Remote PDP | F31 已交付：表/动作 gate；超时 fail_closed；**非**热路径逐行 mask |
-| Cedar ABAC | F29 已交付：静态 `subject_attrs`/`table_attrs`；非动态 IdP 同步 |
-| 复杂 SQL / 列 ACL | T01：表可抽；**嵌套 SELECT 列表可 strip 列**；`*` / `t.*` **不展开**（deny 整句拒绝；allow 也不展开 strip；unit+Policies 诚实） |
-| A10 backend WITH HOLD | 仅进程内 `named_cursors`；**`remainders.backend_sql_with_hold=false`**（UI52–71）；断连即死；非服务端游标 |
-| H05 CRDT / mlock | 全文件 LWW；Zeroize 非 mlock；**`remainders.crdt_merge=false` / `remainders.mlock=false`** |
-| A06 精确窗字节 CI | 逻辑 `peak_window_*` 权威；stream-rss 仅粗 cap；**`remainders.process_rss_window_byte_ci=false`**；详见架构 **§13.3** |
+## 3. P1：产品重债
 
----
+### H05：多实例状态与 Vault 内存边界
 
-## 5. 当前下一动作（唯一焦点）
+当前基线：file+lock、AES-GCM、mtime 热更、全文件 last-writer-wins、密码 ZeroizeOnDrop
+和 UI/API honesty 已交付；当前明确不是 CRDT，也不是 `mlock` 安全堆。
 
-**>>> 产品重债（A10/H05/A06）真实现；诚实面 UI52–71 已闭环 <<<**
+- [ ] **H05-1 实现并发状态 merge**：定义字段级冲突策略、版本/时间戳语义、删除与重放规则，
+  用两个以上实例并发写入验证不会静默丢更新；兼容旧 LWW 文件格式。
+- [ ] **H05-2 评估并实现敏感内存锁定**：在目标平台验证 `mlock`/等价能力、失败策略、
+  fork/core dump/swap 风险和资源释放；无法可靠保证时继续保持 `mlock=false`。
+- [ ] **H05-3 补齐生产故障演练**：锁竞争、进程崩溃、半写文件、密钥错误、重启恢复、
+  revoke/prune/Drop 后擦除均有可重复测试和 runbook。
+- [ ] **H05-4 完成诚实收口**：只有实现和跨实例测试达标才更新 `crdt`/`mlock` 字段、
+  UI、配置模板和架构文档。
 
-| 层 | 状态 |
-|----|------|
-| Admin `remainders.*` + 运维 UI | 已交付（恒 false） |
-| 全 smoke 矩阵 + shared helper | 已交付（26 scripts；`check-honesty-helper-coverage.sh`） |
-| unit on/off | 已交付（ui52 / ui57） |
-| 架构 §13.3 / 审计 §1.4 / CLAUDE 入口 | 已交付 |
+验收终点：多实例并发不会产生未记录的数据丢失，Vault 密码生命周期和异常恢复有证据；
+不能证明的能力继续显式标记为 false。
 
-建议优先级（**真实现**，勿再堆诚实文档）：
+### B08：L2 样本与大 payload 生产门禁
 
-1. **A10** backend SQL `DECLARE … WITH HOLD` 服务端游标（可选；进程内已有；**步0 配置门+设计稿已交付** → 见 `docs/a10-backend-sql-with-hold-design.md`）  
-2. **H05** CRDT merge / mlock（可选；LWW + Zeroize 已有）  
-3. **A06** 进程/cgroup 精确 1–2 窗字节 CI（可选；逻辑 peak + 粗 RSS 已有）  
-4. 其他体验小刀；**F30/P0x 延后项未点名勿做**
+当前基线：样本默认关闭、L2 强制门、rows/bytes 有界、截断标记、API/UI honesty 和
+smoke 已有；OpenDAL 上传仍是可选 feature，不能宣传为全量 L3 归档。
 
+- [ ] **B08-1 完成样本存储后端边界**：明确本地落盘、OpenDAL、失败重试、保留期、权限、
+  加密和删除语义；上传失败不得阻塞查询或伪报成功。
+- [ ] **B08-2 建立生产样本门禁**：以真实大 payload、并发、磁盘满、对象存储不可用、
+  超时和截断场景验证 rows/bytes 上限、审计级别和敏感字段处理。
+- [ ] **B08-3 固化运维与产品表达**：默认关闭、高 QPS 限制、非全量 L3、非完整结果归档
+  在模板、runbook、API、UI 和 smoke 断言中保持一致。
 
-## 6. 完成定义（DoD）
+验收终点：样本数据有界、可追踪、可清理，任何存储失败都可观测且不绕过审计/PEP 策略。
 
-每个任务合并前：
+### T01：列 ACL 与复杂 SQL
 
-- [ ] 有 smoke 或单测  
-- [ ] 相关 `cargo test` / `cargo check` 通过（feature 任务在对应 feature 下测）  
-- [ ] `security.enabled=false` 不破坏 v1 行为  
-- [ ] 更新本文件勾选；**整项完成后**迁入 [`todo-impl.md`](todo-impl.md) 并删本文件对应条  
-- [ ] 行为变更同步规则 / 必要架构文 / §4 诚实账  
-- [ ] `git commit`（scope 清晰，带看板 ID）  
+当前基线：表提取、WHERE/HAVING/EXISTS/IN/标量子查询、嵌套 SELECT 列 strip 和 wildcard
+拒绝/诚实字段已覆盖；`*`、`t.*`、alias `e.*` 不展开。
 
-部分完成：保持 `- [ ]`，更新「已有 / 仍欠」，**不要**假装勾完。
+- [ ] **T01-1 明确 wildcard 策略终点**：决定 allow 模式是继续不展开并保守放行，还是实现
+  catalog 驱动展开；不得在未实现列集合推导时静默 strip 或放行隐式列。
+- [ ] **T01-2 补齐复杂 AST**：覆盖多层相关子查询、CTE、窗口函数、集合运算、函数表达式、
+  方言差异、别名遮蔽和重复列名；无法安全重写时 fail-closed。
+- [ ] **T01-3 完成协议级 E2E**：MySQL/PG、prepared/simple、跨协议 portal 和 deny/allow
+  策略均验证返回列集合、错误码、审计事件和不泄露原始敏感列。
 
----
+验收终点：支持的 AST 集合有明确清单和测试覆盖，未支持的 SQL 稳定拒绝或明确降级，
+`star_expands_wildcard` 等 honesty 字段与真实行为一致。
 
-## 7. 纪律
+## 4. P2：外部环境验收
 
-| 纪律 | 说明 |
-|------|------|
-| 门户不直连 | S6 铁律 |
-| 审计不堵查询 | 有界队列；归档/索引在 worker |
-| 流式先于大数据脱敏 | 禁止把 HTTP chunk 说成端到端流式 |
-| 默认二进制精简 | Cedar/OpenDAL/OTel 继续 optional feature |
-| 配置勿静默 no-op | 未实现能力必须校验失败 |
-| 文档同步 | 行为变更同 PR 改看板 / 规则 |
-| 构建缓存外置 | 禁止仓库内多 GB `.cargo-target*` |
-| 规则优先 | 铁律 > `.claude/rules` > 架构文 > 本看板 |
+### H04b：真实 IdP OIDC 联调
 
----
+本项是部署侧验收，不是本仓默认 CI 的强制门禁。Docker 只能提供应用运行环境；回调地址、
+DNS/TLS、真实 IdP 应用注册和角色映射必须在可从 IdP 访问的环境完成。香港云服务器可作为
+验收环境，但不是 Data Nexus 的代码依赖。
 
-修订：未完成债在本文件；已交付历史见 [`todo-impl.md`](todo-impl.md)。
+- [ ] **H04b-1 准备真实部署**：使用 Docker Compose/容器部署网关，配置外部可访问的 HTTPS
+  redirect URI、secret 注入、时钟同步和日志脱敏；不得用 localhost 回调冒充生产验收。
+- [ ] **H04b-2 完成真实 OIDC 流程**：真实 IdP 登录、回调、state/nonce、token 校验、
+  issuer/audience/expiry 校验和登出均留存可审计证据。
+- [ ] **H04b-3 验证角色映射与拒绝**：至少覆盖 viewer/operator/admin、未知角色、缺少角色、
+  过期 token、错误 issuer 和未授权资源；确认管理面鉴权不等同于数据面 Subject。
+- [ ] **H04b-4 记录部署验收**：将服务器、IdP、版本、时间、测试结果、脱敏日志和回滚步骤
+  写入不入库的交接/输出目录，并保持 secrets 不进入 Git。
+
+验收终点：真实 IdP 到真实部署的回调和角色映射闭环完成；本地 Docker smoke 只能算前置，
+不能单独关闭 H04b。
+
+## 5. P3：明确后置，不纳入当前版本
+
+这些项目保留在规划中，但没有排入当前发布关键路径；除非重新确认范围和优先级，不得以零散
+代码或文档变更宣称完成。
+
+- [ ] **F30** 敏感识别增强：在现有 `column_tags`/mask 之外定义可审计的识别规则、误报/漏报
+  评估、性能预算和数据处理边界；非目标是全量 DLP。
+- [ ] **P01** 新协议：先完成 Redis 等协议的需求、威胁模型、协议兼容范围和维护成本评估。
+- [ ] **P02** 深终端 Agent：后置；先明确部署模型、权限边界、升级和离线行为。
+- [ ] **P03** 审计 Parquet/分析：评估 Parquet/DataFusion 的 schema、冷热存储、查询隔离和
+  成本；不得影响审计写入热路径。
+- [ ] **P04** Sharding rewrite：补齐 `gateway_core` stub 的路由、事务一致性、重试和故障语义，
+  未有完整设计前不实现半成品。
+
+## 6. 通用完成标准
+
+每个主任务的所有未完成子项都满足后，才允许从看板移入归档：
+
+- [ ] 有针对行为的 unit/integration/smoke 测试，失败信息能定位到协议、策略或资源边界。
+- [ ] 运行相关 `cargo test`、`cargo check` 和 feature 矩阵；默认构建、`security.enabled=false`
+  与 v1 L0 行为不回归。
+- [ ] 更新必要的 API/UI、metrics、runbook、架构文档和 honesty 字段；未实现能力必须
+  fail-closed 或显式标记，不得静默 no-op。
+- [ ] 所有产物位于 `/Volumes/fushilu/.caches/data-nexus/` 子目录，工作树没有生成大体积构建目录。
+- [ ] 完成本任务独立 Git commit，提交标题包含任务 ID；再从本文件删除对应条目并写入
+  `todo-impl.md`。
+
+## 7. 已知诚实边界
+
+在对应任务完成前，以下字段必须保持 false 或对应的保守语义：
+
+| 能力 | 当前诚实状态 |
+|------|--------------|
+| A10 backend `DECLARE ... WITH HOLD` | 仅进程内命名游标；`remainders.backend_sql_with_hold=false` |
+| H05 CRDT merge | 全文件 LWW；`remainders.crdt_merge=false` |
+| H05 mlock | Zeroize 但活跃密码仍在进程 RAM；`remainders.mlock=false` |
+| A06 精确 RSS/cgroup 1～2 窗字节 CI | 逻辑 `peak_window_*` 权威；`remainders.process_rss_window_byte_ci=false` |
+| A09 Complete/无 RowStream | 允许有限回退到 `chunked` 或小结果物化；不得称作 backend_window |
+| B08 样本 | 默认关闭、有界、L2；非全量 L3 合规归档 |
+| T01 wildcard | 不展开 `*`/`t.*`/alias wildcard；无法安全判断时拒绝 |
+
+详细架构约束见 [`docs/data-nexus-tech-architecture-2026.md`](docs/data-nexus-tech-architecture-2026.md)
+§13.3、[`docs/data-audit-architecture.md`](docs/data-audit-architecture.md) 和
+[`docs/data-security-roadmap.md`](docs/data-security-roadmap.md)。
