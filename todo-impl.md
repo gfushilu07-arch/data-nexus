@@ -196,6 +196,7 @@ examples/        smoke + gateway config 样例
 | SQLT-3B1 | DQL 基础投影、谓词、NULL/三值逻辑、聚合、排序分页达到 24 case，独立 SQL 文件和固定 Docker 双库逐条执行 runner + 精确语义 oracle | `3c66509` |
 | SQLT-3B2 | DQL JOIN、子查询、CTE、集合运算、窗口函数扩展至 48 case，固定 Docker 双库 94/94 精确语义 oracle | `6d1914c` |
 | SQLT-3B3 | DQL 字符串/数值/日期/JSON/正则/cast/窗口 frame 扩展至 64 case，方言差异独立 SQL，完整 Docker 120/120 | `26aae14` |
+| SQLT-3C1 | INSERT 值类型、默认值、INSERT SELECT、约束错误扩展至 14 个 DML case，固定 Docker 双库 direct/gateway 22/22 | `2617366` |
 
 ---
 
