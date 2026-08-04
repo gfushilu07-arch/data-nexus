@@ -55,8 +55,8 @@ The metadata/session/diagnostic tranche currently contains 20 canonical cases
 budget test prevents this tranche from shrinking while DQL, DML, DDL, and failure
 families are added.
 
-The SQLT-3B1 DQL tranche currently contains 24 canonical cases
-(`SQLT-DQL-001` through `SQLT-DQL-024`). Run its direct fixed-version backend
+The SQLT-3B DQL tranche currently contains 48 canonical cases
+(`SQLT-DQL-001` through `SQLT-DQL-048`). Run its direct fixed-version backend
 acceptance with:
 
 ```bash

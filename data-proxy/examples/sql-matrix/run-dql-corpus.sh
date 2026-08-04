@@ -141,7 +141,7 @@ from pathlib import Path
 
 summary, total, passed, failed, run_dir = sys.argv[1:]
 Path(summary).write_text(json.dumps({
-    "suite": "SQLT-3B1-DQL",
+    "suite": "SQLT-3B-DQL",
     "total": int(total),
     "passed": int(passed),
     "failed": int(failed),
@@ -149,5 +149,5 @@ Path(summary).write_text(json.dumps({
 }, indent=2) + "\n", encoding="utf-8")
 PY
 
-echo "SQLT-3B1 DQL corpus: $pass_count/$case_count passed"
+echo "SQLT-3B DQL corpus: $pass_count/$case_count passed"
 [[ "$fail_count" == 0 ]]

@@ -96,6 +96,101 @@
     "SQLT-DQL-024": {
       "mysql": "1003\n2001\n",
       "postgres": "1003\n2001\n"
+    },
+    "SQLT-DQL-025": {
+      "mysql": "1001\tAda\n1002\tAda\n1003\tLin\n2001\tGrace\n2002\tGrace\n2003\tEdsger\n",
+      "postgres": "1001\tAda\n1002\tAda\n1003\tLin\n2001\tGrace\n2002\tGrace\n2003\tEdsger\n"
+    },
+    "SQLT-DQL-026": {
+      "mysql": "101\tNULL\n102\tNULL\n201\t2002\n202\tNULL\n",
+      "postgres": "101\tNULL\n102\tNULL\n201\t2002\n202\tNULL\n"
+    },
+    "SQLT-DQL-027": {
+      "mysql": "101\t1001\n101\t1002\n102\t1003\n201\t2001\n201\t2002\n202\t2003\n",
+      "postgres": "101\t1001\n101\t1002\n102\t1003\n201\t2001\n201\t2002\n202\t2003\n"
+    },
+    "SQLT-DQL-028": {
+      "postgres": "101\t1001\n102\tNULL\nNULL\t2003\n"
+    },
+    "SQLT-DQL-029": {
+      "mysql": "101\tpaid\n101\tpending\n101\trefunded\n202\tpaid\n202\tpending\n202\trefunded\n",
+      "postgres": "101\tpaid\n101\tpending\n101\trefunded\n202\tpaid\n202\tpending\n202\trefunded\n"
+    },
+    "SQLT-DQL-030": {
+      "mysql": "101\tAda\t1001\n101\tAda\t1002\n102\tLin\t1003\n201\tGrace\t2001\n201\tGrace\t2002\n202\tEdsger\t2003\n",
+      "postgres": "101\tAda\t1001\n101\tAda\t1002\n102\tLin\t1003\n201\tGrace\t2001\n201\tGrace\t2002\n202\tEdsger\t2003\n"
+    },
+    "SQLT-DQL-031": {
+      "mysql": "101\t10\t1001\n101\t10\t1002\n102\t10\t1003\n201\t20\t2001\n201\t20\t2002\n202\t20\t2003\n",
+      "postgres": "101\t10\t1001\n101\t10\t1002\n102\t10\t1003\n201\t20\t2001\n201\t20\t2002\n202\t20\t2003\n"
+    },
+    "SQLT-DQL-032": {
+      "mysql": "101\t101\n",
+      "postgres": "101\t101\n"
+    },
+    "SQLT-DQL-033": {
+      "mysql": "101\t120.00\n102\t120.00\n201\t120.00\n202\t120.00\n",
+      "postgres": "101\t120.00\n102\t120.00\n201\t120.00\n202\t120.00\n"
+    },
+    "SQLT-DQL-034": {
+      "mysql": "101\t2\n102\t1\n201\t2\n202\t1\n",
+      "postgres": "101\t2\n102\t1\n201\t2\n202\t1\n"
+    },
+    "SQLT-DQL-035": {
+      "mysql": "1001\n1002\n1003\n",
+      "postgres": "1001\n1002\n1003\n"
+    },
+    "SQLT-DQL-036": {
+      "mysql": "101\t112.49\n201\t50.00\n202\t120.00\n",
+      "postgres": "101\t112.49\n201\t50.00\n202\t120.00\n"
+    },
+    "SQLT-DQL-037": {
+      "mysql": "202\n",
+      "postgres": "202\n"
+    },
+    "SQLT-DQL-038": {
+      "mysql": "10\t2\t112.49\n20\t2\t162.25\n",
+      "postgres": "10\t2\t112.49\n20\t2\t162.25\n"
+    },
+    "SQLT-DQL-039": {
+      "mysql": "10\t2\t127.49\n20\t2\t170.00\n",
+      "postgres": "10\t2\t127.49\n20\t2\t170.00\n"
+    },
+    "SQLT-DQL-040": {
+      "mysql": "1\n2\n3\n4\n",
+      "postgres": "1\n2\n3\n4\n"
+    },
+    "SQLT-DQL-041": {
+      "mysql": "10\n20\n",
+      "postgres": "10\n20\n"
+    },
+    "SQLT-DQL-042": {
+      "mysql": "10\n10\n",
+      "postgres": "10\n10\n"
+    },
+    "SQLT-DQL-043": {
+      "mysql": "101\n201\n202\n",
+      "postgres": "101\n201\n202\n"
+    },
+    "SQLT-DQL-044": {
+      "mysql": "102\n",
+      "postgres": "102\n"
+    },
+    "SQLT-DQL-045": {
+      "mysql": "Ada\nEdsger\nGrace\nLin\n",
+      "postgres": "Ada\nEdsger\nGrace\nLin\n"
+    },
+    "SQLT-DQL-046": {
+      "mysql": "2003\tpaid\t1\n1002\tpaid\t2\n2001\tpaid\t3\n1001\tpaid\t4\n1003\tpending\t1\n2002\trefunded\t1\n",
+      "postgres": "2003\tpaid\t1\n1002\tpaid\t2\n2001\tpaid\t3\n1001\tpaid\t4\n1003\tpending\t1\n2002\trefunded\t1\n"
+    },
+    "SQLT-DQL-047": {
+      "mysql": "1001\t10\t1\t1\n1002\t10\t1\t1\n1003\t10\t1\t1\n2001\t20\t4\t2\n2002\t20\t4\t2\n2003\t20\t4\t2\n",
+      "postgres": "1001\t10\t1\t1\n1002\t10\t1\t1\n1003\t10\t1\t1\n2001\t20\t4\t2\n2002\t20\t4\t2\n2003\t20\t4\t2\n"
+    },
+    "SQLT-DQL-048": {
+      "mysql": "1001\tNULL\t1002\n1002\t1001\t1003\n1003\t1002\t2001\n2001\t1003\t2002\n2002\t2001\t2003\n2003\t2002\tNULL\n",
+      "postgres": "1001\tNULL\t1002\n1002\t1001\t1003\n1003\t1002\t2001\n2001\t1003\t2002\n2002\t2001\t2003\n2003\t2002\tNULL\n"
     }
   }
 }
