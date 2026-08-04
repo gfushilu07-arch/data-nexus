@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "outcomes": ["allow", "rewrite", "deny", "unsupported"],
+  "dialects": ["mysql", "postgres"],
+  "backends": ["mysql", "postgres"],
+  "side_effects": ["none", "write", "schema_write", "transaction", "session_state"],
+  "protocols": ["mysql_text", "mysql_binary", "pg_simple", "pg_extended", "http", "xproto"],
+  "statement_modes": ["single", "script"],
+  "transaction_modes": ["autocommit", "explicit"],
+  "parameter_modes": ["none", "positional", "named"],
+  "frontends": [
+    "mysql_text",
+    "mysql_binary",
+    "pg_simple",
+    "pg_extended",
+    "http_portal",
+    "xproto"
+  ],
+  "families": {
+    "metadata": {
+      "description": "Session, metadata, and diagnostic statements"
+    },
+    "dql": {
+      "description": "Read-only queries and result-producing SELECT statements"
+    },
+    "dml": {
+      "description": "INSERT, UPDATE, DELETE, and upsert statements"
+    },
+    "ddl": {
+      "description": "Schema and database object lifecycle statements"
+    },
+    "tcl": {
+      "description": "Transaction and savepoint control statements"
+    },
+    "cursor": {
+      "description": "Prepared statements, portals, and named cursors"
+    },
+    "security": {
+      "description": "Policy rewrite, masking, row filtering, and approval boundaries"
+    },
+    "unsupported": {
+      "description": "Known capability boundaries that must fail closed"
+    },
+    "invalid": {
+      "description": "Malformed or semantically invalid SQL"
+    }
+  },
+  "sql_capabilities": {
+    "metadata.show_tables": "Enumerate tables with a dialect-native metadata statement",
+    "metadata.list_tables": "Enumerate tables through the SQL information schema",
+    "dql.join_group": "Join, group, aggregate, filter aggregates, and order results",
+    "dql.complex_ast": "Parse and execute nested queries, CTEs, and window functions",
+    "dql.wildcard": "Apply column authorization rules to wildcard projections",
+    "dml.basic": "Insert, update, and delete rows",
+    "dml.upsert_returning": "Upsert a row and return the resulting values",
+    "ddl.object_lifecycle": "Create, alter, and drop a schema object",
+    "tcl.savepoint": "Create and roll back to a transaction savepoint",
+    "cursor.named_forward": "Declare, fetch from, and close a forward named cursor",
+    "security.mask_row_filter": "Apply masking and tenant row filtering to a query",
+    "unsupported.copy_program": "Reject PostgreSQL server-side program execution",
+    "invalid.syntax": "Reject malformed SQL without backend side effects"
+  },
+  "policies": [
+    "security_off",
+    "allow",
+    "deny",
+    "column_strip",
+    "mask",
+    "row_filter",
+    "watermark",
+    "max_rows",
+    "ticket",
+    "remote_pdp",
+    "cedar"
+  ],
+  "profiles": {
+    "pr": {
+      "purpose": "Fast parser and command contract coverage",
+      "frontends": ["mysql_text", "pg_simple"],
+      "backends": ["mysql", "postgres"],
+      "policies": ["security_off", "allow", "deny"]
+    },
+    "nightly": {
+      "purpose": "Protocol, policy, and backend integration coverage",
+      "frontends": [
+        "mysql_text",
+        "mysql_binary",
+        "pg_simple",
+        "pg_extended",
+        "http_portal",
+        "xproto"
+      ],
+      "backends": ["mysql", "postgres"],
+      "policies": [
+        "security_off",
+        "allow",
+        "deny",
+        "column_strip",
+        "mask",
+        "row_filter",
+        "watermark",
+        "max_rows",
+        "ticket",
+        "remote_pdp",
+        "cedar"
+      ]
+    },
+    "release": {
+      "purpose": "Full supported and fail-closed acceptance matrix",
+      "frontends": [
+        "mysql_text",
+        "mysql_binary",
+        "pg_simple",
+        "pg_extended",
+        "http_portal",
+        "xproto"
+      ],
+      "backends": ["mysql", "postgres"],
+      "policies": [
+        "security_off",
+        "allow",
+        "deny",
+        "column_strip",
+        "mask",
+        "row_filter",
+        "watermark",
+        "max_rows",
+        "ticket",
+        "remote_pdp",
+        "cedar"
+      ]
+    }
+  }
+}

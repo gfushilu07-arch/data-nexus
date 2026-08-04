@@ -1,5 +1,10 @@
 # SQL 全量测试矩阵规划
 
+当前已交付 SQLT-1 的首批规范资产：`data-proxy/examples/sql-matrix/` 下的能力注册表、
+13 个独立 SQL case 文件、显式 policy outcome manifest，以及零依赖校验器和单元测试。
+后续 SQLT-2 至 SQLT-6 继续在此基础上补齐 Docker fixture、backend oracle、230+ case
+corpus、wire/策略故障矩阵与分层报告门禁。
+
 本文定义 Data Nexus 的 SQL 行为测试范围。目标不是证明每一种数据库方言都能被
 跨协议翻译，而是对每一种输入明确记录以下四类结果之一：
 

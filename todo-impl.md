@@ -190,6 +190,7 @@ examples/        smoke + gateway config 样例
 | H05 | security-policies exposes state summary (no keys) | feat(h05/ui04) |
 | H05 | file state + AES-GCM restart smoke (state-file) | feat(h05) |
 | H05 | policy_path mtime poll E2E in state-file smoke | feat(h05) |
+| SQLT-1 | capability registry、13 个独立带注释 SQL case、manifest validator 与 12 项单测 | `feat(SQLT-1): add SQL capability manifest and fixtures` |
 
 ---
 
