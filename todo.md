@@ -120,9 +120,6 @@ A10/T01，不替代各功能实现；它负责用统一 case manifest、真实 b
 证明“支持、改写、拒绝、不支持”四类行为。首版最低 230 个 canonical SQL case，展开后
 PR/nightly/release 分别不少于 350/1,500/3,000 次执行。
 
-- [ ] **SQLT-2 建立可重复 fixture 与 oracle**：Docker 启动固定版本 MySQL/PostgreSQL，
-  以版本化 schema/seed/cleanup 隔离 case；规范化比较网关和直连 backend 的结果、错误、
-  影响行数、事务/schema 状态，产物写入外置缓存。
 - [ ] **SQLT-3 完成 SQL corpus**：至少覆盖会话/元数据 20、DQL 80、DML 35、DDL 30、
   TCL/prepared/cursor 35、非法/恶意/unsupported 30；每个适用家族包含 allow、rewrite、
   deny、unsupported 和副作用断言。

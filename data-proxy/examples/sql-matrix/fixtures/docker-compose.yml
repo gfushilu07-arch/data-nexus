@@ -1,0 +1,35 @@
+# SQLT-2 fixed-version backend fixture. The runner uses an isolated Compose project
+# and removes both containers after each run so every acceptance starts from empty data.
+services:
+  mysql:
+    image: mysql:8.0.42
+    tmpfs:
+      - /var/lib/mysql:size=768m,mode=1777
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: sqlt
+      MYSQL_USER: sqlt
+      MYSQL_PASSWORD: sqlt
+    ports:
+      - "127.0.0.1:23306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 2s
+      timeout: 5s
+      retries: 60
+
+  postgres:
+    image: postgres:16.8
+    tmpfs:
+      - /var/lib/postgresql/data:size=512m,mode=1777
+    environment:
+      POSTGRES_USER: sqlt
+      POSTGRES_PASSWORD: sqlt
+      POSTGRES_DB: sqlt
+    ports:
+      - "127.0.0.1:25432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sqlt -d sqlt"]
+      interval: 2s
+      timeout: 5s
+      retries: 60

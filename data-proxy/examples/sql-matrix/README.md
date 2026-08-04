@@ -29,6 +29,23 @@ PYTHONPYCACHEPREFIX=/Volumes/fushilu/.caches/data-nexus/python-cache \
     -p 'test_*.py'
 ```
 
+Run the SQLT-2 fixed-version Docker fixture and compare direct backend oracle output
+with the security-off gateway path:
+
+```bash
+data-proxy/examples/sql-matrix/run-sql-fixture.sh
+```
+
+The fixture pins `mysql:8.0.42` and `postgres:16.8`, uses versioned dialect-specific
+schema/seed/cleanup SQL files, and writes the run manifest, normalized output, logs,
+results, binary/Git metadata, and summary below
+`/Volumes/fushilu/.caches/data-nexus/sql-matrix/<run-id>/`.
+The disposable database directories use bounded Docker `tmpfs` mounts, so database
+files do not consume Docker Desktop's persistent disk. The runner removes its Compose
+project and volumes on exit, including on failure. The acceptance compares read/state
+snapshots, DML with savepoint rollback, DDL lifecycle state, and normalized MySQL and
+PostgreSQL error identities; the last full run produced 10 passed comparisons.
+
 A skipped case must include non-empty `reason`, `issue`, and `expires_when` fields.
 The validator rejects missing files, unregistered SQL files, path traversal, duplicate
 IDs, mismatched comments, unknown registry values, and ambiguous top-level outcomes.

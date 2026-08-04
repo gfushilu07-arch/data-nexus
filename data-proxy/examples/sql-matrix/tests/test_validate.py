@@ -115,6 +115,19 @@ class ValidateSqlMatrixTest(unittest.TestCase):
         self.assert_has_error("skip.issue")
         self.assert_has_error("skip.expires_when")
 
+    def test_fixture_sql_comment_header_is_enforced(self) -> None:
+        sql_path = self.root / "fixtures" / "mysql" / "schema.sql"
+        lines = sql_path.read_text(encoding="utf-8").splitlines()
+        lines[1] = "-- missing purpose"
+        sql_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        self.assert_has_error("fixtures/mysql/schema.sql: SQL line 2 must start")
+
+    def test_fixture_sql_dialect_must_match_directory(self) -> None:
+        sql_path = self.root / "fixtures" / "postgres" / "seed.sql"
+        text = sql_path.read_text(encoding="utf-8")
+        sql_path.write_text(text.replace("-- Dialect: postgres", "-- Dialect: mysql"), encoding="utf-8")
+        self.assert_has_error("dialect comment must match parent directory")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -12,6 +12,7 @@ from typing import Any
 
 CASE_ID_RE = re.compile(r"^SQLT-[A-Z]+-[0-9]{3}$")
 HEADER_FIELDS = ("case", "Purpose", "Expected", "Dialect")
+FIXTURE_HEADER_FIELDS = ("Purpose", "Expected", "Dialect")
 LIST_CAPABILITIES = (
     "dialects",
     "backends",
@@ -150,6 +151,40 @@ def _validate_sql_file(
         for line in lines[len(HEADER_FIELDS) :]
     ):
         errors.append(f"{case_id}: SQL file has no statement body")
+
+
+def _validate_fixture_sql_files(root: Path, errors: list[str]) -> None:
+    fixture_root = root / "fixtures"
+    if not fixture_root.is_dir():
+        return
+    seen_ids: set[str] = set()
+    for path in sorted(fixture_root.glob("*/*.sql")):
+        dialect = path.parent.name
+        label = str(path.relative_to(root))
+        try:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        except (OSError, UnicodeError) as exc:
+            errors.append(f"{label}: cannot read fixture SQL: {exc}")
+            continue
+        if len(lines) < 4:
+            errors.append(f"{label}: fixture SQL is missing the four-line comment header")
+            continue
+        identity = re.fullmatch(r"-- (fixture|oracle): ([A-Z0-9-]+)", lines[0])
+        if not identity:
+            errors.append(f"{label}: SQL line 1 must declare a fixture or oracle ID")
+        else:
+            fixture_id = identity.group(2)
+            if fixture_id in seen_ids:
+                errors.append(f"duplicate fixture SQL ID: {fixture_id}")
+            seen_ids.add(fixture_id)
+        for index, field in enumerate(FIXTURE_HEADER_FIELDS, start=1):
+            prefix = f"-- {field}: "
+            if not lines[index].startswith(prefix) or not lines[index][len(prefix) :].strip():
+                errors.append(f"{label}: SQL line {index + 1} must start with {prefix!r}")
+        if lines[3] != f"-- Dialect: {dialect}":
+            errors.append(f"{label}: dialect comment must match parent directory {dialect!r}")
+        if not any(line.strip() and not line.lstrip().startswith("--") for line in lines[4:]):
+            errors.append(f"{label}: fixture SQL has no statement body")
 
 
 def _validate_string_array(
@@ -317,6 +352,7 @@ def validate_repository(root: Path) -> list[str]:
             errors.append(f"unreferenced SQL file: {unreferenced.relative_to(root)}")
     else:
         errors.append(f"case root does not exist: {case_root}")
+    _validate_fixture_sql_files(root, errors)
     return errors
 
 

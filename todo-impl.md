@@ -191,6 +191,7 @@ examples/        smoke + gateway config 样例
 | H05 | file state + AES-GCM restart smoke (state-file) | feat(h05) |
 | H05 | policy_path mtime poll E2E in state-file smoke | feat(h05) |
 | SQLT-1 | capability registry、13 个独立带注释 SQL case、manifest validator 与 12 项单测 | `feat(SQLT-1): add SQL capability manifest and fixtures` |
+| SQLT-2 | 固定 MySQL 8.0.42/PostgreSQL 16.8 Docker fixture、版本化 schema/seed/cleanup、10 组 backend oracle、外置产物 runner | `feat(SQLT-2): add Docker SQL fixtures and backend oracle` |
 
 ---
 
