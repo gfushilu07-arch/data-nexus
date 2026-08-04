@@ -137,6 +137,22 @@ class ValidateSqlMatrixTest(unittest.TestCase):
             {f"SQLT-META-{index:03d}" for index in range(1, 21)},
         )
 
+    def test_dql_family_is_expanding_under_sqlt3b1(self) -> None:
+        manifest = self.manifest()
+        dql_cases = [case for case in manifest["cases"] if case["family"] == "dql"]
+        self.assertGreaterEqual(len(dql_cases), 24)
+        self.assertEqual(
+            {case["id"] for case in dql_cases},
+            {f"SQLT-DQL-{index:03d}" for index in range(1, 25)},
+        )
+
+    def test_dql_oracle_must_cover_every_declared_dialect(self) -> None:
+        oracle_path = self.root / "dql-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        del oracles["results"]["SQLT-DQL-001"]["postgres"]
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-DQL-001 dialects must be")
+
 
 if __name__ == "__main__":
     unittest.main()

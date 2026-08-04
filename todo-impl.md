@@ -193,6 +193,7 @@ examples/        smoke + gateway config 样例
 | SQLT-1 | capability registry、13 个独立带注释 SQL case、manifest validator 与 12 项单测 | `feat(SQLT-1): add SQL capability manifest and fixtures` |
 | SQLT-2 | 固定 MySQL 8.0.42/PostgreSQL 16.8 Docker fixture、版本化 schema/seed/cleanup、10 组 backend oracle、外置产物 runner | `feat(SQLT-2): add Docker SQL fixtures and backend oracle` |
 | SQLT-3A | 会话/元数据/诊断 corpus 达到 20 case，固定双库逐条执行通过（SQLT-3 部分进展） | `test(SQLT-3A): expand metadata SQL corpus` |
+| SQLT-3B1 | DQL 基础投影、谓词、NULL/三值逻辑、聚合、排序分页达到 24 case，独立 SQL 文件和固定 Docker 双库逐条执行 runner + 精确语义 oracle | 待提交 |
 
 ---
 

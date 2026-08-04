@@ -187,6 +187,54 @@ def _validate_fixture_sql_files(root: Path, errors: list[str]) -> None:
             errors.append(f"{label}: fixture SQL has no statement body")
 
 
+def _validate_dql_oracles(root: Path, cases: list[Any], errors: list[str]) -> None:
+    oracles = _load_json(root / "dql-oracles.json", errors)
+    if not isinstance(oracles, dict):
+        errors.append("dql-oracles.json must contain an object")
+        return
+    if oracles.get("schema_version") != 1:
+        errors.append("dql-oracles.json schema_version must be 1")
+    results = oracles.get("results")
+    if not isinstance(results, dict):
+        errors.append("dql-oracles.json results must be an object")
+        return
+
+    expected: dict[str, set[str]] = {}
+    for case in cases:
+        if isinstance(case, dict) and case.get("family") == "dql":
+            case_id = case.get("id")
+            dialects = case.get("dialects")
+            if isinstance(case_id, str) and isinstance(dialects, list):
+                expected[case_id] = {item for item in dialects if isinstance(item, str)}
+
+    if set(results) != set(expected):
+        missing = sorted(set(expected) - set(results))
+        extra = sorted(set(results) - set(expected))
+        if missing:
+            errors.append(f"dql-oracles.json is missing cases: {missing}")
+        if extra:
+            errors.append(f"dql-oracles.json has unknown cases: {extra}")
+
+    for case_id, dialects in expected.items():
+        values = results.get(case_id)
+        if not isinstance(values, dict):
+            errors.append(f"dql-oracles.json results.{case_id} must be an object")
+            continue
+        if set(values) != dialects:
+            errors.append(
+                f"dql-oracles.json results.{case_id} dialects must be {sorted(dialects)}"
+            )
+        for dialect, output in values.items():
+            if not isinstance(output, str):
+                errors.append(
+                    f"dql-oracles.json results.{case_id}.{dialect} must be a string"
+                )
+            elif output and not output.endswith("\n"):
+                errors.append(
+                    f"dql-oracles.json results.{case_id}.{dialect} must end with LF"
+                )
+
+
 def _validate_string_array(
     case: dict[str, Any],
     field: str,
@@ -353,6 +401,7 @@ def validate_repository(root: Path) -> list[str]:
     else:
         errors.append(f"case root does not exist: {case_root}")
     _validate_fixture_sql_files(root, errors)
+    _validate_dql_oracles(root, cases, errors)
     return errors
 
 

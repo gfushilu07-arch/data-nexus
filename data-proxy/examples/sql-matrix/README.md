@@ -54,3 +54,18 @@ The metadata/session/diagnostic tranche currently contains 20 canonical cases
 (`SQLT-META-001` through `SQLT-META-020`) across MySQL and PostgreSQL. The corpus
 budget test prevents this tranche from shrinking while DQL, DML, DDL, and failure
 families are added.
+
+The SQLT-3B1 DQL tranche currently contains 24 canonical cases
+(`SQLT-DQL-001` through `SQLT-DQL-024`). Run its direct fixed-version backend
+acceptance with:
+
+```bash
+data-proxy/examples/sql-matrix/run-dql-corpus.sh
+```
+
+The runner resets the fixture before every case, executes each SQL file only against
+its declared dialect, and strictly compares normalized output with the versioned
+`dql-oracles.json`. It writes raw, normalized, expected and diff output plus
+`results.jsonl` and `summary.json` to the external cache. It does not claim
+cross-dialect equality; MySQL and PostgreSQL represent some literals and types
+differently.
