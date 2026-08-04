@@ -1,0 +1,128 @@
+{
+  "realm": "data-nexus",
+  "enabled": true,
+  "sslRequired": "external",
+  "accessTokenLifespan": 300,
+  "roles": {
+    "realm": [
+      { "name": "viewer" },
+      { "name": "operator" },
+      { "name": "admin" },
+      { "name": "unmapped" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "data-nexus-admin",
+      "name": "Data Nexus Admin smoke client",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["https://ui.localhost:8443/auth/callback"],
+      "webOrigins": ["https://ui.localhost:8443"],
+      "attributes": {
+        "post.logout.redirect.uris": "https://ui.localhost:8443/login"
+      },
+      "protocol": "openid-connect",
+      "protocolMappers": [
+        {
+          "name": "data-nexus audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "data-nexus-admin",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "wrong-audience",
+      "name": "Negative audience smoke client",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "protocol": "openid-connect"
+    },
+    {
+      "clientId": "short-lived",
+      "name": "Expiry negative smoke client",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "protocol": "openid-connect",
+      "attributes": {
+        "access.token.lifespan": "2"
+      },
+      "protocolMappers": [
+        {
+          "name": "data-nexus audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "data-nexus-admin",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "viewer-user",
+      "enabled": true,
+      "email": "viewer-user@data-nexus.test",
+      "firstName": "Viewer",
+      "lastName": "User",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "viewer-password", "temporary": false }],
+      "realmRoles": ["viewer"]
+    },
+    {
+      "username": "operator-user",
+      "enabled": true,
+      "email": "operator-user@data-nexus.test",
+      "firstName": "Operator",
+      "lastName": "User",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "operator-password", "temporary": false }],
+      "realmRoles": ["operator"]
+    },
+    {
+      "username": "admin-user",
+      "enabled": true,
+      "email": "admin-user@data-nexus.test",
+      "firstName": "Admin",
+      "lastName": "User",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "admin-password", "temporary": false }],
+      "realmRoles": ["admin"]
+    },
+    {
+      "username": "unknown-user",
+      "enabled": true,
+      "email": "unknown-user@data-nexus.test",
+      "firstName": "Unknown",
+      "lastName": "User",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "unknown-password", "temporary": false }],
+      "realmRoles": ["unmapped"]
+    },
+    {
+      "username": "no-role-user",
+      "enabled": true,
+      "email": "no-role-user@data-nexus.test",
+      "firstName": "NoRole",
+      "lastName": "User",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "no-role-password", "temporary": false }]
+    }
+  ]
+}

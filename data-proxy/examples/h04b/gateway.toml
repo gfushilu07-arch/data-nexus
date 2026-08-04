@@ -1,0 +1,61 @@
+version = "2"
+
+[admin]
+host = "0.0.0.0"
+port = 8082
+log_level = "INFO"
+
+[security]
+enabled = false
+
+[admin_auth]
+enabled = true
+mode = "jwt_jwks"
+jwks_url = "http://keycloak:8080/realms/data-nexus/protocol/openid-connect/certs"
+issuer = "https://idp.localhost:8443/realms/data-nexus"
+audience = "data-nexus-admin"
+jwks_cache_secs = 30
+leeway_secs = 0
+public_metrics = true
+role_claim_paths = ["roles", "groups", "realm_access.roles"]
+
+[admin_auth.role_bindings]
+"data-nexus-viewers" = "viewer"
+"data-nexus-operators" = "operator"
+"data-nexus-admins" = "admin"
+"viewer" = "viewer"
+"operator" = "operator"
+"admin" = "admin"
+
+[[listeners]]
+name = "h04b-mysql"
+listen_addr = "0.0.0.0:9088"
+protocol = "mysql"
+service = "h04b"
+auth_policy = "local-users"
+
+[[services]]
+name = "h04b"
+backend_protocol = "mysql"
+endpoints = ["h04b-primary"]
+route_policy = "h04b-balance"
+plugin_policies = []
+
+[[endpoints]]
+name = "h04b-primary"
+protocol = "mysql"
+address = "127.0.0.1:13306"
+database = "unused"
+username = "unused"
+password = "unused"
+weight = 1
+
+[[route_policies]]
+name = "h04b-balance"
+kind = "simple_load_balance"
+
+[[auth_policies]]
+name = "local-users"
+kind = "static"
+username = "unused"
+password = "unused"
