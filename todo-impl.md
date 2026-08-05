@@ -198,6 +198,7 @@ examples/        smoke + gateway config 样例
 | SQLT-3B3 | DQL 字符串/数值/日期/JSON/正则/cast/窗口 frame 扩展至 64 case，方言差异独立 SQL，完整 Docker 120/120 | `26aae14` |
 | SQLT-3C1 | INSERT 值类型、默认值、INSERT SELECT、约束错误扩展至 14 个 DML case，固定 Docker 双库 direct/gateway 22/22 | `2617366` |
 | SQLT-3C2 | UPDATE/DELETE、子查询、方言 JOIN/USING、affected rows 和精确最终状态，固定 Docker 单 tranche 28/28、DML 合并 50/50 | `f234439` |
+| SQLT-3C3 | 13 条冲突写入/RETURNING/MERGE/data-modifying CTE/savepoint/错误恢复 DML，精确返回行、状态、错误身份和事务 marker，固定 Docker 64/64 | `7adb345`、`b9e401a`、`b104033` |
 
 ---
 
