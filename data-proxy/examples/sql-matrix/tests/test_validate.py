@@ -143,7 +143,7 @@ class ValidateSqlMatrixTest(unittest.TestCase):
         self.assertGreaterEqual(len(dql_cases), 80)
         self.assertEqual(
             {case["id"] for case in dql_cases},
-            {f"SQLT-DQL-{index:03d}" for index in range(1, 85)},
+            {f"SQLT-DQL-{index:03d}" for index in range(1, 87)},
         )
 
     def test_dql_oracle_must_cover_every_declared_dialect(self) -> None:
@@ -166,6 +166,34 @@ class ValidateSqlMatrixTest(unittest.TestCase):
         del oracles["results"]["SQLT-DQL-084"]["mysql"]["after_rollback"]
         oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
         self.assert_has_error("SQLT-DQL-084.mysql fields must be")
+
+    def test_dql_boundary_oracle_must_cover_boundary_cases(self) -> None:
+        oracle_path = self.root / "dql-boundary-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        del oracles["results"]["SQLT-DQL-085"]["postgres"]
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-DQL-085 dialects must be")
+
+    def test_dql_boundary_oracle_rejects_invalid_hash(self) -> None:
+        oracle_path = self.root / "dql-boundary-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["results"]["SQLT-DQL-086"]["mysql"]["sha256"] = "not-a-hash"
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-DQL-086.mysql.sha256 must be a lowercase SHA-256")
+
+    def test_dql_boundary_oracle_requires_fixed_chunk_size(self) -> None:
+        oracle_path = self.root / "dql-boundary-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["chunk_bytes"] = 1_048_576
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("chunk_bytes must be 65536")
+
+    def test_dql_boundary_oracle_rejects_unknown_summary_field(self) -> None:
+        oracle_path = self.root / "dql-boundary-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["results"]["SQLT-DQL-085"]["mysql"]["unbounded_output"] = True
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-DQL-085.mysql fields must be")
 
     def test_dml_tranches_have_contiguous_case_ids(self) -> None:
         manifest = self.manifest()

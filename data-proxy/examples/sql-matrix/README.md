@@ -55,8 +55,8 @@ The metadata/session/diagnostic tranche currently contains 20 canonical cases
 budget test prevents this tranche from shrinking while DQL, DML, DDL, and failure
 families are added.
 
-The SQLT-3B DQL tranche currently contains 84 canonical cases
-(`SQLT-DQL-001` through `SQLT-DQL-084`). The first 80 are deterministic
+The SQLT-3B DQL tranche currently contains 86 canonical cases
+(`SQLT-DQL-001` through `SQLT-DQL-086`). The first 80 are deterministic
 autocommit queries. Run their direct fixed-version backend acceptance with:
 
 ```bash
@@ -91,6 +91,21 @@ results, and transaction/connection recovery. Its default range performs 16
 `case x dialect x path` executions. `SQLT_DQL_LOCK_CASE_FROM`,
 `SQLT_DQL_LOCK_CASE_TO`, and `SQLT_DQL_LOCK_SOURCES` are development filters only;
 final acceptance leaves all three unset.
+
+The last two cases cover a one-mebibyte field and a deterministic 10,000-row
+result. Run their fixed-version direct and security-off gateway acceptance with:
+
+```bash
+data-proxy/examples/sql-matrix/run-dql-boundary-corpus.sh
+```
+
+The boundary runner writes client stdout directly to the external cache and reads
+it back in fixed 64 KiB chunks. It compares byte count, row count, maximum line
+length, final-LF state, complete SHA-256, and first/last-line SHA-256 against
+`dql-boundary-oracles.json`; the full output is never retained in a shell variable
+or JSON oracle. Its default range performs eight `case x dialect x path`
+executions. `SQLT_DQL_BOUNDARY_CASE_FROM`, `SQLT_DQL_BOUNDARY_CASE_TO`, and
+`SQLT_DQL_BOUNDARY_SOURCES` are development filters only.
 
 The DML corpus contains the SQLT-3C1 INSERT tranche and SQLT-3C2 UPDATE/DELETE
 tranches (`SQLT-DML-003` through `SQLT-DML-043`). They cover values, defaults, exact

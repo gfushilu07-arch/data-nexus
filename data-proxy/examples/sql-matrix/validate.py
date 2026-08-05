@@ -205,6 +205,7 @@ def _validate_dql_oracles(root: Path, cases: list[Any], errors: list[str]) -> No
             isinstance(case, dict)
             and case.get("family") == "dql"
             and case.get("transaction_mode") == "autocommit"
+            and case.get("capability") != "dql.boundary"
         ):
             case_id = case.get("id")
             dialects = case.get("dialects")
@@ -303,6 +304,75 @@ def _validate_dql_lock_oracles(root: Path, cases: list[Any], errors: list[str]) 
                     errors.append(f"{label}.{field} must be a string")
                 elif output and not output.endswith("\n"):
                     errors.append(f"{label}.{field} must end with LF")
+
+
+def _validate_dql_boundary_oracles(root: Path, cases: list[Any], errors: list[str]) -> None:
+    """Validate bounded-memory summary contracts for large DQL outputs."""
+    oracles = _load_json(root / "dql-boundary-oracles.json", errors)
+    if not isinstance(oracles, dict):
+        errors.append("dql-boundary-oracles.json must contain an object")
+        return
+    if oracles.get("schema_version") != 1:
+        errors.append("dql-boundary-oracles.json schema_version must be 1")
+    chunk_bytes = oracles.get("chunk_bytes")
+    if chunk_bytes != 65536 or isinstance(chunk_bytes, bool):
+        errors.append("dql-boundary-oracles.json chunk_bytes must be 65536")
+    results = oracles.get("results")
+    if not isinstance(results, dict):
+        errors.append("dql-boundary-oracles.json results must be an object")
+        return
+
+    expected: dict[str, set[str]] = {}
+    for case in cases:
+        if isinstance(case, dict) and case.get("capability") == "dql.boundary":
+            case_id = case.get("id")
+            dialects = case.get("dialects")
+            if isinstance(case_id, str) and isinstance(dialects, list):
+                expected[case_id] = {item for item in dialects if isinstance(item, str)}
+
+    if set(results) != set(expected):
+        errors.append(
+            "dql-boundary-oracles.json cases must be "
+            f"{sorted(expected)}, got {sorted(results)}"
+        )
+
+    fields = {
+        "bytes",
+        "lines",
+        "max_line_bytes",
+        "ends_with_lf",
+        "sha256",
+        "first_line_sha256",
+        "last_line_sha256",
+    }
+    hash_fields = {"sha256", "first_line_sha256", "last_line_sha256"}
+    for case_id, dialects in expected.items():
+        values = results.get(case_id)
+        if not isinstance(values, dict):
+            errors.append(f"dql-boundary-oracles.json results.{case_id} must be an object")
+            continue
+        if set(values) != dialects:
+            errors.append(
+                f"dql-boundary-oracles.json results.{case_id} dialects must be "
+                f"{sorted(dialects)}"
+            )
+        for dialect, summary in values.items():
+            label = f"dql-boundary-oracles.json results.{case_id}.{dialect}"
+            if not isinstance(summary, dict):
+                errors.append(f"{label} must be an object")
+                continue
+            if set(summary) != fields:
+                errors.append(f"{label} fields must be {sorted(fields)}")
+            for field in ("bytes", "lines", "max_line_bytes"):
+                value = summary.get(field)
+                if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+                    errors.append(f"{label}.{field} must be a non-negative integer")
+            if not isinstance(summary.get("ends_with_lf"), bool):
+                errors.append(f"{label}.ends_with_lf must be a boolean")
+            for field in hash_fields:
+                value = summary.get(field)
+                if not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value):
+                    errors.append(f"{label}.{field} must be a lowercase SHA-256")
 
 
 def _validate_dml_oracles(root: Path, cases: list[Any], errors: list[str]) -> None:
@@ -581,6 +651,7 @@ def validate_repository(root: Path) -> list[str]:
     _validate_fixture_sql_files(root, errors)
     _validate_dql_oracles(root, cases, errors)
     _validate_dql_lock_oracles(root, cases, errors)
+    _validate_dql_boundary_oracles(root, cases, errors)
     _validate_dml_oracles(root, cases, errors)
     return errors
 

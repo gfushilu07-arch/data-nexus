@@ -133,6 +133,7 @@ for case in manifest["cases"]:
     if (
         case["family"] != "dql"
         or case["transaction_mode"] != "autocommit"
+        or case["capability"] == "dql.boundary"
         or not case_from <= case["id"] <= case_to
     ):
         continue

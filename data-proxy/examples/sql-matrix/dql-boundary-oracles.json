@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "chunk_bytes": 65536,
+  "results": {
+    "SQLT-DQL-085": {
+      "mysql": {
+        "bytes": 1048577,
+        "lines": 1,
+        "max_line_bytes": 1048576,
+        "ends_with_lf": true,
+        "sha256": "eb92ca55ea07796e15fde2c54bbda31bdaed01130013c4ecb7ba9fd41533afd4",
+        "first_line_sha256": "8f990ba0b577b51cf009ea049368c16bbda1b21e1b93be07a824758bb253c39b",
+        "last_line_sha256": "8f990ba0b577b51cf009ea049368c16bbda1b21e1b93be07a824758bb253c39b"
+      },
+      "postgres": {
+        "bytes": 1048577,
+        "lines": 1,
+        "max_line_bytes": 1048576,
+        "ends_with_lf": true,
+        "sha256": "eb92ca55ea07796e15fde2c54bbda31bdaed01130013c4ecb7ba9fd41533afd4",
+        "first_line_sha256": "8f990ba0b577b51cf009ea049368c16bbda1b21e1b93be07a824758bb253c39b",
+        "last_line_sha256": "8f990ba0b577b51cf009ea049368c16bbda1b21e1b93be07a824758bb253c39b"
+      }
+    },
+    "SQLT-DQL-086": {
+      "mysql": {
+        "bytes": 48894,
+        "lines": 10000,
+        "max_line_bytes": 5,
+        "ends_with_lf": true,
+        "sha256": "8060aa0ac20a3e5db2b67325c98a0122f2d09a612574458225dcb9a086f87cc3",
+        "first_line_sha256": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+        "last_line_sha256": "39e5b4830d4d9c14db7368a95b65d5463ea3d09520373723430c03a5a453b5df"
+      },
+      "postgres": {
+        "bytes": 48894,
+        "lines": 10000,
+        "max_line_bytes": 5,
+        "ends_with_lf": true,
+        "sha256": "8060aa0ac20a3e5db2b67325c98a0122f2d09a612574458225dcb9a086f87cc3",
+        "first_line_sha256": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+        "last_line_sha256": "39e5b4830d4d9c14db7368a95b65d5463ea3d09520373723430c03a5a453b5df"
+      }
+    }
+  }
+}

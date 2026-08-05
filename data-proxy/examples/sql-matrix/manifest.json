@@ -1909,6 +1909,46 @@
       "profiles": ["nightly", "release"]
     },
     {
+      "id": "SQLT-DQL-085",
+      "sql_file": "dql/one-mebibyte-field.sql",
+      "family": "dql",
+      "capability": "dql.boundary",
+      "dialects": ["mysql", "postgres"],
+      "frontends": ["mysql_text", "pg_simple", "pg_extended"],
+      "backends": ["mysql", "postgres"],
+      "protocols": ["mysql_text", "pg_simple", "pg_extended"],
+      "statement_mode": "single",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"}
+      ],
+      "side_effect": "none",
+      "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-DQL-086",
+      "sql_file": "dql/ten-thousand-rows.sql",
+      "family": "dql",
+      "capability": "dql.boundary",
+      "dialects": ["mysql", "postgres"],
+      "frontends": ["mysql_text", "pg_simple", "pg_extended"],
+      "backends": ["mysql", "postgres"],
+      "protocols": ["mysql_text", "pg_simple", "pg_extended"],
+      "statement_mode": "single",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"}
+      ],
+      "side_effect": "none",
+      "profiles": ["nightly", "release"]
+    },
+    {
       "id": "SQLT-DML-001",
       "sql_file": "dml/insert-update-delete.sql",
       "family": "dml",
