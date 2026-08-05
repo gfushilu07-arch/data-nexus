@@ -1,6 +1,6 @@
 -- fixture: SQLT-FIXTURE-POSTGRES-SCHEMA-V1
 -- Purpose: Create the version 1 PostgreSQL schema used by canonical SQL cases.
--- Expected: Three empty tables exist with deterministic types and constraints.
+-- Expected: Four empty tables exist with deterministic types and constraints.
 -- Dialect: postgres
 
 CREATE TABLE sqlt_customers (
@@ -24,4 +24,13 @@ CREATE TABLE sqlt_mutations (
     description VARCHAR(255) NOT NULL,
     amount NUMERIC(12, 2),
     status VARCHAR(32) NOT NULL DEFAULT 'new'
+);
+
+CREATE TABLE sqlt_dml_targets (
+    target_id BIGINT PRIMARY KEY,
+    customer_id BIGINT NOT NULL REFERENCES sqlt_customers (customer_id),
+    tenant_id INTEGER NOT NULL,
+    description VARCHAR(64) NOT NULL,
+    amount NUMERIC(12, 2),
+    status VARCHAR(32) NOT NULL
 );

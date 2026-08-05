@@ -1,55 +1,357 @@
 {
   "schema_version": 1,
   "state_queries": {
-    "mysql": "fixtures/mysql/oracle-dml-insert-state.sql",
-    "postgres": "fixtures/postgres/oracle-dml-insert-state.sql"
+    "insert": {
+      "mysql": "fixtures/mysql/oracle-dml-insert-state.sql",
+      "postgres": "fixtures/postgres/oracle-dml-insert-state.sql"
+    },
+    "update_delete": {
+      "mysql": "fixtures/mysql/oracle-dml-update-delete-state.sql",
+      "postgres": "fixtures/postgres/oracle-dml-update-delete-state.sql"
+    }
   },
   "results": {
     "SQLT-DML-003": {
-      "mysql": {"result": "success", "state": "mutation\t3001\tsingle insert\t10.50\tnew\n"},
-      "postgres": {"result": "success", "state": "mutation\t3001\tsingle insert\t10.50\tnew\n"}
+      "mysql": {
+        "result": "success",
+        "state": "mutation\t3001\tsingle insert\t10.50\tnew\n",
+        "state_query": "insert"
+      },
+      "postgres": {
+        "result": "success",
+        "state": "mutation\t3001\tsingle insert\t10.50\tnew\n",
+        "state_query": "insert"
+      }
     },
     "SQLT-DML-004": {
-      "mysql": {"result": "success", "state": "mutation\t3002\tmulti one\t20.00\tqueued\nmutation\t3003\tmulti two\t30.25\tready\n"},
-      "postgres": {"result": "success", "state": "mutation\t3002\tmulti one\t20.00\tqueued\nmutation\t3003\tmulti two\t30.25\tready\n"}
+      "mysql": {
+        "result": "success",
+        "state": "mutation\t3002\tmulti one\t20.00\tqueued\nmutation\t3003\tmulti two\t30.25\tready\n",
+        "state_query": "insert"
+      },
+      "postgres": {
+        "result": "success",
+        "state": "mutation\t3002\tmulti one\t20.00\tqueued\nmutation\t3003\tmulti two\t30.25\tready\n",
+        "state_query": "insert"
+      }
     },
     "SQLT-DML-005": {
-      "mysql": {"result": "success", "state": "mutation\t3004\tnullable amount\tNULL\tnull-ok\n"},
-      "postgres": {"result": "success", "state": "mutation\t3004\tnullable amount\tNULL\tnull-ok\n"}
+      "mysql": {
+        "result": "success",
+        "state": "mutation\t3004\tnullable amount\tNULL\tnull-ok\n",
+        "state_query": "insert"
+      },
+      "postgres": {
+        "result": "success",
+        "state": "mutation\t3004\tnullable amount\tNULL\tnull-ok\n",
+        "state_query": "insert"
+      }
     },
     "SQLT-DML-006": {
-      "mysql": {"result": "success", "state": "mutation\t3005\tdefault status\t40.00\tnew\n"},
-      "postgres": {"result": "success", "state": "mutation\t3005\tdefault status\t40.00\tnew\n"}
+      "mysql": {
+        "result": "success",
+        "state": "mutation\t3005\tdefault status\t40.00\tnew\n",
+        "state_query": "insert"
+      },
+      "postgres": {
+        "result": "success",
+        "state": "mutation\t3005\tdefault status\t40.00\tnew\n",
+        "state_query": "insert"
+      }
     },
     "SQLT-DML-007": {
-      "mysql": {"result": "success", "state": "mutation\t3006\texact decimal\t1234567890.12\tprecise\n"},
-      "postgres": {"result": "success", "state": "mutation\t3006\texact decimal\t1234567890.12\tprecise\n"}
+      "mysql": {
+        "result": "success",
+        "state": "mutation\t3006\texact decimal\t1234567890.12\tprecise\n",
+        "state_query": "insert"
+      },
+      "postgres": {
+        "result": "success",
+        "state": "mutation\t3006\texact decimal\t1234567890.12\tprecise\n",
+        "state_query": "insert"
+      }
     },
     "SQLT-DML-008": {
-      "mysql": {"result": "success", "state": "mutation\t3007\tquote ' slash \\ utf8 中文\t50.00\ttext\n"}
+      "mysql": {
+        "result": "success",
+        "state": "mutation\t3007\tquote ' slash \\ utf8 中文\t50.00\ttext\n",
+        "state_query": "insert"
+      }
     },
     "SQLT-DML-009": {
-      "postgres": {"result": "success", "state": "mutation\t3008\tquote ' slash \\ utf8 中文\t60.00\ttext\n"}
+      "postgres": {
+        "result": "success",
+        "state": "mutation\t3008\tquote ' slash \\ utf8 中文\t60.00\ttext\n",
+        "state_query": "insert"
+      }
     },
     "SQLT-DML-010": {
-      "mysql": {"result": "success", "state": "mutation\t3101\tAda\t10.00\tcopied\nmutation\t3102\tLin\t10.00\tcopied\nmutation\t3201\tGrace\t20.00\tcopied\nmutation\t3202\tEdsger\t20.00\tcopied\n"},
-      "postgres": {"result": "success", "state": "mutation\t3101\tAda\t10.00\tcopied\nmutation\t3102\tLin\t10.00\tcopied\nmutation\t3201\tGrace\t20.00\tcopied\nmutation\t3202\tEdsger\t20.00\tcopied\n"}
+      "mysql": {
+        "result": "success",
+        "state": "mutation\t3101\tAda\t10.00\tcopied\nmutation\t3102\tLin\t10.00\tcopied\nmutation\t3201\tGrace\t20.00\tcopied\nmutation\t3202\tEdsger\t20.00\tcopied\n",
+        "state_query": "insert"
+      },
+      "postgres": {
+        "result": "success",
+        "state": "mutation\t3101\tAda\t10.00\tcopied\nmutation\t3102\tLin\t10.00\tcopied\nmutation\t3201\tGrace\t20.00\tcopied\nmutation\t3202\tEdsger\t20.00\tcopied\n",
+        "state_query": "insert"
+      }
     },
     "SQLT-DML-011": {
-      "mysql": {"result": "error", "error": "mysql\t1062\t23000\n", "state": ""},
-      "postgres": {"result": "error", "error": "postgres\t23505\n", "state": ""}
+      "mysql": {
+        "result": "error",
+        "error": "mysql\t1062\t23000\n",
+        "state": "",
+        "state_query": "insert"
+      },
+      "postgres": {
+        "result": "error",
+        "error": "postgres\t23505\n",
+        "state": "",
+        "state_query": "insert"
+      }
     },
     "SQLT-DML-012": {
-      "mysql": {"result": "error", "error": "mysql\t1452\t23000\n", "state": ""},
-      "postgres": {"result": "error", "error": "postgres\t23503\n", "state": ""}
+      "mysql": {
+        "result": "error",
+        "error": "mysql\t1452\t23000\n",
+        "state": "",
+        "state_query": "insert"
+      },
+      "postgres": {
+        "result": "error",
+        "error": "postgres\t23503\n",
+        "state": "",
+        "state_query": "insert"
+      }
     },
     "SQLT-DML-013": {
-      "mysql": {"result": "error", "error": "mysql\t1048\t23000\n", "state": ""},
-      "postgres": {"result": "error", "error": "postgres\t23502\n", "state": ""}
+      "mysql": {
+        "result": "error",
+        "error": "mysql\t1048\t23000\n",
+        "state": "",
+        "state_query": "insert"
+      },
+      "postgres": {
+        "result": "error",
+        "error": "postgres\t23502\n",
+        "state": "",
+        "state_query": "insert"
+      }
     },
     "SQLT-DML-014": {
-      "mysql": {"result": "error", "error": "mysql\t1406\t22001\n", "state": ""},
-      "postgres": {"result": "error", "error": "postgres\t22001\n", "state": ""}
+      "mysql": {
+        "result": "error",
+        "error": "mysql\t1406\t22001\n",
+        "state": "",
+        "state_query": "insert"
+      },
+      "postgres": {
+        "result": "error",
+        "error": "postgres\t22001\n",
+        "state": "",
+        "state_query": "insert"
+      }
+    },
+    "SQLT-DML-015": {
+      "mysql": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha-updated\t12.34\tdone\n4002\t102\t10\tbeta\t20.00\tnew\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 1,
+        "state_query": "update_delete"
+      },
+      "postgres": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha-updated\t12.34\tdone\n4002\t102\t10\tbeta\t20.00\tnew\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 1,
+        "state_query": "update_delete"
+      }
+    },
+    "SQLT-DML-016": {
+      "mysql": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\t10.00\ttenant-updated\n4002\t102\t10\tbeta\t20.00\ttenant-updated\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t50.00\ttenant-updated\n",
+        "affected_rows": 3,
+        "state_query": "update_delete"
+      },
+      "postgres": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\t10.00\ttenant-updated\n4002\t102\t10\tbeta\t20.00\ttenant-updated\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t50.00\ttenant-updated\n",
+        "affected_rows": 3,
+        "state_query": "update_delete"
+      }
+    },
+    "SQLT-DML-017": {
+      "mysql": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\t10.00\tnew\n4002\t102\t10\tbeta\t20.00\tnew\n4003\t201\t20\tgamma\t35.25\tready\n4004\t202\t20\tdelta\t5.25\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 2,
+        "state_query": "update_delete"
+      },
+      "postgres": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\t10.00\tnew\n4002\t102\t10\tbeta\t20.00\tnew\n4003\t201\t20\tgamma\t35.25\tready\n4004\t202\t20\tdelta\t5.25\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 2,
+        "state_query": "update_delete"
+      }
+    },
+    "SQLT-DML-018": {
+      "mysql": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\tNULL\tmissing\n4002\t102\t10\tbeta\t20.00\tnew\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 1,
+        "state_query": "update_delete"
+      },
+      "postgres": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\tNULL\tmissing\n4002\t102\t10\tbeta\t20.00\tnew\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 1,
+        "state_query": "update_delete"
+      }
+    },
+    "SQLT-DML-019": {
+      "mysql": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\t10.00\tnew\n4002\t102\t10\tbeta\t20.00\tnew\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 0,
+        "state_query": "update_delete"
+      },
+      "postgres": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\t10.00\tnew\n4002\t102\t10\tbeta\t20.00\tnew\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 0,
+        "state_query": "update_delete"
+      }
+    },
+    "SQLT-DML-020": {
+      "mysql": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\t12.50\tcopied\n4002\t102\t10\tbeta\t20.00\tnew\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 1,
+        "state_query": "update_delete"
+      },
+      "postgres": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\t12.50\tcopied\n4002\t102\t10\tbeta\t20.00\tnew\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 1,
+        "state_query": "update_delete"
+      }
+    },
+    "SQLT-DML-021": {
+      "mysql": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\t112.49\trollup\n4002\t102\t10\tbeta\t15.00\trollup\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t112.49\trollup\n",
+        "affected_rows": 3,
+        "state_query": "update_delete"
+      },
+      "postgres": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\t112.49\trollup\n4002\t102\t10\tbeta\t15.00\trollup\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t112.49\trollup\n",
+        "affected_rows": 3,
+        "state_query": "update_delete"
+      }
+    },
+    "SQLT-DML-022": {
+      "mysql": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\t10.00\tnew\n4002\t102\t10\tbeta\t20.00\tnew\n4003\t201\t20\tGrace-joined\t30.00\tjoined\n4004\t202\t20\tEdsger-joined\tNULL\tjoined\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 2,
+        "state_query": "update_delete"
+      }
+    },
+    "SQLT-DML-023": {
+      "postgres": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\t10.00\tnew\n4002\t102\t10\tbeta\t20.00\tnew\n4003\t201\t20\tGrace-joined\t30.00\tjoined\n4004\t202\t20\tEdsger-joined\tNULL\tjoined\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 2,
+        "state_query": "update_delete"
+      }
+    },
+    "SQLT-DML-024": {
+      "mysql": {
+        "result": "success",
+        "state": "4002\t102\t10\tbeta\t20.00\tnew\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 1,
+        "state_query": "update_delete"
+      },
+      "postgres": {
+        "result": "success",
+        "state": "4002\t102\t10\tbeta\t20.00\tnew\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 1,
+        "state_query": "update_delete"
+      }
+    },
+    "SQLT-DML-025": {
+      "mysql": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\t10.00\tnew\n4002\t102\t10\tbeta\t20.00\tnew\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 2,
+        "state_query": "update_delete"
+      },
+      "postgres": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\t10.00\tnew\n4002\t102\t10\tbeta\t20.00\tnew\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 2,
+        "state_query": "update_delete"
+      }
+    },
+    "SQLT-DML-026": {
+      "mysql": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\t10.00\tnew\n4002\t102\t10\tbeta\t20.00\tnew\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 0,
+        "state_query": "update_delete"
+      },
+      "postgres": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\t10.00\tnew\n4002\t102\t10\tbeta\t20.00\tnew\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 0,
+        "state_query": "update_delete"
+      }
+    },
+    "SQLT-DML-027": {
+      "mysql": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\t10.00\tnew\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 1,
+        "state_query": "update_delete"
+      },
+      "postgres": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\t10.00\tnew\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 1,
+        "state_query": "update_delete"
+      }
+    },
+    "SQLT-DML-028": {
+      "mysql": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\t10.00\tnew\n4002\t102\t10\tbeta\t20.00\tnew\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 2,
+        "state_query": "update_delete"
+      }
+    },
+    "SQLT-DML-029": {
+      "postgres": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\t10.00\tnew\n4002\t102\t10\tbeta\t20.00\tnew\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 2,
+        "state_query": "update_delete"
+      }
+    },
+    "SQLT-DML-030": {
+      "mysql": {
+        "result": "error",
+        "error": "mysql\t1452\t23000\n",
+        "state": "",
+        "state_query": "update_delete"
+      },
+      "postgres": {
+        "result": "error",
+        "error": "postgres\t23503\n",
+        "state": "",
+        "state_query": "update_delete"
+      }
     }
   }
 }

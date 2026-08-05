@@ -74,8 +74,10 @@ During corpus development, a bounded ID range can be selected with
 `SQLT_DQL_CASE_FROM` and `SQLT_DQL_CASE_TO`. Final acceptance must leave both unset
 so the complete registered DQL corpus runs.
 
-The SQLT-3C1 INSERT tranche contains 12 focused cases (`SQLT-DML-003` through
-`SQLT-DML-014`) for values, defaults, exact decimals, special text, INSERT SELECT,
+The DML corpus contains the SQLT-3C1 INSERT tranche and SQLT-3C2 UPDATE/DELETE
+tranche (`SQLT-DML-003` through `SQLT-DML-030`). It covers values, defaults, exact
+decimals, special text, INSERT SELECT, predicates, expressions, subqueries,
+MySQL JOIN UPDATE/DELETE, PostgreSQL UPDATE FROM/DELETE USING, zero-row writes,
 and stable constraint errors. Run its fixed-version direct and security-off gateway
 acceptance with:
 
@@ -84,7 +86,11 @@ data-proxy/examples/sql-matrix/run-dml-corpus.sh
 ```
 
 Each case and dialect starts from a fresh fixture. Successful executions are compared
-with the exact versioned state in `dml-oracles.json`; failed executions must match the
-MySQL error number and SQLSTATE or PostgreSQL SQLSTATE, and their before/after state
-snapshots must be identical. Use `SQLT_DML_CASE_FROM` and `SQLT_DML_CASE_TO` only for
-bounded development runs. Final acceptance runs the complete default range.
+with the exact versioned state in `dml-oracles.json`; UPDATE/DELETE cases also compare
+the affected-row count emitted by the fixed SQL clients. Failed executions must match
+the MySQL error number and SQLSTATE or PostgreSQL SQLSTATE, and their before/after
+state snapshots must be identical. Use `SQLT_DML_CASE_FROM` and
+`SQLT_DML_CASE_TO` only for bounded development runs. Final acceptance runs the
+complete default range, currently 50 `case x dialect` executions. Raw responses,
+normalized state, affected rows, errors, diffs, `results.jsonl`, and `summary.json`
+are written below `/Volumes/fushilu/.caches/data-nexus/sql-matrix/<run-id>/`.

@@ -42,6 +42,17 @@ class NormalizeSqlOutputTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "cannot classify"):
             NORMALIZE.normalize_error_text("connection closed", "postgres")
 
+    def test_normalizes_mysql_affected_rows(self) -> None:
+        source = "Query OK, 2 rows affected (0.01 sec)\nRows matched: 2\n"
+        self.assertEqual(NORMALIZE.normalize_affected_rows(source, "mysql"), "2\n")
+
+    def test_normalizes_postgres_affected_rows(self) -> None:
+        self.assertEqual(NORMALIZE.normalize_affected_rows("UPDATE 3\n", "postgres"), "3\n")
+
+    def test_affected_rows_requires_one_marker(self) -> None:
+        with self.assertRaisesRegex(ValueError, "expected one"):
+            NORMALIZE.normalize_affected_rows("UPDATE 1\nDELETE 1\n", "postgres")
+
 
 if __name__ == "__main__":
     unittest.main()

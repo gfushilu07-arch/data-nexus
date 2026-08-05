@@ -31,19 +31,36 @@ def normalize_error_text(text: str, dialect: str) -> str:
     raise ValueError(f"cannot classify {dialect} error output")
 
 
+def normalize_affected_rows(text: str, dialect: str) -> str:
+    """Extract the one affected-row marker emitted by the fixed SQL clients."""
+    if dialect == "mysql":
+        matches = re.findall(r"Query OK, (\d+) row[s]? affected", text)
+    elif dialect == "postgres":
+        matches = re.findall(r"^(?:UPDATE|DELETE) (\d+)$", text, re.MULTILINE)
+    else:
+        raise ValueError(f"unsupported affected-row dialect: {dialect}")
+    if len(matches) != 1:
+        raise ValueError(f"expected one affected-row marker, found {len(matches)}")
+    return f"{matches[0]}\n"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--error-dialect", choices=("mysql", "postgres"))
+    parser.add_argument("--affected-dialect", choices=("mysql", "postgres"))
     parser.add_argument("source", type=Path)
     parser.add_argument("destination", type=Path)
     args = parser.parse_args()
     args.destination.parent.mkdir(parents=True, exist_ok=True)
     source = args.source.read_text(encoding="utf-8")
-    normalized = (
-        normalize_error_text(source, args.error_dialect)
-        if args.error_dialect
-        else normalize_text(source)
-    )
+    if args.error_dialect and args.affected_dialect:
+        parser.error("--error-dialect and --affected-dialect are mutually exclusive")
+    if args.error_dialect:
+        normalized = normalize_error_text(source, args.error_dialect)
+    elif args.affected_dialect:
+        normalized = normalize_affected_rows(source, args.affected_dialect)
+    else:
+        normalized = normalize_text(source)
     args.destination.write_text(normalized, encoding="utf-8")
     return 0
 

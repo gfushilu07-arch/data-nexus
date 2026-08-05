@@ -153,12 +153,12 @@ class ValidateSqlMatrixTest(unittest.TestCase):
         oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
         self.assert_has_error("SQLT-DQL-001 dialects must be")
 
-    def test_dml_insert_tranche_has_contiguous_case_ids(self) -> None:
+    def test_dml_tranches_have_contiguous_case_ids(self) -> None:
         manifest = self.manifest()
         dml_cases = [case for case in manifest["cases"] if case["family"] == "dml"]
-        self.assertGreaterEqual(len(dml_cases), 14)
+        self.assertGreaterEqual(len(dml_cases), 30)
         self.assertTrue(
-            {f"SQLT-DML-{index:03d}" for index in range(1, 15)}
+            {f"SQLT-DML-{index:03d}" for index in range(1, 31)}
             <= {case["id"] for case in dml_cases}
         )
 
@@ -179,9 +179,16 @@ class ValidateSqlMatrixTest(unittest.TestCase):
     def test_dml_state_query_must_exist_below_matrix_root(self) -> None:
         oracle_path = self.root / "dml-oracles.json"
         oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
-        oracles["state_queries"]["mysql"] = "../outside.sql"
+        oracles["state_queries"]["update_delete"]["mysql"] = "../outside.sql"
         oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
-        self.assert_has_error("state_queries.mysql escapes matrix root")
+        self.assert_has_error("state_queries.update_delete.mysql escapes matrix root")
+
+    def test_dml_update_oracle_requires_affected_rows(self) -> None:
+        oracle_path = self.root / "dml-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        del oracles["results"]["SQLT-DML-015"]["mysql"]["affected_rows"]
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-DML-015.mysql.affected_rows")
 
 
 if __name__ == "__main__":

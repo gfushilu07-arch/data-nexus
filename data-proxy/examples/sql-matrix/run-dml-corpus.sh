@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Execute the registered SQLT-3C1 INSERT corpus against fixed Docker backends.
+# Execute the registered SQLT-3C1/3C2 DML corpus against fixed Docker backends.
 # Each case is reset before direct and gateway execution; all artifacts stay external.
 set -euo pipefail
 
@@ -16,8 +16,8 @@ CACHE_ROOT="${DATA_NEXUS_SQL_MATRIX_CACHE:-/Volumes/fushilu/.caches/data-nexus/s
 RUN_ID="${SQLT_DML_RUN_ID:-dml-$(date -u +%Y%m%dT%H%M%SZ)}"
 RUN_DIR="$CACHE_ROOT/$RUN_ID"
 CASE_FROM="${SQLT_DML_CASE_FROM:-SQLT-DML-003}"
-CASE_TO="${SQLT_DML_CASE_TO:-SQLT-DML-014}"
-COMPOSE_PROJECT="sqlt3c1-${RUN_ID//[^a-zA-Z0-9]/}"
+CASE_TO="${SQLT_DML_CASE_TO:-SQLT-DML-030}"
+COMPOSE_PROJECT="sqlt3cdml-${RUN_ID//[^a-zA-Z0-9]/}"
 COMPOSE=(docker compose -p "$COMPOSE_PROJECT" -f "$ROOT/fixtures/docker-compose.yml")
 RESULTS="$RUN_DIR/results.jsonl"
 GATEWAY_CONFIG="$ROOT/fixtures/gateway-config.toml"
@@ -43,12 +43,12 @@ command -v docker >/dev/null 2>&1 || { echo "missing required command: docker" >
 command -v python3 >/dev/null 2>&1 || { echo "missing required command: python3" >&2; exit 1; }
 command -v curl >/dev/null 2>&1 || { echo "missing required command: curl" >&2; exit 1; }
 [[ "$(rustc --version)" == rustc\ 1.94.1\ * ]] || {
-  echo "SQLT-3C1 requires rustc 1.94.1; found: $(rustc --version)" >&2
+  echo "SQLT-3C1/3C2 requires rustc 1.94.1; found: $(rustc --version)" >&2
   exit 1
 }
 python3 "$ROOT/validate.py"
 
-echo "==> starting fixed-version SQLT-3C1 Docker backends"
+echo "==> starting fixed-version SQLT-3C1/3C2 Docker backends"
 "${COMPOSE[@]}" up -d >"$RUN_DIR/logs/compose-up.log" 2>&1
 for _ in $(seq 1 90); do
   mysql_ok="$("${COMPOSE[@]}" exec -T mysql mysqladmin ping -h 127.0.0.1 -uroot -proot --silent 2>/dev/null || true)"
@@ -92,15 +92,25 @@ run_postgres() {
     -v VERBOSITY=verbose -P null=NULL -A -t -F $'\t' -U sqlt -d sqlt <"$1"
 }
 
+run_mysql_exec() {
+  "${COMPOSE[@]}" exec -T mysql mysql --default-character-set=utf8mb4 \
+    --protocol=TCP -h 127.0.0.1 -uroot -proot sqlt -vvv <"$1"
+}
+
+run_postgres_exec() {
+  "${COMPOSE[@]}" exec -T postgres psql -X -v ON_ERROR_STOP=1 \
+    -v VERBOSITY=verbose -P null=NULL -A -t -F $'\t' -U sqlt -d sqlt <"$1"
+}
+
 run_mysql_gateway() {
   docker run --rm -i --add-host=host.docker.internal:host-gateway mysql:8.0.42 \
-    mysql --batch --raw --skip-column-names --default-character-set=utf8mb4 --ssl-mode=DISABLED \
+    mysql --default-character-set=utf8mb4 --ssl-mode=DISABLED -vvv \
     -h host.docker.internal -P 29088 -uroot -proot <"$1"
 }
 
 run_postgres_gateway() {
   docker run --rm -i --add-host=host.docker.internal:host-gateway postgres:16.8 \
-    env PGPASSWORD=root psql -X -q -v ON_ERROR_STOP=1 -v VERBOSITY=verbose \
+    env PGPASSWORD=root psql -X -v ON_ERROR_STOP=1 -v VERBOSITY=verbose \
     -P null=NULL -A -t -F $'\t' -h host.docker.internal -p 29089 -U root -d sqlt <"$1"
 }
 
@@ -123,7 +133,7 @@ import json
 import sys
 from pathlib import Path
 
-results, case_id, dialect, status, source, execution, direct_state, gateway_state = sys.argv[1:]
+results, case_id, dialect, status, source, execution, direct_state, gateway_state, direct_affected, gateway_affected = sys.argv[1:]
 with Path(results).open("a", encoding="utf-8") as handle:
     handle.write(json.dumps({
         "case_id": case_id,
@@ -133,6 +143,8 @@ with Path(results).open("a", encoding="utf-8") as handle:
         "execution": execution,
         "direct_state": direct_state,
         "gateway_state": gateway_state,
+        "direct_affected_rows": direct_affected,
+        "gateway_affected_rows": gateway_affected,
     }, sort_keys=True) + "\n")
 PY
 }
@@ -143,6 +155,10 @@ normalize_state() {
 
 normalize_error() {
   python3 "$ROOT/normalize.py" --error-dialect "$1" "$2" "$3"
+}
+
+normalize_affected() {
+  python3 "$ROOT/normalize.py" --affected-dialect "$1" "$2" "$3"
 }
 
 case_count=0
@@ -165,9 +181,10 @@ PY
   expected_result="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["result"])' "$oracle")"
   expected_state="$RUN_DIR/normalized-output/${case_id}-${dialect}.expected-state.tsv"
   expected_error="$RUN_DIR/normalized-output/${case_id}-${dialect}.expected-error.tsv"
+  expected_affected="$RUN_DIR/normalized-output/${case_id}-${dialect}.expected-affected.tsv"
   empty_state="$RUN_DIR/normalized-output/${case_id}-${dialect}.empty-state.tsv"
   : >"$empty_state"
-  python3 - "$oracle" "$expected_state" "$expected_error" <<'PY'
+  python3 - "$oracle" "$expected_state" "$expected_error" "$expected_affected" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -175,9 +192,16 @@ from pathlib import Path
 value = json.load(open(sys.argv[1], encoding="utf-8"))
 Path(sys.argv[2]).write_text(value.get("state", ""), encoding="utf-8")
 Path(sys.argv[3]).write_text(value.get("error", ""), encoding="utf-8")
+Path(sys.argv[4]).write_text(
+    "" if "affected_rows" not in value else str(value["affected_rows"]) + "\n",
+    encoding="utf-8",
+)
 PY
+  state_query_group="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["state_query"])' "$oracle")"
   echo "==> $case_id [$dialect]"
   case_status=passed
+  direct_affected_file=""
+  gateway_affected_file=""
   for path in direct gateway; do
     load_fixtures "$dialect"
     prefix="$RUN_DIR/results/${case_id}-${dialect}-${path}"
@@ -186,23 +210,34 @@ PY
     pre_state="$prefix-pre.tsv"
     post_state="$prefix-post.tsv"
     exec_raw="$prefix-exec.raw"
+    actual_affected="$prefix-affected.tsv"
     err_raw="$RUN_DIR/logs/${case_id}-${dialect}-${path}.err"
     exec_status=0
     if [[ "$dialect" == "mysql" ]]; then
-      run_mysql "$ROOT/fixtures/mysql/oracle-dml-insert-state.sql" >"$pre_raw"
-      if [[ "$path" == direct ]]; then run_mysql "$sql_path" >"$exec_raw" 2>"$err_raw" || exec_status=$?;
+      state_query_relative="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["state_queries"][sys.argv[2]][sys.argv[3]])' "$ROOT/dml-oracles.json" "$state_query_group" "$dialect")"
+      state_query="$ROOT/$state_query_relative"
+      run_mysql "$state_query" >"$pre_raw"
+      if [[ "$path" == direct ]]; then run_mysql_exec "$sql_path" >"$exec_raw" 2>"$err_raw" || exec_status=$?;
       else run_mysql_gateway "$sql_path" >"$exec_raw" 2>"$err_raw" || exec_status=$?; fi
-      run_mysql "$ROOT/fixtures/mysql/oracle-dml-insert-state.sql" >"$post_raw"
+      run_mysql "$state_query" >"$post_raw"
     else
-      run_postgres "$ROOT/fixtures/postgres/oracle-dml-insert-state.sql" >"$pre_raw"
-      if [[ "$path" == direct ]]; then run_postgres "$sql_path" >"$exec_raw" 2>"$err_raw" || exec_status=$?;
+      state_query_relative="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["state_queries"][sys.argv[2]][sys.argv[3]])' "$ROOT/dml-oracles.json" "$state_query_group" "$dialect")"
+      state_query="$ROOT/$state_query_relative"
+      run_postgres "$state_query" >"$pre_raw"
+      if [[ "$path" == direct ]]; then run_postgres_exec "$sql_path" >"$exec_raw" 2>"$err_raw" || exec_status=$?;
       else run_postgres_gateway "$sql_path" >"$exec_raw" 2>"$err_raw" || exec_status=$?; fi
-      run_postgres "$ROOT/fixtures/postgres/oracle-dml-insert-state.sql" >"$post_raw"
+      run_postgres "$state_query" >"$post_raw"
     fi
     normalize_state "$pre_raw" "$pre_state"
     normalize_state "$post_raw" "$post_state"
     if [[ "$expected_result" == success ]]; then
-      if [[ "$exec_status" -ne 0 ]] || ! cmp -s "$expected_state" "$post_state" || ! cmp -s "$pre_state" "$empty_state"; then
+      if [[ "$case_id" > "SQLT-DML-014" ]]; then
+        normalize_affected "$dialect" "$exec_raw" "$actual_affected" || exec_status=$?
+        if [[ "$path" == direct ]]; then direct_affected_file="$actual_affected"; else gateway_affected_file="$actual_affected"; fi
+      fi
+      if [[ "$exec_status" -ne 0 ]] || ! cmp -s "$expected_state" "$post_state" || \
+        { [[ "$case_id" > "SQLT-DML-014" ]] && ! cmp -s "$expected_affected" "$actual_affected"; } || \
+        { [[ "$case_id" < "SQLT-DML-015" ]] && ! cmp -s "$pre_state" "$empty_state"; }; then
         case_status=failed
       fi
     else
@@ -222,11 +257,15 @@ PY
       if [[ "$expected_result" == error ]]; then
         diff -u "$expected_error" "$actual_error" >"$RUN_DIR/logs/${case_id}-${dialect}-${path}.error.diff" || true
       fi
+      if [[ "$case_id" > "SQLT-DML-014" && -f "$actual_affected" ]]; then
+        diff -u "$expected_affected" "$actual_affected" >"$RUN_DIR/logs/${case_id}-${dialect}-${path}.affected.diff" || true
+      fi
     fi
   done
   write_result "$case_id" "$dialect" "$case_status" "$sql_file" "$expected_result" \
     "$RUN_DIR/results/${case_id}-${dialect}-direct-post.tsv" \
-    "$RUN_DIR/results/${case_id}-${dialect}-gateway-post.tsv"
+    "$RUN_DIR/results/${case_id}-${dialect}-gateway-post.tsv" \
+    "$direct_affected_file" "$gateway_affected_file"
   if [[ "$case_status" == passed ]]; then pass_count=$((pass_count + 1)); else fail_count=$((fail_count + 1)); fi
 done < <(python3 - "$ROOT/manifest.json" "$CASE_FROM" "$CASE_TO" <<'PY'
 import json
@@ -256,6 +295,6 @@ summary = {
 }
 Path(output).write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 if summary["failed"]:
-    raise SystemExit(f"SQLT-3C1 failed: {summary['passed']} passed, {summary['failed']} failed")
-print(f"SQLT-3C1 passed: {summary['passed']} case/dialect executions")
+    raise SystemExit(f"SQLT-3C1/3C2 failed: {summary['passed']} passed, {summary['failed']} failed")
+print(f"SQLT-3C1/3C2 passed: {summary['passed']} case/dialect executions")
 PY

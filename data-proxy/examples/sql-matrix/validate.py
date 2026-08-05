@@ -236,7 +236,7 @@ def _validate_dql_oracles(root: Path, cases: list[Any], errors: list[str]) -> No
 
 
 def _validate_dml_oracles(root: Path, cases: list[Any], errors: list[str]) -> None:
-    """Validate the per-case state and error contract for the INSERT tranche."""
+    """Validate per-case state, affected-row, and error contracts for DML tranches."""
     oracles = _load_json(root / "dml-oracles.json", errors)
     if not isinstance(oracles, dict):
         errors.append("dml-oracles.json must contain an object")
@@ -244,20 +244,27 @@ def _validate_dml_oracles(root: Path, cases: list[Any], errors: list[str]) -> No
     if oracles.get("schema_version") != 1:
         errors.append("dml-oracles.json schema_version must be 1")
     state_queries = oracles.get("state_queries")
-    if not isinstance(state_queries, dict) or set(state_queries) != {"mysql", "postgres"}:
-        errors.append("dml-oracles.json state_queries must define mysql and postgres")
+    if not isinstance(state_queries, dict) or not state_queries:
+        errors.append("dml-oracles.json state_queries must define at least one query group")
     else:
-        for dialect, relative in state_queries.items():
-            if not isinstance(relative, str) or not relative.endswith(".sql"):
-                errors.append(f"dml-oracles.json state_queries.{dialect} must be an SQL path")
+        for group, queries in state_queries.items():
+            if not isinstance(queries, dict) or set(queries) != {"mysql", "postgres"}:
+                errors.append(
+                    f"dml-oracles.json state_queries.{group} must define mysql and postgres"
+                )
                 continue
-            path = root / PurePosixPath(relative)
-            try:
-                path.resolve().relative_to(root.resolve())
-            except ValueError:
-                errors.append(f"dml-oracles.json state_queries.{dialect} escapes matrix root")
-            if not path.is_file():
-                errors.append(f"dml-oracles.json state_queries.{dialect} does not exist: {relative}")
+            for dialect, relative in queries.items():
+                label = f"dml-oracles.json state_queries.{group}.{dialect}"
+                if not isinstance(relative, str) or not relative.endswith(".sql"):
+                    errors.append(f"{label} must be an SQL path")
+                    continue
+                path = root / PurePosixPath(relative)
+                try:
+                    path.resolve().relative_to(root.resolve())
+                except ValueError:
+                    errors.append(f"{label} escapes matrix root")
+                if not path.is_file():
+                    errors.append(f"{label} does not exist: {relative}")
 
     expected: dict[str, set[str]] = {}
     for case in cases:
@@ -265,7 +272,7 @@ def _validate_dml_oracles(root: Path, cases: list[Any], errors: list[str]) -> No
             isinstance(case, dict)
             and case.get("family") == "dml"
             and isinstance(case.get("id"), str)
-            and case["id"] in {f"SQLT-DML-{index:03d}" for index in range(3, 15)}
+            and case["id"] in {f"SQLT-DML-{index:03d}" for index in range(3, 31)}
         ):
             expected[case["id"]] = set(case.get("dialects", []))
     results = oracles.get("results")
@@ -286,16 +293,23 @@ def _validate_dml_oracles(root: Path, cases: list[Any], errors: list[str]) -> No
             if not isinstance(value, dict) or value.get("result") not in {"success", "error"}:
                 errors.append(f"{label}.result must be success or error")
                 continue
+            query_group = value.get("state_query")
+            if not isinstance(query_group, str) or query_group not in state_queries:
+                errors.append(f"{label}.state_query must name a registered query group")
             if value["result"] == "success":
                 if not isinstance(value.get("state"), str) or not value["state"].endswith("\n"):
                     errors.append(f"{label}.state must be a newline-terminated string")
                 if "error" in value:
                     errors.append(f"{label} success oracle cannot define error")
+                if case_id >= "SQLT-DML-015" and not isinstance(value.get("affected_rows"), int):
+                    errors.append(f"{label}.affected_rows must be an integer")
             else:
                 if not isinstance(value.get("error"), str) or not value["error"].endswith("\n"):
                     errors.append(f"{label}.error must be a newline-terminated string")
                 if value.get("state") != "":
                     errors.append(f"{label}.state must be empty for an error oracle")
+                if "affected_rows" in value:
+                    errors.append(f"{label} error oracle cannot define affected_rows")
 
 
 def _validate_string_array(
