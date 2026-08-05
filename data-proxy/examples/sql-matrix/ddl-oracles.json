@@ -428,6 +428,84 @@
         "before_data": "1\t<NULL>\n2\t20\n",
         "after_data": "1\t<NULL>\n2\t20\n"
       }
+    },
+    "SQLT-DDL-032": {
+      "mysql": {
+        "result": "success",
+        "setup": "fixtures/mysql/ddl-setup-index-basic.sql",
+        "state": "sqlt_ddl_index\t1\tprobe_id\tint\tNO\t<NULL>\nsqlt_ddl_index\t2\tprobe_name\tvarchar(32)\tNO\t<NULL>\n",
+        "data_query": "fixtures/mysql/oracle-ddl-indexes.sql",
+        "before_data": "",
+        "after_data": "sqlt_idx_probe\t1\tprobe_name\tNO\nsqlt_idx_probe\t2\tprobe_id\tNO\n"
+      },
+      "postgres": {
+        "result": "success",
+        "setup": "fixtures/postgres/ddl-setup-index-basic.sql",
+        "state": "sqlt_ddl_index\t1\tprobe_id\tinteger\tNO\t<NULL>\nsqlt_ddl_index\t2\tprobe_name\tcharacter varying(32)\tNO\t<NULL>\n",
+        "data_query": "fixtures/postgres/oracle-ddl-indexes.sql",
+        "before_data": "",
+        "after_data": "sqlt_idx_probe\t1\tprobe_name\tNO\nsqlt_idx_probe\t2\tprobe_id\tNO\n"
+      }
+    },
+    "SQLT-DDL-033": {
+      "mysql": {
+        "result": "success",
+        "setup": "fixtures/mysql/ddl-setup-index-basic.sql",
+        "state": "sqlt_ddl_index\t1\tprobe_id\tint\tNO\t<NULL>\nsqlt_ddl_index\t2\tprobe_name\tvarchar(32)\tNO\t<NULL>\n",
+        "data_query": "fixtures/mysql/oracle-ddl-indexes.sql",
+        "before_data": "",
+        "after_data": "sqlt_idx_probe\t1\tprobe_name\tYES\nsqlt_idx_probe\t2\tprobe_id\tYES\n"
+      },
+      "postgres": {
+        "result": "success",
+        "setup": "fixtures/postgres/ddl-setup-index-basic.sql",
+        "state": "sqlt_ddl_index\t1\tprobe_id\tinteger\tNO\t<NULL>\nsqlt_ddl_index\t2\tprobe_name\tcharacter varying(32)\tNO\t<NULL>\n",
+        "data_query": "fixtures/postgres/oracle-ddl-indexes.sql",
+        "before_data": "",
+        "after_data": "sqlt_idx_probe\t1\tprobe_name\tYES\nsqlt_idx_probe\t2\tprobe_id\tYES\n"
+      }
+    },
+    "SQLT-DDL-034": {
+      "mysql": {
+        "result": "success",
+        "setup": "fixtures/mysql/ddl-setup-index-existing.sql",
+        "state": "sqlt_ddl_index\t1\tprobe_id\tint\tNO\t<NULL>\nsqlt_ddl_index\t2\tprobe_name\tvarchar(32)\tNO\t<NULL>\n",
+        "data_query": "fixtures/mysql/oracle-ddl-indexes.sql",
+        "before_data": "sqlt_idx_probe\t1\tprobe_name\tNO\nsqlt_idx_probe\t2\tprobe_id\tNO\n",
+        "after_data": ""
+      }
+    },
+    "SQLT-DDL-035": {
+      "postgres": {
+        "result": "success",
+        "setup": "fixtures/postgres/ddl-setup-index-existing.sql",
+        "state": "sqlt_ddl_index\t1\tprobe_id\tinteger\tNO\t<NULL>\nsqlt_ddl_index\t2\tprobe_name\tcharacter varying(32)\tNO\t<NULL>\n",
+        "data_query": "fixtures/postgres/oracle-ddl-indexes.sql",
+        "before_data": "sqlt_idx_probe\t1\tprobe_name\tNO\nsqlt_idx_probe\t2\tprobe_id\tNO\n",
+        "after_data": ""
+      }
+    },
+    "SQLT-DDL-036": {
+      "mysql": {
+        "result": "error",
+        "setup": "fixtures/mysql/ddl-setup-index-existing.sql",
+        "state": "sqlt_ddl_index\t1\tprobe_id\tint\tNO\t<NULL>\nsqlt_ddl_index\t2\tprobe_name\tvarchar(32)\tNO\t<NULL>\n",
+        "error": "mysql\t1061\t42000\n",
+        "unchanged": true,
+        "data_query": "fixtures/mysql/oracle-ddl-indexes.sql",
+        "before_data": "sqlt_idx_probe\t1\tprobe_name\tNO\nsqlt_idx_probe\t2\tprobe_id\tNO\n",
+        "after_data": "sqlt_idx_probe\t1\tprobe_name\tNO\nsqlt_idx_probe\t2\tprobe_id\tNO\n"
+      },
+      "postgres": {
+        "result": "error",
+        "setup": "fixtures/postgres/ddl-setup-index-existing.sql",
+        "state": "sqlt_ddl_index\t1\tprobe_id\tinteger\tNO\t<NULL>\nsqlt_ddl_index\t2\tprobe_name\tcharacter varying(32)\tNO\t<NULL>\n",
+        "error": "postgres\t42P07\n",
+        "unchanged": true,
+        "data_query": "fixtures/postgres/oracle-ddl-indexes.sql",
+        "before_data": "sqlt_idx_probe\t1\tprobe_name\tNO\nsqlt_idx_probe\t2\tprobe_id\tNO\n",
+        "after_data": "sqlt_idx_probe\t1\tprobe_name\tNO\nsqlt_idx_probe\t2\tprobe_id\tNO\n"
+      }
     }
   }
 }
