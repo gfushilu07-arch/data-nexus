@@ -74,6 +74,17 @@ class NormalizeSqlOutputTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "at most one"):
             NORMALIZE.normalize_returned_rows("UPDATE 1\nDELETE 1\n", "postgres")
 
+    def test_normalizes_transaction_markers(self) -> None:
+        source = "START TRANSACTION\nSQLT_TXN\tphase\t4001\talpha\nCOMMIT\n"
+        self.assertEqual(
+            NORMALIZE.normalize_transaction_markers(source),
+            "SQLT_TXN\tphase\t4001\talpha\n",
+        )
+
+    def test_transaction_markers_are_required(self) -> None:
+        with self.assertRaisesRegex(ValueError, "at least one"):
+            NORMALIZE.normalize_transaction_markers("COMMIT\n")
+
 
 if __name__ == "__main__":
     unittest.main()

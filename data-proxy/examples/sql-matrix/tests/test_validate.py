@@ -156,9 +156,9 @@ class ValidateSqlMatrixTest(unittest.TestCase):
     def test_dml_tranches_have_contiguous_case_ids(self) -> None:
         manifest = self.manifest()
         dml_cases = [case for case in manifest["cases"] if case["family"] == "dml"]
-        self.assertGreaterEqual(len(dml_cases), 40)
+        self.assertGreaterEqual(len(dml_cases), 43)
         self.assertTrue(
-            {f"SQLT-DML-{index:03d}" for index in range(1, 41)}
+            {f"SQLT-DML-{index:03d}" for index in range(1, 44)}
             <= {case["id"] for case in dml_cases}
         )
 
@@ -188,7 +188,7 @@ class ValidateSqlMatrixTest(unittest.TestCase):
         oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
         del oracles["results"]["SQLT-DML-015"]["mysql"]["affected_rows"]
         oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
-        self.assert_has_error("SQLT-DML-015.mysql must define affected_rows or returned_rows")
+        self.assert_has_error("SQLT-DML-015.mysql must define affected_rows, returned_rows")
 
     def test_dml_returned_rows_must_be_normalized(self) -> None:
         oracle_path = self.root / "dml-oracles.json"
@@ -196,6 +196,13 @@ class ValidateSqlMatrixTest(unittest.TestCase):
         oracles["results"]["SQLT-DML-036"]["postgres"]["returned_rows"] = ["row"]
         oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
         self.assert_has_error("SQLT-DML-036.postgres.returned_rows")
+
+    def test_dml_recovered_error_requires_stable_error_identity(self) -> None:
+        oracle_path = self.root / "dml-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        del oracles["results"]["SQLT-DML-042"]["mysql"]["error"]
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-DML-042.mysql.error")
 
 
 if __name__ == "__main__":

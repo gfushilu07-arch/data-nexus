@@ -16,7 +16,7 @@ CACHE_ROOT="${DATA_NEXUS_SQL_MATRIX_CACHE:-/Volumes/fushilu/.caches/data-nexus/s
 RUN_ID="${SQLT_DML_RUN_ID:-dml-$(date -u +%Y%m%dT%H%M%SZ)}"
 RUN_DIR="$CACHE_ROOT/$RUN_ID"
 CASE_FROM="${SQLT_DML_CASE_FROM:-SQLT-DML-003}"
-CASE_TO="${SQLT_DML_CASE_TO:-SQLT-DML-040}"
+CASE_TO="${SQLT_DML_CASE_TO:-SQLT-DML-043}"
 COMPOSE_PROJECT="sqlt3cdml-${RUN_ID//[^a-zA-Z0-9]/}"
 COMPOSE=(docker compose -p "$COMPOSE_PROJECT" -f "$ROOT/fixtures/docker-compose.yml")
 RESULTS="$RUN_DIR/results.jsonl"
@@ -114,6 +114,32 @@ run_postgres_gateway() {
     -P null=NULL -A -t -F $'\t' -h host.docker.internal -p 29089 -U root -d sqlt <"$1"
 }
 
+run_mysql_transaction_exec() {
+  local force_flag="${2:-}"
+  "${COMPOSE[@]}" exec -T mysql mysql --batch --raw --skip-column-names $force_flag \
+    --default-character-set=utf8mb4 --protocol=TCP -h 127.0.0.1 -uroot -proot sqlt <"$1"
+}
+
+run_mysql_transaction_gateway() {
+  local force_flag="${2:-}"
+  docker run --rm -i --add-host=host.docker.internal:host-gateway mysql:8.0.42 \
+    mysql --batch --raw --skip-column-names $force_flag --default-character-set=utf8mb4 \
+    --ssl-mode=DISABLED -h host.docker.internal -P 29088 -uroot -proot <"$1"
+}
+
+run_postgres_transaction_exec() {
+  local stop_on_error="$2"
+  "${COMPOSE[@]}" exec -T postgres psql -X -q -v "ON_ERROR_STOP=$stop_on_error" \
+    -v VERBOSITY=verbose -P null=NULL -A -t -F $'\t' -U sqlt -d sqlt <"$1"
+}
+
+run_postgres_transaction_gateway() {
+  local stop_on_error="$2"
+  docker run --rm -i --add-host=host.docker.internal:host-gateway postgres:16.8 \
+    env PGPASSWORD=root psql -X -q -v "ON_ERROR_STOP=$stop_on_error" -v VERBOSITY=verbose \
+    -P null=NULL -A -t -F $'\t' -h host.docker.internal -p 29089 -U root -d sqlt <"$1"
+}
+
 load_fixtures() {
   local dialect="$1"
   if [[ "$dialect" == "mysql" ]]; then
@@ -136,6 +162,7 @@ from pathlib import Path
 (
     results, case_id, dialect, status, source, execution, direct_state, gateway_state,
     direct_affected, gateway_affected, direct_returned, gateway_returned,
+    direct_transaction, gateway_transaction,
 ) = sys.argv[1:]
 with Path(results).open("a", encoding="utf-8") as handle:
     handle.write(json.dumps({
@@ -150,6 +177,8 @@ with Path(results).open("a", encoding="utf-8") as handle:
         "gateway_affected_rows": gateway_affected,
         "direct_returned_rows": direct_returned,
         "gateway_returned_rows": gateway_returned,
+        "direct_transaction_markers": direct_transaction,
+        "gateway_transaction_markers": gateway_transaction,
     }, sort_keys=True) + "\n")
 PY
 }
@@ -168,6 +197,10 @@ normalize_affected() {
 
 normalize_returned() {
   python3 "$ROOT/normalize.py" --returned-dialect "$1" "$2" "$3"
+}
+
+normalize_transaction() {
+  python3 "$ROOT/normalize.py" --transaction-markers "$1" "$2"
 }
 
 case_count=0
@@ -192,9 +225,10 @@ PY
   expected_error="$RUN_DIR/normalized-output/${case_id}-${dialect}.expected-error.tsv"
   expected_affected="$RUN_DIR/normalized-output/${case_id}-${dialect}.expected-affected.tsv"
   expected_returned="$RUN_DIR/normalized-output/${case_id}-${dialect}.expected-returned.tsv"
+  expected_transaction="$RUN_DIR/normalized-output/${case_id}-${dialect}.expected-transaction.tsv"
   empty_state="$RUN_DIR/normalized-output/${case_id}-${dialect}.empty-state.tsv"
   : >"$empty_state"
-  python3 - "$oracle" "$expected_state" "$expected_error" "$expected_affected" "$expected_returned" <<'PY'
+  python3 - "$oracle" "$expected_state" "$expected_error" "$expected_affected" "$expected_returned" "$expected_transaction" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -207,9 +241,11 @@ Path(sys.argv[4]).write_text(
     encoding="utf-8",
 )
 Path(sys.argv[5]).write_text(value.get("returned_rows", ""), encoding="utf-8")
+Path(sys.argv[6]).write_text(value.get("transaction_markers", ""), encoding="utf-8")
 PY
   has_affected="$(python3 -c 'import json,sys; print("yes" if "affected_rows" in json.load(open(sys.argv[1])) else "no")' "$oracle")"
   has_returned="$(python3 -c 'import json,sys; print("yes" if "returned_rows" in json.load(open(sys.argv[1])) else "no")' "$oracle")"
+  has_transaction="$(python3 -c 'import json,sys; print("yes" if "transaction_markers" in json.load(open(sys.argv[1])) else "no")' "$oracle")"
   state_query_group="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["state_query"])' "$oracle")"
   echo "==> $case_id [$dialect]"
   case_status=passed
@@ -217,6 +253,8 @@ PY
   gateway_affected_file=""
   direct_returned_file=""
   gateway_returned_file=""
+  direct_transaction_file=""
+  gateway_transaction_file=""
   for path in direct gateway; do
     load_fixtures "$dialect"
     prefix="$RUN_DIR/results/${case_id}-${dialect}-${path}"
@@ -227,26 +265,37 @@ PY
     exec_raw="$prefix-exec.raw"
     actual_affected="$prefix-affected.tsv"
     actual_returned="$prefix-returned.tsv"
+    actual_transaction="$prefix-transaction.tsv"
     err_raw="$RUN_DIR/logs/${case_id}-${dialect}-${path}.err"
     exec_status=0
     if [[ "$dialect" == "mysql" ]]; then
       state_query_relative="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["state_queries"][sys.argv[2]][sys.argv[3]])' "$ROOT/dml-oracles.json" "$state_query_group" "$dialect")"
       state_query="$ROOT/$state_query_relative"
       run_mysql "$state_query" >"$pre_raw"
-      if [[ "$path" == direct ]]; then run_mysql_exec "$sql_path" >"$exec_raw" 2>"$err_raw" || exec_status=$?;
+      if [[ "$has_transaction" == yes ]]; then
+        force_flag=""
+        [[ "$expected_result" == recovered_error ]] && force_flag="--force"
+        if [[ "$path" == direct ]]; then run_mysql_transaction_exec "$sql_path" "$force_flag" >"$exec_raw" 2>"$err_raw" || exec_status=$?;
+        else run_mysql_transaction_gateway "$sql_path" "$force_flag" >"$exec_raw" 2>"$err_raw" || exec_status=$?; fi
+      elif [[ "$path" == direct ]]; then run_mysql_exec "$sql_path" >"$exec_raw" 2>"$err_raw" || exec_status=$?;
       else run_mysql_gateway "$sql_path" >"$exec_raw" 2>"$err_raw" || exec_status=$?; fi
       run_mysql "$state_query" >"$post_raw"
     else
       state_query_relative="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["state_queries"][sys.argv[2]][sys.argv[3]])' "$ROOT/dml-oracles.json" "$state_query_group" "$dialect")"
       state_query="$ROOT/$state_query_relative"
       run_postgres "$state_query" >"$pre_raw"
-      if [[ "$path" == direct ]]; then run_postgres_exec "$sql_path" >"$exec_raw" 2>"$err_raw" || exec_status=$?;
+      if [[ "$has_transaction" == yes ]]; then
+        stop_on_error=1
+        [[ "$expected_result" == recovered_error ]] && stop_on_error=0
+        if [[ "$path" == direct ]]; then run_postgres_transaction_exec "$sql_path" "$stop_on_error" >"$exec_raw" 2>"$err_raw" || exec_status=$?;
+        else run_postgres_transaction_gateway "$sql_path" "$stop_on_error" >"$exec_raw" 2>"$err_raw" || exec_status=$?; fi
+      elif [[ "$path" == direct ]]; then run_postgres_exec "$sql_path" >"$exec_raw" 2>"$err_raw" || exec_status=$?;
       else run_postgres_gateway "$sql_path" >"$exec_raw" 2>"$err_raw" || exec_status=$?; fi
       run_postgres "$state_query" >"$post_raw"
     fi
     normalize_state "$pre_raw" "$pre_state"
     normalize_state "$post_raw" "$post_state"
-    if [[ "$expected_result" == success ]]; then
+    if [[ "$expected_result" == success || "$expected_result" == recovered_error ]]; then
       if [[ "$has_affected" == yes ]]; then
         normalize_affected "$dialect" "$exec_raw" "$actual_affected" || exec_status=$?
         if [[ "$path" == direct ]]; then direct_affected_file="$actual_affected"; else gateway_affected_file="$actual_affected"; fi
@@ -255,9 +304,20 @@ PY
         normalize_returned "$dialect" "$exec_raw" "$actual_returned" || exec_status=$?
         if [[ "$path" == direct ]]; then direct_returned_file="$actual_returned"; else gateway_returned_file="$actual_returned"; fi
       fi
+      if [[ "$has_transaction" == yes ]]; then
+        normalize_transaction "$exec_raw" "$actual_transaction" || exec_status=$?
+        if [[ "$path" == direct ]]; then direct_transaction_file="$actual_transaction"; else gateway_transaction_file="$actual_transaction"; fi
+      fi
+      if [[ "$expected_result" == recovered_error ]]; then
+        actual_error="$RUN_DIR/normalized-output/${case_id}-${dialect}-${path}.error.tsv"
+        : >"$actual_error"
+        normalize_error "$dialect" "$err_raw" "$actual_error" || exec_status=$?
+      fi
       if [[ "$exec_status" -ne 0 ]] || ! cmp -s "$expected_state" "$post_state" || \
         { [[ "$has_affected" == yes ]] && ! cmp -s "$expected_affected" "$actual_affected"; } || \
         { [[ "$has_returned" == yes ]] && ! cmp -s "$expected_returned" "$actual_returned"; } || \
+        { [[ "$has_transaction" == yes ]] && ! cmp -s "$expected_transaction" "$actual_transaction"; } || \
+        { [[ "$expected_result" == recovered_error ]] && ! cmp -s "$expected_error" "$actual_error"; } || \
         { [[ "$case_id" < "SQLT-DML-015" ]] && ! cmp -s "$pre_state" "$empty_state"; }; then
         case_status=failed
       fi
@@ -275,7 +335,7 @@ PY
     fi
     if [[ "$case_status" != passed ]]; then
       diff -u "$expected_state" "$post_state" >"$RUN_DIR/logs/${case_id}-${dialect}-${path}.state.diff" || true
-      if [[ "$expected_result" == error ]]; then
+      if [[ "$expected_result" == error || "$expected_result" == recovered_error ]]; then
         diff -u "$expected_error" "$actual_error" >"$RUN_DIR/logs/${case_id}-${dialect}-${path}.error.diff" || true
       fi
       if [[ "$has_affected" == yes && -f "$actual_affected" ]]; then
@@ -284,13 +344,17 @@ PY
       if [[ "$has_returned" == yes && -f "$actual_returned" ]]; then
         diff -u "$expected_returned" "$actual_returned" >"$RUN_DIR/logs/${case_id}-${dialect}-${path}.returned.diff" || true
       fi
+      if [[ "$has_transaction" == yes && -f "$actual_transaction" ]]; then
+        diff -u "$expected_transaction" "$actual_transaction" >"$RUN_DIR/logs/${case_id}-${dialect}-${path}.transaction.diff" || true
+      fi
     fi
   done
   write_result "$case_id" "$dialect" "$case_status" "$sql_file" "$expected_result" \
     "$RUN_DIR/results/${case_id}-${dialect}-direct-post.tsv" \
     "$RUN_DIR/results/${case_id}-${dialect}-gateway-post.tsv" \
     "$direct_affected_file" "$gateway_affected_file" \
-    "$direct_returned_file" "$gateway_returned_file"
+    "$direct_returned_file" "$gateway_returned_file" \
+    "$direct_transaction_file" "$gateway_transaction_file"
   if [[ "$case_status" == passed ]]; then pass_count=$((pass_count + 1)); else fail_count=$((fail_count + 1)); fi
 done < <(python3 - "$ROOT/manifest.json" "$CASE_FROM" "$CASE_TO" <<'PY'
 import json

@@ -61,18 +61,27 @@ def normalize_returned_rows(text: str, dialect: str) -> str:
     return normalize_text("\n".join(line for line in lines if not tag_pattern.fullmatch(line)))
 
 
+def normalize_transaction_markers(text: str) -> str:
+    """Extract deterministic marker rows emitted after transaction recovery."""
+    markers = [line.rstrip() for line in text.splitlines() if line.startswith("SQLT_TXN\t")]
+    if not markers:
+        raise ValueError("expected at least one SQLT_TXN marker row")
+    return "\n".join(markers) + "\n"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--error-dialect", choices=("mysql", "postgres"))
     parser.add_argument("--affected-dialect", choices=("mysql", "postgres"))
     parser.add_argument("--returned-dialect", choices=("postgres",))
+    parser.add_argument("--transaction-markers", action="store_true")
     parser.add_argument("source", type=Path)
     parser.add_argument("destination", type=Path)
     args = parser.parse_args()
     args.destination.parent.mkdir(parents=True, exist_ok=True)
     source = args.source.read_text(encoding="utf-8")
     modes = [args.error_dialect, args.affected_dialect, args.returned_dialect]
-    if sum(value is not None for value in modes) > 1:
+    if sum(value is not None for value in modes) + int(args.transaction_markers) > 1:
         parser.error("normalization dialect modes are mutually exclusive")
     if args.error_dialect:
         normalized = normalize_error_text(source, args.error_dialect)
@@ -80,6 +89,8 @@ def main() -> int:
         normalized = normalize_affected_rows(source, args.affected_dialect)
     elif args.returned_dialect:
         normalized = normalize_returned_rows(source, args.returned_dialect)
+    elif args.transaction_markers:
+        normalized = normalize_transaction_markers(source)
     else:
         normalized = normalize_text(source)
     args.destination.write_text(normalized, encoding="utf-8")

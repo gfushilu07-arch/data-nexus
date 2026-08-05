@@ -435,6 +435,38 @@
         "returned_rows": "4003\tgamma\t31.00\tcte-updated\n4004\tdelta\t1.00\tcte-updated\n",
         "state_query": "update_delete"
       }
+    },
+    "SQLT-DML-041": {
+      "mysql": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\t10.00\tnew\n4002\t102\t10\tbeta\t20.00\tsavepoint-recovered\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "transaction_markers": "SQLT_TXN\tsavepoint-rollback\t4001\talpha\tnew\nSQLT_TXN\tsavepoint-rollback\t4002\tbeta\tsavepoint-recovered\n",
+        "state_query": "update_delete"
+      },
+      "postgres": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\t10.00\tnew\n4002\t102\t10\tbeta\t20.00\tsavepoint-recovered\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "transaction_markers": "SQLT_TXN\tsavepoint-rollback\t4001\talpha\tnew\nSQLT_TXN\tsavepoint-rollback\t4002\tbeta\tsavepoint-recovered\n",
+        "state_query": "update_delete"
+      }
+    },
+    "SQLT-DML-042": {
+      "mysql": {
+        "result": "recovered_error",
+        "error": "mysql\t1452\t23000\n",
+        "state": "4001\t101\t10\talpha\t10.00\tnew\n4002\t102\t10\tbeta\t20.00\terror-recovered\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "transaction_markers": "SQLT_TXN\tmysql-error-recovery\t4001\t101\tnew\nSQLT_TXN\tmysql-error-recovery\t4002\t102\terror-recovered\n",
+        "state_query": "update_delete"
+      }
+    },
+    "SQLT-DML-043": {
+      "postgres": {
+        "result": "recovered_error",
+        "error": "postgres\t23503\n",
+        "state": "4001\t101\t10\talpha\t10.00\tnew\n4002\t102\t10\tbeta\t20.00\terror-recovered\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "transaction_markers": "SQLT_TXN\tpostgres-error-recovery\t4001\t101\tnew\nSQLT_TXN\tpostgres-error-recovery\t4002\t102\terror-recovered\n",
+        "state_query": "update_delete"
+      }
     }
   }
 }

@@ -272,7 +272,7 @@ def _validate_dml_oracles(root: Path, cases: list[Any], errors: list[str]) -> No
             isinstance(case, dict)
             and case.get("family") == "dml"
             and isinstance(case.get("id"), str)
-            and case["id"] in {f"SQLT-DML-{index:03d}" for index in range(3, 41)}
+            and case["id"] in {f"SQLT-DML-{index:03d}" for index in range(3, 44)}
         ):
             expected[case["id"]] = set(case.get("dialects", []))
     results = oracles.get("results")
@@ -290,17 +290,25 @@ def _validate_dml_oracles(root: Path, cases: list[Any], errors: list[str]) -> No
             continue
         for dialect, value in values.items():
             label = f"dml-oracles.json results.{case_id}.{dialect}"
-            if not isinstance(value, dict) or value.get("result") not in {"success", "error"}:
-                errors.append(f"{label}.result must be success or error")
+            if not isinstance(value, dict) or value.get("result") not in {
+                "success",
+                "error",
+                "recovered_error",
+            }:
+                errors.append(f"{label}.result must be success, error, or recovered_error")
                 continue
             query_group = value.get("state_query")
             if not isinstance(query_group, str) or query_group not in state_queries:
                 errors.append(f"{label}.state_query must name a registered query group")
-            if value["result"] == "success":
+            if value["result"] in {"success", "recovered_error"}:
                 if not isinstance(value.get("state"), str) or not value["state"].endswith("\n"):
                     errors.append(f"{label}.state must be a newline-terminated string")
-                if "error" in value:
+                if value["result"] == "success" and "error" in value:
                     errors.append(f"{label} success oracle cannot define error")
+                if value["result"] == "recovered_error" and (
+                    not isinstance(value.get("error"), str) or not value["error"].endswith("\n")
+                ):
+                    errors.append(f"{label}.error must be a newline-terminated string")
                 if "affected_rows" in value and type(value["affected_rows"]) is not int:
                     errors.append(f"{label}.affected_rows must be an integer")
                 returned_rows = value.get("returned_rows")
@@ -312,8 +320,18 @@ def _validate_dml_oracles(root: Path, cases: list[Any], errors: list[str]) -> No
                 if case_id >= "SQLT-DML-015" and not {
                     "affected_rows",
                     "returned_rows",
+                    "transaction_markers",
                 } & set(value):
-                    errors.append(f"{label} must define affected_rows or returned_rows")
+                    errors.append(
+                        f"{label} must define affected_rows, returned_rows, or transaction_markers"
+                    )
+                markers = value.get("transaction_markers")
+                if "transaction_markers" in value and (
+                    not isinstance(markers, str)
+                    or not markers.startswith("SQLT_TXN\t")
+                    or not markers.endswith("\n")
+                ):
+                    errors.append(f"{label}.transaction_markers must contain marker rows")
             else:
                 if not isinstance(value.get("error"), str) or not value["error"].endswith("\n"):
                     errors.append(f"{label}.error must be a newline-terminated string")

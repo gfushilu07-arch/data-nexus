@@ -94,6 +94,7 @@
     "dml.returning": "Return exact rows produced by an INSERT, UPDATE, or DELETE statement",
     "dml.merge": "Merge matched and unmatched source rows into a target table",
     "dml.data_modifying_cte": "Expose rows changed inside a data-modifying common table expression",
+    "dml.transaction_recovery": "Recover DML work through an explicit transaction savepoint",
     "dml.upsert_returning": "Upsert a row and return the resulting values",
     "ddl.object_lifecycle": "Create, alter, and drop a schema object",
     "tcl.savepoint": "Create and roll back to a transaction savepoint",
