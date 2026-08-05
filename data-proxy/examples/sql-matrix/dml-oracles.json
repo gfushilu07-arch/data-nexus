@@ -392,6 +392,49 @@
         "affected_rows": 2,
         "state_query": "update_delete"
       }
+    },
+    "SQLT-DML-036": {
+      "postgres": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\t10.00\tnew\n4002\t102\t10\tbeta\t20.00\tnew\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n4010\t101\t10\treturned-insert\t96.00\treturned\n",
+        "affected_rows": 1,
+        "returned_rows": "4010\treturned-insert\t96.00\treturned\n",
+        "state_query": "update_delete"
+      }
+    },
+    "SQLT-DML-037": {
+      "postgres": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\t10.00\tnew\n4002\t102\t10\treturned-update\t97.50\treturned\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 1,
+        "returned_rows": "4002\treturned-update\t97.50\treturned\n",
+        "state_query": "update_delete"
+      }
+    },
+    "SQLT-DML-038": {
+      "postgres": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\t10.00\tnew\n4002\t102\t10\tbeta\t20.00\tnew\n4003\t201\t20\tgamma\t30.00\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 1,
+        "returned_rows": "4004\tdelta\tNULL\tready\n",
+        "state_query": "update_delete"
+      }
+    },
+    "SQLT-DML-039": {
+      "postgres": {
+        "result": "success",
+        "state": "4001\t101\t10\tmerge-updated\t98.00\tmerged\n4002\t102\t10\tbeta\t20.00\tnew\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n4011\t201\t20\tmerge-inserted\t99.00\tmerged\n",
+        "affected_rows": 2,
+        "state_query": "update_delete"
+      }
+    },
+    "SQLT-DML-040": {
+      "postgres": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\t10.00\tnew\n4002\t102\t10\tbeta\t20.00\tnew\n4003\t201\t20\tgamma\t31.00\tcte-updated\n4004\t202\t20\tdelta\t1.00\tcte-updated\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "returned_rows": "4003\tgamma\t31.00\tcte-updated\n4004\tdelta\t1.00\tcte-updated\n",
+        "state_query": "update_delete"
+      }
     }
   }
 }

@@ -2418,6 +2418,111 @@
       "profiles": ["pr", "nightly", "release"]
     },
     {
+      "id": "SQLT-DML-036",
+      "sql_file": "dml/postgres-insert-returning.sql",
+      "family": "dml",
+      "capability": "dml.returning",
+      "dialects": ["postgres"],
+      "frontends": ["pg_simple", "pg_extended"],
+      "backends": ["postgres"],
+      "protocols": ["pg_simple", "pg_extended"],
+      "statement_mode": "single",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"},
+        {"policy": "ticket", "outcome": "deny"}
+      ],
+      "side_effect": "write",
+      "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-DML-037",
+      "sql_file": "dml/postgres-update-returning.sql",
+      "family": "dml",
+      "capability": "dml.returning",
+      "dialects": ["postgres"],
+      "frontends": ["pg_simple", "pg_extended"],
+      "backends": ["postgres"],
+      "protocols": ["pg_simple", "pg_extended"],
+      "statement_mode": "single",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"},
+        {"policy": "ticket", "outcome": "deny"}
+      ],
+      "side_effect": "write",
+      "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-DML-038",
+      "sql_file": "dml/postgres-delete-returning.sql",
+      "family": "dml",
+      "capability": "dml.returning",
+      "dialects": ["postgres"],
+      "frontends": ["pg_simple", "pg_extended"],
+      "backends": ["postgres"],
+      "protocols": ["pg_simple", "pg_extended"],
+      "statement_mode": "single",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"},
+        {"policy": "ticket", "outcome": "deny"}
+      ],
+      "side_effect": "write",
+      "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-DML-039",
+      "sql_file": "dml/postgres-merge.sql",
+      "family": "dml",
+      "capability": "dml.merge",
+      "dialects": ["postgres"],
+      "frontends": ["pg_simple", "pg_extended"],
+      "backends": ["postgres"],
+      "protocols": ["pg_simple", "pg_extended"],
+      "statement_mode": "single",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"},
+        {"policy": "ticket", "outcome": "deny"}
+      ],
+      "side_effect": "write",
+      "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-DML-040",
+      "sql_file": "dml/postgres-dml-cte.sql",
+      "family": "dml",
+      "capability": "dml.data_modifying_cte",
+      "dialects": ["postgres"],
+      "frontends": ["pg_simple", "pg_extended"],
+      "backends": ["postgres"],
+      "protocols": ["pg_simple", "pg_extended"],
+      "statement_mode": "single",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"},
+        {"policy": "ticket", "outcome": "deny"}
+      ],
+      "side_effect": "write",
+      "profiles": ["pr", "nightly", "release"]
+    },
+    {
       "id": "SQLT-DDL-001",
       "sql_file": "ddl/create-alter-drop.sql",
       "family": "ddl",

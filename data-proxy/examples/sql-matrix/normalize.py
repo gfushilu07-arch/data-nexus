@@ -37,7 +37,7 @@ def normalize_affected_rows(text: str, dialect: str) -> str:
         matches = re.findall(r"Query OK, (\d+) row[s]? affected", text)
     elif dialect == "postgres":
         matches = re.findall(
-            r"^(?:(?:UPDATE|DELETE) (\d+)|INSERT \d+ (\d+))$",
+            r"^(?:(?:UPDATE|DELETE|MERGE) (\d+)|INSERT \d+ (\d+))$",
             text,
             re.MULTILINE,
         )
@@ -49,21 +49,37 @@ def normalize_affected_rows(text: str, dialect: str) -> str:
     return f"{matches[0]}\n"
 
 
+def normalize_returned_rows(text: str, dialect: str) -> str:
+    """Remove one optional command tag and normalize exact unaligned result rows."""
+    if dialect != "postgres":
+        raise ValueError(f"unsupported returned-row dialect: {dialect}")
+    lines = text.replace("\r\n", "\n").replace("\r", "\n").splitlines()
+    tag_pattern = re.compile(r"^(?:INSERT \d+ \d+|UPDATE \d+|DELETE \d+|MERGE \d+)$")
+    tags = [line for line in lines if tag_pattern.fullmatch(line)]
+    if len(tags) > 1:
+        raise ValueError(f"expected at most one DML command tag, found {len(tags)}")
+    return normalize_text("\n".join(line for line in lines if not tag_pattern.fullmatch(line)))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--error-dialect", choices=("mysql", "postgres"))
     parser.add_argument("--affected-dialect", choices=("mysql", "postgres"))
+    parser.add_argument("--returned-dialect", choices=("postgres",))
     parser.add_argument("source", type=Path)
     parser.add_argument("destination", type=Path)
     args = parser.parse_args()
     args.destination.parent.mkdir(parents=True, exist_ok=True)
     source = args.source.read_text(encoding="utf-8")
-    if args.error_dialect and args.affected_dialect:
-        parser.error("--error-dialect and --affected-dialect are mutually exclusive")
+    modes = [args.error_dialect, args.affected_dialect, args.returned_dialect]
+    if sum(value is not None for value in modes) > 1:
+        parser.error("normalization dialect modes are mutually exclusive")
     if args.error_dialect:
         normalized = normalize_error_text(source, args.error_dialect)
     elif args.affected_dialect:
         normalized = normalize_affected_rows(source, args.affected_dialect)
+    elif args.returned_dialect:
+        normalized = normalize_returned_rows(source, args.returned_dialect)
     else:
         normalized = normalize_text(source)
     args.destination.write_text(normalized, encoding="utf-8")

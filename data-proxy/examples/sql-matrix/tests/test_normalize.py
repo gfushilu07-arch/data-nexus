@@ -52,9 +52,27 @@ class NormalizeSqlOutputTest(unittest.TestCase):
     def test_normalizes_postgres_insert_affected_rows(self) -> None:
         self.assertEqual(NORMALIZE.normalize_affected_rows("INSERT 0 0\n", "postgres"), "0\n")
 
+    def test_normalizes_postgres_merge_affected_rows(self) -> None:
+        self.assertEqual(NORMALIZE.normalize_affected_rows("MERGE 2\n", "postgres"), "2\n")
+
     def test_affected_rows_requires_one_marker(self) -> None:
         with self.assertRaisesRegex(ValueError, "expected one"):
             NORMALIZE.normalize_affected_rows("UPDATE 1\nDELETE 1\n", "postgres")
+
+    def test_normalizes_postgres_returning_rows(self) -> None:
+        source = "4010\treturned-insert\t96.00\treturned\nINSERT 0 1\n"
+        self.assertEqual(
+            NORMALIZE.normalize_returned_rows(source, "postgres"),
+            "4010\treturned-insert\t96.00\treturned\n",
+        )
+
+    def test_normalizes_data_modifying_cte_rows_without_tag(self) -> None:
+        source = "4003\tgamma\t31.00\tcte-updated\n4004\tdelta\t1.00\tcte-updated\n"
+        self.assertEqual(NORMALIZE.normalize_returned_rows(source, "postgres"), source)
+
+    def test_returned_rows_reject_multiple_command_tags(self) -> None:
+        with self.assertRaisesRegex(ValueError, "at most one"):
+            NORMALIZE.normalize_returned_rows("UPDATE 1\nDELETE 1\n", "postgres")
 
 
 if __name__ == "__main__":

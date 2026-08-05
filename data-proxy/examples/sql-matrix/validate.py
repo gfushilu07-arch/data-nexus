@@ -272,7 +272,7 @@ def _validate_dml_oracles(root: Path, cases: list[Any], errors: list[str]) -> No
             isinstance(case, dict)
             and case.get("family") == "dml"
             and isinstance(case.get("id"), str)
-            and case["id"] in {f"SQLT-DML-{index:03d}" for index in range(3, 36)}
+            and case["id"] in {f"SQLT-DML-{index:03d}" for index in range(3, 41)}
         ):
             expected[case["id"]] = set(case.get("dialects", []))
     results = oracles.get("results")
@@ -301,8 +301,19 @@ def _validate_dml_oracles(root: Path, cases: list[Any], errors: list[str]) -> No
                     errors.append(f"{label}.state must be a newline-terminated string")
                 if "error" in value:
                     errors.append(f"{label} success oracle cannot define error")
-                if case_id >= "SQLT-DML-015" and not isinstance(value.get("affected_rows"), int):
+                if "affected_rows" in value and type(value["affected_rows"]) is not int:
                     errors.append(f"{label}.affected_rows must be an integer")
+                returned_rows = value.get("returned_rows")
+                if "returned_rows" in value and (
+                    not isinstance(returned_rows, str)
+                    or (returned_rows and not returned_rows.endswith("\n"))
+                ):
+                    errors.append(f"{label}.returned_rows must be a normalized string")
+                if case_id >= "SQLT-DML-015" and not {
+                    "affected_rows",
+                    "returned_rows",
+                } & set(value):
+                    errors.append(f"{label} must define affected_rows or returned_rows")
             else:
                 if not isinstance(value.get("error"), str) or not value["error"].endswith("\n"):
                     errors.append(f"{label}.error must be a newline-terminated string")
@@ -310,6 +321,8 @@ def _validate_dml_oracles(root: Path, cases: list[Any], errors: list[str]) -> No
                     errors.append(f"{label}.state must be empty for an error oracle")
                 if "affected_rows" in value:
                     errors.append(f"{label} error oracle cannot define affected_rows")
+                if "returned_rows" in value:
+                    errors.append(f"{label} error oracle cannot define returned_rows")
 
 
 def _validate_string_array(
