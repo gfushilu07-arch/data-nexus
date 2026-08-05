@@ -338,6 +338,96 @@
         "before_data": "1\t10\n2\t20\n",
         "after_data": "1\t10\n2\t20\n"
       }
+    },
+    "SQLT-DDL-027": {
+      "mysql": {
+        "result": "error",
+        "setup": "fixtures/mysql/ddl-setup-constraint-unique-conflict.sql",
+        "state": "sqlt_ddl_constraint\t1\tprobe_id\tint\tNO\t<NULL>\nsqlt_ddl_constraint\t2\tprobe_value\tint\tNO\t<NULL>\n",
+        "error": "mysql\t1062\t23000\n",
+        "unchanged": true,
+        "data_query": "fixtures/mysql/oracle-ddl-conflict-values.sql",
+        "before_data": "1\t5\n2\t5\n",
+        "after_data": "1\t5\n2\t5\n"
+      },
+      "postgres": {
+        "result": "error",
+        "setup": "fixtures/postgres/ddl-setup-constraint-unique-conflict.sql",
+        "state": "sqlt_ddl_constraint\t1\tprobe_id\tinteger\tNO\t<NULL>\nsqlt_ddl_constraint\t2\tprobe_value\tinteger\tNO\t<NULL>\n",
+        "error": "postgres\t23505\n",
+        "unchanged": true,
+        "data_query": "fixtures/postgres/oracle-ddl-conflict-values.sql",
+        "before_data": "1\t5\n2\t5\n",
+        "after_data": "1\t5\n2\t5\n"
+      }
+    },
+    "SQLT-DDL-028": {
+      "mysql": {
+        "result": "error",
+        "setup": "fixtures/mysql/ddl-setup-constraint-foreign-key-conflict.sql",
+        "state": "sqlt_ddl_constraint\t1\tprobe_id\tint\tNO\t<NULL>\nsqlt_ddl_constraint\t2\tparent_id\tint\tNO\t<NULL>\nsqlt_ddl_parent\t1\tparent_id\tint\tNO\t<NULL>\n",
+        "error": "mysql\t1452\t23000\n",
+        "unchanged": true,
+        "data_query": "fixtures/mysql/oracle-ddl-foreign-key-conflict-data.sql",
+        "before_data": "CHILD\t1\t99\nPARENT\t10\t10\n",
+        "after_data": "CHILD\t1\t99\nPARENT\t10\t10\n"
+      },
+      "postgres": {
+        "result": "error",
+        "setup": "fixtures/postgres/ddl-setup-constraint-foreign-key-conflict.sql",
+        "state": "sqlt_ddl_constraint\t1\tprobe_id\tinteger\tNO\t<NULL>\nsqlt_ddl_constraint\t2\tparent_id\tinteger\tNO\t<NULL>\nsqlt_ddl_parent\t1\tparent_id\tinteger\tNO\t<NULL>\n",
+        "error": "postgres\t23503\n",
+        "unchanged": true,
+        "data_query": "fixtures/postgres/oracle-ddl-foreign-key-conflict-data.sql",
+        "before_data": "CHILD\t1\t99\nPARENT\t10\t10\n",
+        "after_data": "CHILD\t1\t99\nPARENT\t10\t10\n"
+      }
+    },
+    "SQLT-DDL-029": {
+      "mysql": {
+        "result": "error",
+        "setup": "fixtures/mysql/ddl-setup-constraint-check-conflict.sql",
+        "state": "sqlt_ddl_constraint\t1\tprobe_id\tint\tNO\t<NULL>\nsqlt_ddl_constraint\t2\tprobe_value\tint\tNO\t<NULL>\n",
+        "error": "mysql\t3819\tHY000\n",
+        "unchanged": true,
+        "data_query": "fixtures/mysql/oracle-ddl-conflict-values.sql",
+        "before_data": "1\t-1\n2\t10\n",
+        "after_data": "1\t-1\n2\t10\n"
+      },
+      "postgres": {
+        "result": "error",
+        "setup": "fixtures/postgres/ddl-setup-constraint-check-conflict.sql",
+        "state": "sqlt_ddl_constraint\t1\tprobe_id\tinteger\tNO\t<NULL>\nsqlt_ddl_constraint\t2\tprobe_value\tinteger\tNO\t<NULL>\n",
+        "error": "postgres\t23514\n",
+        "unchanged": true,
+        "data_query": "fixtures/postgres/oracle-ddl-conflict-values.sql",
+        "before_data": "1\t-1\n2\t10\n",
+        "after_data": "1\t-1\n2\t10\n"
+      }
+    },
+    "SQLT-DDL-030": {
+      "mysql": {
+        "result": "error",
+        "setup": "fixtures/mysql/ddl-setup-column-null-conflict.sql",
+        "state": "sqlt_ddl_column\t1\tprobe_id\tint\tNO\t<NULL>\nsqlt_ddl_column\t2\tprobe_value\tint\tYES\t<NULL>\n",
+        "error": "mysql\t1138\t22004\n",
+        "unchanged": true,
+        "data_query": "fixtures/mysql/oracle-ddl-column-conflict-values.sql",
+        "before_data": "1\t<NULL>\n2\t20\n",
+        "after_data": "1\t<NULL>\n2\t20\n"
+      }
+    },
+    "SQLT-DDL-031": {
+      "postgres": {
+        "result": "error",
+        "setup": "fixtures/postgres/ddl-setup-column-null-conflict.sql",
+        "state": "sqlt_ddl_column\t1\tprobe_id\tinteger\tNO\t<NULL>\nsqlt_ddl_column\t2\tprobe_value\tinteger\tYES\t<NULL>\n",
+        "error": "postgres\t23502\n",
+        "unchanged": true,
+        "data_query": "fixtures/postgres/oracle-ddl-column-conflict-values.sql",
+        "before_data": "1\t<NULL>\n2\t20\n",
+        "after_data": "1\t<NULL>\n2\t20\n"
+      }
     }
   }
 }

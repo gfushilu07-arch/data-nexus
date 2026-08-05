@@ -288,6 +288,16 @@ class ValidateSqlMatrixTest(unittest.TestCase):
         oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
         self.assert_has_error("SQLT-DDL-013.mysql.data_query escapes matrix root")
 
+    def test_ddl_error_oracle_accepts_unchanged_data_probe(self) -> None:
+        oracle_path = self.root / "ddl-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        value = oracles["results"]["SQLT-DDL-004"]["mysql"]
+        value["data_query"] = "fixtures/mysql/oracle-ddl-catalog.sql"
+        value["before_data"] = ""
+        value["after_data"] = ""
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assertEqual(self.errors(), [])
+
     def test_ddl_error_probe_fields_must_be_declared_together(self) -> None:
         oracle_path = self.root / "ddl-oracles.json"
         oracles = json.loads(oracle_path.read_text(encoding="utf-8"))

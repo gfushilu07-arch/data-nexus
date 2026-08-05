@@ -597,8 +597,6 @@ def _validate_ddl_oracles(root: Path, cases: list[Any], errors: list[str]) -> No
                         errors.append(
                             f"{label}.{field} must be an empty or newline-terminated string"
                         )
-                if result != "success":
-                    errors.append(f"{label} data probes require a success oracle")
             error_probe_fields = {"error_probe", "probe_error"}
             present_error_probe_fields = error_probe_fields & set(value)
             if present_error_probe_fields and present_error_probe_fields != error_probe_fields:
