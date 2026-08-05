@@ -120,6 +120,52 @@
         "setup": "fixtures/postgres/ddl-setup-alter-basic.sql",
         "state": "sqlt_ddl_renamed\t1\tprobe_id\tinteger\tNO\t<NULL>\nsqlt_ddl_renamed\t2\tprobe_name\tcharacter varying(16)\tNO\t<NULL>\n"
       }
+    },
+    "SQLT-DDL-011": {
+      "mysql": {
+        "result": "success",
+        "setup": "fixtures/mysql/ddl-setup-alter-basic.sql",
+        "state": ""
+      },
+      "postgres": {
+        "result": "success",
+        "setup": "fixtures/postgres/ddl-setup-alter-basic.sql",
+        "state": ""
+      }
+    },
+    "SQLT-DDL-012": {
+      "mysql": {
+        "result": "success",
+        "setup": null,
+        "state": "",
+        "unchanged": true
+      },
+      "postgres": {
+        "result": "success",
+        "setup": null,
+        "state": "",
+        "unchanged": true
+      }
+    },
+    "SQLT-DDL-013": {
+      "mysql": {
+        "result": "success",
+        "setup": "fixtures/mysql/ddl-setup-truncate.sql",
+        "state": "sqlt_ddl_truncate\t1\tprobe_id\tint\tNO\t<NULL>\nsqlt_ddl_truncate\t2\tprobe_name\tvarchar(16)\tNO\t<NULL>\n",
+        "unchanged": true,
+        "data_query": "fixtures/mysql/oracle-ddl-truncate-data.sql",
+        "before_data": "3\n",
+        "after_data": "0\n"
+      },
+      "postgres": {
+        "result": "success",
+        "setup": "fixtures/postgres/ddl-setup-truncate.sql",
+        "state": "sqlt_ddl_truncate\t1\tprobe_id\tinteger\tNO\t<NULL>\nsqlt_ddl_truncate\t2\tprobe_name\tcharacter varying(16)\tNO\t<NULL>\n",
+        "unchanged": true,
+        "data_query": "fixtures/postgres/oracle-ddl-truncate-data.sql",
+        "before_data": "3\n",
+        "after_data": "0\n"
+      }
     }
   }
 }

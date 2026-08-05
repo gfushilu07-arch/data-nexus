@@ -16,7 +16,7 @@ CACHE_ROOT="${DATA_NEXUS_SQL_MATRIX_CACHE:-/Volumes/fushilu/.caches/data-nexus/s
 RUN_ID="${SQLT_DDL_RUN_ID:-ddl-$(date -u +%Y%m%dT%H%M%SZ)}"
 RUN_DIR="$CACHE_ROOT/$RUN_ID"
 CASE_FROM="${SQLT_DDL_CASE_FROM:-SQLT-DDL-001}"
-CASE_TO="${SQLT_DDL_CASE_TO:-SQLT-DDL-010}"
+CASE_TO="${SQLT_DDL_CASE_TO:-SQLT-DDL-013}"
 COMPOSE_PROJECT="sqlt3dddl-${RUN_ID//[^a-zA-Z0-9]/}"
 COMPOSE=(docker compose -p "$COMPOSE_PROJECT" -f "$ROOT/fixtures/docker-compose.yml")
 RESULTS="$RUN_DIR/results.jsonl"
@@ -139,13 +139,25 @@ PY
   mv "$destination.normalized" "$destination"
 }
 
+data_snapshot() {
+  local dialect="$1"
+  local query="$2"
+  local destination="$3"
+  run_direct "$dialect" "$ROOT/$query" >"$destination"
+  python3 "$ROOT/normalize.py" "$destination" "$destination.normalized"
+  mv "$destination.normalized" "$destination"
+}
+
 write_result() {
   python3 - "$RESULTS" "$@" <<'PY'
 import json
 import sys
 from pathlib import Path
 
-results, case_id, dialect, path, status, execution, before, after, error = sys.argv[1:]
+(
+    results, case_id, dialect, path, status, execution, before, after, error,
+    before_data, after_data,
+) = sys.argv[1:]
 with Path(results).open("a", encoding="utf-8") as handle:
     handle.write(json.dumps({
         "case_id": case_id,
@@ -156,6 +168,8 @@ with Path(results).open("a", encoding="utf-8") as handle:
         "before_catalog": before,
         "after_catalog": after,
         "error": error,
+        "before_data": before_data,
+        "after_data": after_data,
     }, sort_keys=True) + "\n")
 PY
 }
@@ -179,9 +193,12 @@ PY
   expected_result="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["result"])' "$oracle")"
   setup="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("setup") or "")' "$oracle")"
   unchanged="$(python3 -c 'import json,sys; print("yes" if json.load(open(sys.argv[1])).get("unchanged") else "no")' "$oracle")"
+  data_query="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("data_query") or "")' "$oracle")"
   expected_state="$RUN_DIR/normalized-output/${case_id}-${dialect}.expected-state.tsv"
   expected_error="$RUN_DIR/normalized-output/${case_id}-${dialect}.expected-error.tsv"
-  python3 - "$oracle" "$expected_state" "$expected_error" <<'PY'
+  expected_before_data="$RUN_DIR/normalized-output/${case_id}-${dialect}.expected-before-data.tsv"
+  expected_after_data="$RUN_DIR/normalized-output/${case_id}-${dialect}.expected-after-data.tsv"
+  python3 - "$oracle" "$expected_state" "$expected_error" "$expected_before_data" "$expected_after_data" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -189,6 +206,8 @@ from pathlib import Path
 value = json.load(open(sys.argv[1], encoding="utf-8"))
 Path(sys.argv[2]).write_text(value["state"], encoding="utf-8")
 Path(sys.argv[3]).write_text(value.get("error", ""), encoding="utf-8")
+Path(sys.argv[4]).write_text(value.get("before_data", ""), encoding="utf-8")
+Path(sys.argv[5]).write_text(value.get("after_data", ""), encoding="utf-8")
 PY
 
   for path in direct gateway; do
@@ -200,9 +219,16 @@ PY
     after="$prefix-after.tsv"
     stdout="$prefix.stdout"
     stderr="$prefix.stderr"
+    before_data=""
+    after_data=""
     actual_error="$RUN_DIR/normalized-output/${case_id}-${dialect}-${path}.error.tsv"
     : >"$actual_error"
     catalog_snapshot "$dialect" "$before"
+    if [[ -n "$data_query" ]]; then
+      before_data="$prefix-before-data.tsv"
+      after_data="$prefix-after-data.tsv"
+      data_snapshot "$dialect" "$data_query" "$before_data"
+    fi
 
     exec_status=0
     if [[ "$path" == direct ]]; then
@@ -213,6 +239,9 @@ PY
       run_postgres_gateway "$sql_path" >"$stdout" 2>"$stderr" || exec_status=$?
     fi
     catalog_snapshot "$dialect" "$after"
+    if [[ -n "$data_query" ]]; then
+      data_snapshot "$dialect" "$data_query" "$after_data"
+    fi
 
     status=passed
     if [[ "$expected_result" == success ]]; then
@@ -229,6 +258,11 @@ PY
     if [[ "$unchanged" == yes ]] && ! cmp -s "$before" "$after"; then
       status=failed
     fi
+    if [[ -n "$data_query" ]] && \
+      { ! cmp -s "$expected_before_data" "$before_data" || \
+        ! cmp -s "$expected_after_data" "$after_data"; }; then
+      status=failed
+    fi
 
     if [[ "$status" == failed ]]; then
       diff -u "$expected_state" "$after" >"$RUN_DIR/logs/${case_id}-${dialect}-${path}.state.diff" || true
@@ -238,12 +272,16 @@ PY
       if [[ "$unchanged" == yes ]]; then
         diff -u "$before" "$after" >"$RUN_DIR/logs/${case_id}-${dialect}-${path}.unchanged.diff" || true
       fi
+      if [[ -n "$data_query" ]]; then
+        diff -u "$expected_before_data" "$before_data" >"$RUN_DIR/logs/${case_id}-${dialect}-${path}.before-data.diff" || true
+        diff -u "$expected_after_data" "$after_data" >"$RUN_DIR/logs/${case_id}-${dialect}-${path}.after-data.diff" || true
+      fi
       fail_count=$((fail_count + 1))
     else
       pass_count=$((pass_count + 1))
     fi
     write_result "$case_id" "$dialect" "$path" "$status" "$expected_result" \
-      "$before" "$after" "$actual_error"
+      "$before" "$after" "$actual_error" "$before_data" "$after_data"
   done
 done < <(python3 - "$ROOT/manifest.json" "$CASE_FROM" "$CASE_TO" <<'PY'
 import json

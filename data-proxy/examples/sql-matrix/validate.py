@@ -571,6 +571,33 @@ def _validate_ddl_oracles(root: Path, cases: list[Any], errors: list[str]) -> No
                     errors.append(f"{label}.error must be a newline-terminated string")
                 if unchanged is not True:
                     errors.append(f"{label} error oracle must define unchanged=true")
+            data_fields = {"data_query", "before_data", "after_data"}
+            present_data_fields = data_fields & set(value)
+            if present_data_fields and present_data_fields != data_fields:
+                errors.append(
+                    f"{label} must define data_query, before_data, and after_data together"
+                )
+            if present_data_fields == data_fields:
+                data_query = value["data_query"]
+                if not isinstance(data_query, str) or not data_query.endswith(".sql"):
+                    errors.append(f"{label}.data_query must be an SQL path")
+                else:
+                    path = root / PurePosixPath(data_query)
+                    try:
+                        path.resolve().relative_to(root.resolve())
+                    except ValueError:
+                        errors.append(f"{label}.data_query escapes matrix root")
+                    else:
+                        if not path.is_file():
+                            errors.append(f"{label}.data_query does not exist: {data_query}")
+                for field in ("before_data", "after_data"):
+                    output = value[field]
+                    if not isinstance(output, str) or (output and not output.endswith("\n")):
+                        errors.append(
+                            f"{label}.{field} must be an empty or newline-terminated string"
+                        )
+                if result != "success":
+                    errors.append(f"{label} data probes require a success oracle")
 
 
 def _validate_string_array(

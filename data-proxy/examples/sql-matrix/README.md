@@ -140,7 +140,8 @@ data-proxy/examples/sql-matrix/run-ddl-corpus.sh
 Every `case x dialect x path` execution rebuilds its own direct-backend baseline.
 The runner compares ordered catalog snapshots with `ddl-oracles.json`; backend
 errors must match a stable MySQL error number/SQLSTATE or PostgreSQL SQLSTATE, and
-error/idempotency cases must leave the catalog unchanged. The default range through
-D1b performs 36 executions. `SQLT_DDL_CASE_FROM` and `SQLT_DDL_CASE_TO` are development
+error/idempotency cases must leave the catalog unchanged. TRUNCATE additionally
+compares exact before/after data probes. The default range through D1c1 performs 48
+executions. `SQLT_DDL_CASE_FROM` and `SQLT_DDL_CASE_TO` are development
 filters only; final acceptance leaves both unset. Raw client output, normalized
 catalog state, errors, diffs, and summaries remain below the external cache root.
