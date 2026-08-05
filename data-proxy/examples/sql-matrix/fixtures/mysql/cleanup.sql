@@ -1,6 +1,6 @@
 -- fixture: SQLT-FIXTURE-MYSQL-CLEANUP
 -- Purpose: Remove every SQLT object before rebuilding the MySQL fixture.
--- Expected: The SQLT schema contains none of the four versioned fixture tables.
+-- Expected: The SQLT schema contains none of the versioned fixture and DDL probe tables.
 -- Dialect: mysql
 
 SET FOREIGN_KEY_CHECKS = 0;
@@ -9,4 +9,8 @@ DROP TABLE IF EXISTS sqlt_orders;
 DROP TABLE IF EXISTS sqlt_customers;
 DROP TABLE IF EXISTS sqlt_mutations;
 DROP TABLE IF EXISTS sqlt_ddl_oracle;
+DROP TABLE IF EXISTS sqlt_ddl_probe;
+DROP TABLE IF EXISTS sqlt_ddl_create;
+DROP TABLE IF EXISTS sqlt_ddl_if_not_exists;
+DROP TABLE IF EXISTS sqlt_ddl_duplicate;
 SET FOREIGN_KEY_CHECKS = 1;

@@ -129,3 +129,18 @@ state snapshots must be identical. Use `SQLT_DML_CASE_FROM` and
 complete default range, currently 64 `case x dialect` executions. Raw responses,
 normalized state, affected rows, errors, diffs, `results.jsonl`, and `summary.json`
 are written below `/Volumes/fushilu/.caches/data-nexus/sql-matrix/<run-id>/`.
+
+The canonical DDL corpus starts with table lifecycle and CREATE semantics. Run the
+fixed MySQL 8.0.42 and PostgreSQL 16.8 direct/security-off gateway matrix with:
+
+```bash
+data-proxy/examples/sql-matrix/run-ddl-corpus.sh
+```
+
+Every `case x dialect x path` execution rebuilds its own direct-backend baseline.
+The runner compares ordered catalog snapshots with `ddl-oracles.json`; backend
+errors must match a stable MySQL error number/SQLSTATE or PostgreSQL SQLSTATE, and
+error/idempotency cases must leave the catalog unchanged. The default D1a range
+performs 16 executions. `SQLT_DDL_CASE_FROM` and `SQLT_DDL_CASE_TO` are development
+filters only; final acceptance leaves both unset. Raw client output, normalized
+catalog state, errors, diffs, and summaries remain below the external cache root.

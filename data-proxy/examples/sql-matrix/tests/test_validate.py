@@ -246,6 +246,34 @@ class ValidateSqlMatrixTest(unittest.TestCase):
         oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
         self.assert_has_error("SQLT-DML-042.mysql.error")
 
+    def test_ddl_oracle_must_cover_every_declared_dialect(self) -> None:
+        oracle_path = self.root / "ddl-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        del oracles["results"]["SQLT-DDL-002"]["postgres"]
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-DDL-002 dialects must be")
+
+    def test_ddl_error_oracle_requires_stable_error_identity(self) -> None:
+        oracle_path = self.root / "ddl-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        del oracles["results"]["SQLT-DDL-004"]["mysql"]["error"]
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-DDL-004.mysql.error")
+
+    def test_ddl_error_oracle_requires_unchanged_catalog(self) -> None:
+        oracle_path = self.root / "ddl-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["results"]["SQLT-DDL-004"]["postgres"]["unchanged"] = False
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-DDL-004.postgres error oracle must define unchanged=true")
+
+    def test_ddl_setup_must_exist_below_matrix_root(self) -> None:
+        oracle_path = self.root / "ddl-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["results"]["SQLT-DDL-003"]["mysql"]["setup"] = "../outside.sql"
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-DDL-003.mysql.setup escapes matrix root")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -483,6 +483,96 @@ def _validate_dml_oracles(root: Path, cases: list[Any], errors: list[str]) -> No
                     errors.append(f"{label} error oracle cannot define returned_rows")
 
 
+def _validate_ddl_oracles(root: Path, cases: list[Any], errors: list[str]) -> None:
+    """Validate exact catalog and stable error contracts for canonical DDL cases."""
+    oracles = _load_json(root / "ddl-oracles.json", errors)
+    if not isinstance(oracles, dict):
+        errors.append("ddl-oracles.json must contain an object")
+        return
+    if oracles.get("schema_version") != 1:
+        errors.append("ddl-oracles.json schema_version must be 1")
+
+    catalog_queries = oracles.get("catalog_queries")
+    if not isinstance(catalog_queries, dict) or set(catalog_queries) != {"mysql", "postgres"}:
+        errors.append("ddl-oracles.json catalog_queries must define mysql and postgres")
+        catalog_queries = {}
+    for dialect, relative in catalog_queries.items():
+        label = f"ddl-oracles.json catalog_queries.{dialect}"
+        if not isinstance(relative, str) or not relative.endswith(".sql"):
+            errors.append(f"{label} must be an SQL path")
+            continue
+        path = root / PurePosixPath(relative)
+        try:
+            path.resolve().relative_to(root.resolve())
+        except ValueError:
+            errors.append(f"{label} escapes matrix root")
+            continue
+        if not path.is_file():
+            errors.append(f"{label} does not exist: {relative}")
+
+    expected: dict[str, set[str]] = {}
+    for case in cases:
+        if (
+            isinstance(case, dict)
+            and case.get("family") == "ddl"
+            and isinstance(case.get("id"), str)
+        ):
+            expected[case["id"]] = {
+                dialect for dialect in case.get("dialects", []) if isinstance(dialect, str)
+            }
+
+    results = oracles.get("results")
+    if not isinstance(results, dict):
+        errors.append("ddl-oracles.json results must be an object")
+        return
+    if set(results) != set(expected):
+        errors.append(
+            f"ddl-oracles.json cases must be {sorted(expected)}, got {sorted(results)}"
+        )
+    for case_id, dialects in expected.items():
+        values = results.get(case_id)
+        if not isinstance(values, dict) or set(values) != dialects:
+            errors.append(
+                f"ddl-oracles.json results.{case_id} dialects must be {sorted(dialects)}"
+            )
+            continue
+        for dialect, value in values.items():
+            label = f"ddl-oracles.json results.{case_id}.{dialect}"
+            if not isinstance(value, dict):
+                errors.append(f"{label} must be an object")
+                continue
+            result = value.get("result")
+            if result not in {"success", "error"}:
+                errors.append(f"{label}.result must be success or error")
+            state = value.get("state")
+            if not isinstance(state, str) or (state and not state.endswith("\n")):
+                errors.append(f"{label}.state must be an empty or newline-terminated string")
+            setup = value.get("setup")
+            if setup is not None:
+                if not isinstance(setup, str) or not setup.endswith(".sql"):
+                    errors.append(f"{label}.setup must be null or an SQL path")
+                else:
+                    path = root / PurePosixPath(setup)
+                    try:
+                        path.resolve().relative_to(root.resolve())
+                    except ValueError:
+                        errors.append(f"{label}.setup escapes matrix root")
+                        continue
+                    if not path.is_file():
+                        errors.append(f"{label}.setup does not exist: {setup}")
+            unchanged = value.get("unchanged")
+            if "unchanged" in value and type(unchanged) is not bool:
+                errors.append(f"{label}.unchanged must be a boolean")
+            error = value.get("error")
+            if result == "success" and "error" in value:
+                errors.append(f"{label} success oracle cannot define error")
+            if result == "error":
+                if not isinstance(error, str) or not error.endswith("\n"):
+                    errors.append(f"{label}.error must be a newline-terminated string")
+                if unchanged is not True:
+                    errors.append(f"{label} error oracle must define unchanged=true")
+
+
 def _validate_string_array(
     case: dict[str, Any],
     field: str,
@@ -653,6 +743,7 @@ def validate_repository(root: Path) -> list[str]:
     _validate_dql_lock_oracles(root, cases, errors)
     _validate_dql_boundary_oracles(root, cases, errors)
     _validate_dml_oracles(root, cases, errors)
+    _validate_ddl_oracles(root, cases, errors)
     return errors
 
 

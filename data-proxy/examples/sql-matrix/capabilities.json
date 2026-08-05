@@ -102,6 +102,7 @@
     "dml.transaction_recovery": "Recover DML work through an explicit transaction savepoint",
     "dml.upsert_returning": "Upsert a row and return the resulting values",
     "ddl.object_lifecycle": "Create, alter, and drop a schema object",
+    "ddl.create_table": "Create a table and preserve idempotent and duplicate-object semantics",
     "tcl.savepoint": "Create and roll back to a transaction savepoint",
     "cursor.named_forward": "Declare, fetch from, and close a forward named cursor",
     "security.mask_row_filter": "Apply masking and tenant row filtering to a query",
