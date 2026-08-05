@@ -166,6 +166,44 @@
         "before_data": "3\n",
         "after_data": "0\n"
       }
+    },
+    "SQLT-DDL-015": {
+      "mysql": {
+        "result": "success",
+        "setup": "fixtures/mysql/ddl-setup-constraint-no-pk.sql",
+        "state": "sqlt_ddl_constraint\t1\tprobe_id\tint\tNO\t<NULL>\nsqlt_ddl_constraint\t2\tprobe_name\tvarchar(32)\tNO\t<NULL>\n",
+        "data_query": "fixtures/mysql/oracle-ddl-constraints.sql",
+        "before_data": "",
+        "after_data": "PRIMARY\tPRIMARY KEY\t1\tprobe_id\t<NULL>\t<NULL>\n"
+      },
+      "postgres": {
+        "result": "success",
+        "setup": "fixtures/postgres/ddl-setup-constraint-no-pk.sql",
+        "state": "sqlt_ddl_constraint\t1\tprobe_id\tinteger\tNO\t<NULL>\nsqlt_ddl_constraint\t2\tprobe_name\tcharacter varying(32)\tNO\t<NULL>\n",
+        "data_query": "fixtures/postgres/oracle-ddl-constraints.sql",
+        "before_data": "",
+        "after_data": "sqlt_pk_probe\tPRIMARY KEY\t1\tprobe_id\t<NULL>\t<NULL>\n"
+      }
+    },
+    "SQLT-DDL-016": {
+      "mysql": {
+        "result": "success",
+        "setup": "fixtures/mysql/ddl-setup-constraint-with-pk.sql",
+        "state": "sqlt_ddl_constraint\t1\tprobe_id\tint\tNO\t<NULL>\nsqlt_ddl_constraint\t2\tprobe_name\tvarchar(32)\tNO\t<NULL>\n",
+        "data_query": "fixtures/mysql/oracle-ddl-constraints.sql",
+        "before_data": "PRIMARY\tPRIMARY KEY\t1\tprobe_id\t<NULL>\t<NULL>\n",
+        "after_data": ""
+      }
+    },
+    "SQLT-DDL-017": {
+      "postgres": {
+        "result": "success",
+        "setup": "fixtures/postgres/ddl-setup-constraint-with-pk.sql",
+        "state": "sqlt_ddl_constraint\t1\tprobe_id\tinteger\tNO\t<NULL>\nsqlt_ddl_constraint\t2\tprobe_name\tcharacter varying(32)\tNO\t<NULL>\n",
+        "data_query": "fixtures/postgres/oracle-ddl-constraints.sql",
+        "before_data": "sqlt_pk_probe\tPRIMARY KEY\t1\tprobe_id\t<NULL>\t<NULL>\n",
+        "after_data": ""
+      }
     }
   }
 }

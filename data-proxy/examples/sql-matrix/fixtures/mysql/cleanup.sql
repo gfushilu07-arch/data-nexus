@@ -18,4 +18,5 @@ DROP TABLE IF EXISTS sqlt_ddl_renamed;
 DROP TABLE IF EXISTS sqlt_ddl_truncate;
 DROP TABLE IF EXISTS sqlt_ddl_missing;
 DROP TEMPORARY TABLE IF EXISTS sqlt_ddl_temp;
+DROP TABLE IF EXISTS sqlt_ddl_constraint;
 SET FOREIGN_KEY_CHECKS = 1;

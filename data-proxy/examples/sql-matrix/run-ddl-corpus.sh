@@ -16,7 +16,7 @@ CACHE_ROOT="${DATA_NEXUS_SQL_MATRIX_CACHE:-/Volumes/fushilu/.caches/data-nexus/s
 RUN_ID="${SQLT_DDL_RUN_ID:-ddl-$(date -u +%Y%m%dT%H%M%SZ)}"
 RUN_DIR="$CACHE_ROOT/$RUN_ID"
 CASE_FROM="${SQLT_DDL_CASE_FROM:-SQLT-DDL-001}"
-CASE_TO="${SQLT_DDL_CASE_TO:-SQLT-DDL-013}"
+CASE_TO="${SQLT_DDL_CASE_TO:-SQLT-DDL-017}"
 COMPOSE_PROJECT="sqlt3dddl-${RUN_ID//[^a-zA-Z0-9]/}"
 COMPOSE=(docker compose -p "$COMPOSE_PROJECT" -f "$ROOT/fixtures/docker-compose.yml")
 RESULTS="$RUN_DIR/results.jsonl"
@@ -283,17 +283,9 @@ PY
     write_result "$case_id" "$dialect" "$path" "$status" "$expected_result" \
       "$before" "$after" "$actual_error" "$before_data" "$after_data"
   done
-done < <(python3 - "$ROOT/manifest.json" "$CASE_FROM" "$CASE_TO" <<'PY'
-import json
-import sys
-
-manifest, first, last = sys.argv[1:]
-for case in json.load(open(manifest, encoding="utf-8"))["cases"]:
-    if case.get("family") != "ddl" or not first <= case["id"] <= last:
-        continue
-    for dialect in case["dialects"]:
-        print(case["id"], dialect, case["sql_file"], sep="\t")
-PY
+done < <(
+  python3 "$ROOT/select_ddl_cases.py" \
+    "$ROOT/manifest.json" "$ROOT/ddl-oracles.json" "$CASE_FROM" "$CASE_TO"
 )
 
 python3 - "$RESULTS" "$RUN_DIR/summary.json" "$case_count" "$pass_count" "$fail_count" <<'PY'
