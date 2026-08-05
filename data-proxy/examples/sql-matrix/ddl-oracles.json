@@ -262,6 +262,82 @@
         "error_probe": "fixtures/postgres/ddl-probe-check-violation.sql",
         "probe_error": "postgres\t23514\n"
       }
+    },
+    "SQLT-DDL-021": {
+      "mysql": {
+        "result": "success",
+        "setup": "fixtures/mysql/ddl-setup-column-nullable.sql",
+        "state": "sqlt_ddl_column\t1\tprobe_id\tint\tNO\t<NULL>\nsqlt_ddl_column\t2\tprobe_value\tint\tYES\t7\n",
+        "data_query": "fixtures/mysql/oracle-ddl-column-data.sql",
+        "before_data": "1\t10\n2\t20\n",
+        "after_data": "1\t10\n2\t20\n"
+      },
+      "postgres": {
+        "result": "success",
+        "setup": "fixtures/postgres/ddl-setup-column-nullable.sql",
+        "state": "sqlt_ddl_column\t1\tprobe_id\tinteger\tNO\t<NULL>\nsqlt_ddl_column\t2\tprobe_value\tinteger\tYES\t7\n",
+        "data_query": "fixtures/postgres/oracle-ddl-column-data.sql",
+        "before_data": "1\t10\n2\t20\n",
+        "after_data": "1\t10\n2\t20\n"
+      }
+    },
+    "SQLT-DDL-022": {
+      "mysql": {
+        "result": "success",
+        "setup": "fixtures/mysql/ddl-setup-column-default.sql",
+        "state": "sqlt_ddl_column\t1\tprobe_id\tint\tNO\t<NULL>\nsqlt_ddl_column\t2\tprobe_value\tint\tYES\t<NULL>\n",
+        "data_query": "fixtures/mysql/oracle-ddl-column-data.sql",
+        "before_data": "1\t10\n2\t20\n",
+        "after_data": "1\t10\n2\t20\n"
+      },
+      "postgres": {
+        "result": "success",
+        "setup": "fixtures/postgres/ddl-setup-column-default.sql",
+        "state": "sqlt_ddl_column\t1\tprobe_id\tinteger\tNO\t<NULL>\nsqlt_ddl_column\t2\tprobe_value\tinteger\tYES\t<NULL>\n",
+        "data_query": "fixtures/postgres/oracle-ddl-column-data.sql",
+        "before_data": "1\t10\n2\t20\n",
+        "after_data": "1\t10\n2\t20\n"
+      }
+    },
+    "SQLT-DDL-023": {
+      "mysql": {
+        "result": "success",
+        "setup": "fixtures/mysql/ddl-setup-column-nullable.sql",
+        "state": "sqlt_ddl_column\t1\tprobe_id\tint\tNO\t<NULL>\nsqlt_ddl_column\t2\tprobe_value\tint\tNO\t<NULL>\n",
+        "data_query": "fixtures/mysql/oracle-ddl-column-data.sql",
+        "before_data": "1\t10\n2\t20\n",
+        "after_data": "1\t10\n2\t20\n"
+      }
+    },
+    "SQLT-DDL-024": {
+      "postgres": {
+        "result": "success",
+        "setup": "fixtures/postgres/ddl-setup-column-nullable.sql",
+        "state": "sqlt_ddl_column\t1\tprobe_id\tinteger\tNO\t<NULL>\nsqlt_ddl_column\t2\tprobe_value\tinteger\tNO\t<NULL>\n",
+        "data_query": "fixtures/postgres/oracle-ddl-column-data.sql",
+        "before_data": "1\t10\n2\t20\n",
+        "after_data": "1\t10\n2\t20\n"
+      }
+    },
+    "SQLT-DDL-025": {
+      "mysql": {
+        "result": "success",
+        "setup": "fixtures/mysql/ddl-setup-column-not-null.sql",
+        "state": "sqlt_ddl_column\t1\tprobe_id\tint\tNO\t<NULL>\nsqlt_ddl_column\t2\tprobe_value\tint\tYES\t<NULL>\n",
+        "data_query": "fixtures/mysql/oracle-ddl-column-data.sql",
+        "before_data": "1\t10\n2\t20\n",
+        "after_data": "1\t10\n2\t20\n"
+      }
+    },
+    "SQLT-DDL-026": {
+      "postgres": {
+        "result": "success",
+        "setup": "fixtures/postgres/ddl-setup-column-not-null.sql",
+        "state": "sqlt_ddl_column\t1\tprobe_id\tinteger\tNO\t<NULL>\nsqlt_ddl_column\t2\tprobe_value\tinteger\tYES\t<NULL>\n",
+        "data_query": "fixtures/postgres/oracle-ddl-column-data.sql",
+        "before_data": "1\t10\n2\t20\n",
+        "after_data": "1\t10\n2\t20\n"
+      }
     }
   }
 }
