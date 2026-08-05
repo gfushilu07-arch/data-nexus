@@ -598,7 +598,35 @@ def _validate_ddl_oracles(root: Path, cases: list[Any], errors: list[str]) -> No
                             f"{label}.{field} must be an empty or newline-terminated string"
                         )
                 if result != "success":
-                        errors.append(f"{label} data probes require a success oracle")
+                    errors.append(f"{label} data probes require a success oracle")
+            error_probe_fields = {"error_probe", "probe_error"}
+            present_error_probe_fields = error_probe_fields & set(value)
+            if present_error_probe_fields and present_error_probe_fields != error_probe_fields:
+                errors.append(
+                    f"{label} must define error_probe and probe_error together"
+                )
+            if present_error_probe_fields == error_probe_fields:
+                error_probe = value["error_probe"]
+                if not isinstance(error_probe, str) or not error_probe.endswith(".sql"):
+                    errors.append(f"{label}.error_probe must be an SQL path")
+                else:
+                    path = root / PurePosixPath(error_probe)
+                    try:
+                        path.resolve().relative_to(root.resolve())
+                    except ValueError:
+                        errors.append(f"{label}.error_probe escapes matrix root")
+                    else:
+                        if not path.is_file():
+                            errors.append(
+                                f"{label}.error_probe does not exist: {error_probe}"
+                            )
+                probe_error = value["probe_error"]
+                if not isinstance(probe_error, str) or not probe_error.endswith("\n"):
+                    errors.append(
+                        f"{label}.probe_error must be a newline-terminated string"
+                    )
+                if result != "success":
+                    errors.append(f"{label} error probes require a success oracle")
 
 
 def _validate_ddl_temp_oracles(root: Path, cases: list[Any], errors: list[str]) -> None:

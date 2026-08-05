@@ -16,7 +16,7 @@ CACHE_ROOT="${DATA_NEXUS_SQL_MATRIX_CACHE:-/Volumes/fushilu/.caches/data-nexus/s
 RUN_ID="${SQLT_DDL_RUN_ID:-ddl-$(date -u +%Y%m%dT%H%M%SZ)}"
 RUN_DIR="$CACHE_ROOT/$RUN_ID"
 CASE_FROM="${SQLT_DDL_CASE_FROM:-SQLT-DDL-001}"
-CASE_TO="${SQLT_DDL_CASE_TO:-SQLT-DDL-017}"
+CASE_TO="${SQLT_DDL_CASE_TO:-SQLT-DDL-020}"
 COMPOSE_PROJECT="sqlt3dddl-${RUN_ID//[^a-zA-Z0-9]/}"
 COMPOSE=(docker compose -p "$COMPOSE_PROJECT" -f "$ROOT/fixtures/docker-compose.yml")
 RESULTS="$RUN_DIR/results.jsonl"
@@ -194,11 +194,13 @@ PY
   setup="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("setup") or "")' "$oracle")"
   unchanged="$(python3 -c 'import json,sys; print("yes" if json.load(open(sys.argv[1])).get("unchanged") else "no")' "$oracle")"
   data_query="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("data_query") or "")' "$oracle")"
+  error_probe="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("error_probe") or "")' "$oracle")"
   expected_state="$RUN_DIR/normalized-output/${case_id}-${dialect}.expected-state.tsv"
   expected_error="$RUN_DIR/normalized-output/${case_id}-${dialect}.expected-error.tsv"
   expected_before_data="$RUN_DIR/normalized-output/${case_id}-${dialect}.expected-before-data.tsv"
   expected_after_data="$RUN_DIR/normalized-output/${case_id}-${dialect}.expected-after-data.tsv"
-  python3 - "$oracle" "$expected_state" "$expected_error" "$expected_before_data" "$expected_after_data" <<'PY'
+  expected_probe_error="$RUN_DIR/normalized-output/${case_id}-${dialect}.expected-probe-error.tsv"
+  python3 - "$oracle" "$expected_state" "$expected_error" "$expected_before_data" "$expected_after_data" "$expected_probe_error" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -208,6 +210,7 @@ Path(sys.argv[2]).write_text(value["state"], encoding="utf-8")
 Path(sys.argv[3]).write_text(value.get("error", ""), encoding="utf-8")
 Path(sys.argv[4]).write_text(value.get("before_data", ""), encoding="utf-8")
 Path(sys.argv[5]).write_text(value.get("after_data", ""), encoding="utf-8")
+Path(sys.argv[6]).write_text(value.get("probe_error", ""), encoding="utf-8")
 PY
 
   for path in direct gateway; do
@@ -222,6 +225,8 @@ PY
     before_data=""
     after_data=""
     actual_error="$RUN_DIR/normalized-output/${case_id}-${dialect}-${path}.error.tsv"
+    probe_stdout="$prefix-probe.stdout"
+    probe_stderr="$prefix-probe.stderr"
     : >"$actual_error"
     catalog_snapshot "$dialect" "$before"
     if [[ -n "$data_query" ]]; then
@@ -237,6 +242,20 @@ PY
       run_mysql_gateway "$sql_path" >"$stdout" 2>"$stderr" || exec_status=$?
     else
       run_postgres_gateway "$sql_path" >"$stdout" 2>"$stderr" || exec_status=$?
+    fi
+
+    probe_status=0
+    if [[ "$exec_status" -eq 0 && -n "$error_probe" ]]; then
+      if [[ "$path" == direct ]]; then
+        run_direct "$dialect" "$ROOT/$error_probe" >"$probe_stdout" 2>"$probe_stderr" || probe_status=$?
+      elif [[ "$dialect" == mysql ]]; then
+        run_mysql_gateway "$ROOT/$error_probe" >"$probe_stdout" 2>"$probe_stderr" || probe_status=$?
+      else
+        run_postgres_gateway "$ROOT/$error_probe" >"$probe_stdout" 2>"$probe_stderr" || probe_status=$?
+      fi
+      if [[ "$probe_status" -ne 0 ]]; then
+        python3 "$ROOT/normalize.py" --error-dialect "$dialect" "$probe_stderr" "$actual_error" || true
+      fi
     fi
     catalog_snapshot "$dialect" "$after"
     if [[ -n "$data_query" ]]; then
@@ -258,6 +277,10 @@ PY
     if [[ "$unchanged" == yes ]] && ! cmp -s "$before" "$after"; then
       status=failed
     fi
+    if [[ -n "$error_probe" ]] && \
+      { [[ "$probe_status" -eq 0 ]] || ! cmp -s "$expected_probe_error" "$actual_error"; }; then
+      status=failed
+    fi
     if [[ -n "$data_query" ]] && \
       { ! cmp -s "$expected_before_data" "$before_data" || \
         ! cmp -s "$expected_after_data" "$after_data"; }; then
@@ -268,6 +291,9 @@ PY
       diff -u "$expected_state" "$after" >"$RUN_DIR/logs/${case_id}-${dialect}-${path}.state.diff" || true
       if [[ "$expected_result" == error ]]; then
         diff -u "$expected_error" "$actual_error" >"$RUN_DIR/logs/${case_id}-${dialect}-${path}.error.diff" || true
+      fi
+      if [[ -n "$error_probe" ]]; then
+        diff -u "$expected_probe_error" "$actual_error" >"$RUN_DIR/logs/${case_id}-${dialect}-${path}.probe-error.diff" || true
       fi
       if [[ "$unchanged" == yes ]]; then
         diff -u "$before" "$after" >"$RUN_DIR/logs/${case_id}-${dialect}-${path}.unchanged.diff" || true

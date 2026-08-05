@@ -288,6 +288,27 @@ class ValidateSqlMatrixTest(unittest.TestCase):
         oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
         self.assert_has_error("SQLT-DDL-013.mysql.data_query escapes matrix root")
 
+    def test_ddl_error_probe_fields_must_be_declared_together(self) -> None:
+        oracle_path = self.root / "ddl-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        del oracles["results"]["SQLT-DDL-020"]["postgres"]["probe_error"]
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("must define error_probe and probe_error together")
+
+    def test_ddl_error_probe_must_exist_below_matrix_root(self) -> None:
+        oracle_path = self.root / "ddl-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["results"]["SQLT-DDL-020"]["mysql"]["error_probe"] = "../outside.sql"
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-DDL-020.mysql.error_probe escapes matrix root")
+
+    def test_ddl_probe_error_requires_stable_error_identity(self) -> None:
+        oracle_path = self.root / "ddl-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["results"]["SQLT-DDL-020"]["postgres"]["probe_error"] = "23514"
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-DDL-020.postgres.probe_error")
+
     def test_ddl_temp_oracle_must_cover_every_declared_dialect(self) -> None:
         oracle_path = self.root / "ddl-temp-oracles.json"
         oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
