@@ -201,6 +201,7 @@ examples/        smoke + gateway config 样例
 | SQLT-3C2 | UPDATE/DELETE、子查询、方言 JOIN/USING、affected rows 和精确最终状态，固定 Docker 单 tranche 28/28、DML 合并 50/50 | `f234439` |
 | SQLT-3C3 | 13 条冲突写入/RETURNING/MERGE/data-modifying CTE/savepoint/错误恢复 DML，精确返回行、状态、错误身份和事务 marker，固定 Docker 64/64 | `7adb345`、`b9e401a`、`b104033` |
 | SQLT-3D1a | DDL 普通/幂等/重复建表语义，专用 catalog/error oracle、validator 和 fixed Docker direct/security-off gateway runner 16/16 | `1bbf74b` |
+| SQLT-3D1b | DDL ADD/DROP/RENAME COLUMN、MySQL/PostgreSQL 类型扩容和 table rename，长度感知 catalog oracle，完整 Docker 36/36 | `9661dee` |
 
 ---
 
