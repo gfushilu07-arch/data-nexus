@@ -249,6 +249,28 @@
     "SQLT-DQL-064": {
       "mysql": "1001\t10\t12.50\n1002\t10\t112.49\n1003\t10\t127.49\n2001\t20\t42.25\n2002\t20\t50.00\n2003\t20\t170.00\n",
       "postgres": "1001\t10\t12.50\n1002\t10\t112.49\n1003\t10\t127.49\n2001\t20\t42.25\n2002\t20\t50.00\n2003\t20\t170.00\n"
-    }
+    },
+    "SQLT-DQL-065": {"postgres": "101\tAda\n201\tGrace\n"},
+    "SQLT-DQL-066": {"postgres": "102\tNULL\n101\tada@example.test\n202\tedsger@example.test\n201\tgrace@example.test\n"},
+    "SQLT-DQL-067": {"postgres": "201\tgrace@example.test\n202\tedsger@example.test\n101\tada@example.test\n102\tNULL\n"},
+    "SQLT-DQL-068": {"mysql": "102\tNULL\n101\tada@example.test\n202\tedsger@example.test\n201\tgrace@example.test\n"},
+    "SQLT-DQL-069": {
+      "mysql": "101\t10\tada@example.test\tAda\n102\t10\tNULL\tLin\n201\t20\tgrace@example.test\tGrace\n202\t20\tedsger@example.test\tEdsger\n",
+      "postgres": "101\t10\tada@example.test\tAda\n102\t10\tNULL\tLin\n201\t20\tgrace@example.test\tGrace\n202\t20\tedsger@example.test\tEdsger\n"
+    },
+    "SQLT-DQL-070": {
+      "mysql": "101\t10\tada@example.test\tAda\t1001\n102\t10\tNULL\tLin\t1003\n201\t20\tgrace@example.test\tGrace\t2001\n",
+      "postgres": "101\t10\tada@example.test\tAda\t1001\n102\t10\tNULL\tLin\t1003\n201\t20\tgrace@example.test\tGrace\t2001\n"
+    },
+    "SQLT-DQL-071": {"mysql": "101\tAda\n102\tLin\n", "postgres": "101\tAda\n102\tLin\n"},
+    "SQLT-DQL-072": {"mysql": "101\t101\t1001\n102\t102\t1003\n201\t201\t2001\n", "postgres": "101\t101\t1001\n102\t102\t1003\n201\t201\t2001\n"},
+    "SQLT-DQL-073": {"postgres": "101\t101\t10\n201\t201\t20\n"},
+    "SQLT-DQL-074": {"postgres": "101\t10\n102\t10\n"},
+    "SQLT-DQL-075": {"postgres": "101\tAda\n202\tEdsger\n"},
+    "SQLT-DQL-076": {"mysql": "101\tAda\n202\tEdsger\n"},
+    "SQLT-DQL-077": {"postgres": "1\tpaid\n2\tpending\n3\trefunded\n"},
+    "SQLT-DQL-078": {"postgres": "1001\t2026-01-02 01:02:03\n2001\t2026-02-02 04:05:06\n"},
+    "SQLT-DQL-079": {"mysql": "1001\t2026-01-02 01:02:03\n2001\t2026-02-02 04:05:06\n"},
+    "SQLT-DQL-080": {"mysql": "1002\t101\t99.99\n1003\t102\t15.00\n2001\t201\t42.25\n", "postgres": "1002\t101\t99.99\n1003\t102\t15.00\n2001\t201\t42.25\n"}
   }
 }

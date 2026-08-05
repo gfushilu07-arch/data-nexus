@@ -1685,6 +1685,150 @@
       "profiles": ["pr", "nightly", "release"]
     },
     {
+      "id": "SQLT-DQL-065",
+      "sql_file": "dql/postgres-ilike.sql",
+      "family": "dql", "capability": "dql.predicate",
+      "dialects": ["postgres"], "frontends": ["pg_simple", "pg_extended"],
+      "backends": ["postgres"], "protocols": ["pg_simple", "pg_extended"],
+      "statement_mode": "single", "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "allow"}, {"policy": "allow", "outcome": "allow"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-DQL-066",
+      "sql_file": "dql/postgres-nulls-first.sql",
+      "family": "dql", "capability": "dql.sort_page",
+      "dialects": ["postgres"], "frontends": ["pg_simple", "pg_extended"],
+      "backends": ["postgres"], "protocols": ["pg_simple", "pg_extended"],
+      "statement_mode": "single", "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "allow"}, {"policy": "allow", "outcome": "allow"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-DQL-067",
+      "sql_file": "dql/postgres-nulls-last.sql",
+      "family": "dql", "capability": "dql.sort_page",
+      "dialects": ["postgres"], "frontends": ["pg_simple", "pg_extended"],
+      "backends": ["postgres"], "protocols": ["pg_simple", "pg_extended"],
+      "statement_mode": "single", "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "allow"}, {"policy": "allow", "outcome": "allow"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-DQL-068",
+      "sql_file": "dql/mysql-null-ordering.sql",
+      "family": "dql", "capability": "dql.sort_page",
+      "dialects": ["mysql"], "frontends": ["mysql_text", "mysql_binary"],
+      "backends": ["mysql"], "protocols": ["mysql_text", "mysql_binary"],
+      "statement_mode": "single", "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "allow"}, {"policy": "allow", "outcome": "allow"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-DQL-069",
+      "sql_file": "dql/qualified-wildcard.sql",
+      "family": "dql", "capability": "dql.wildcard",
+      "dialects": ["mysql", "postgres"], "frontends": ["mysql_text", "pg_simple", "pg_extended"],
+      "backends": ["mysql", "postgres"], "protocols": ["mysql_text", "pg_simple", "pg_extended"],
+      "statement_mode": "single", "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "allow"}, {"policy": "allow", "outcome": "allow"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-DQL-070",
+      "sql_file": "dql/alias-wildcard-join.sql",
+      "family": "dql", "capability": "dql.wildcard",
+      "dialects": ["mysql", "postgres"], "frontends": ["mysql_text", "pg_simple", "pg_extended"],
+      "backends": ["mysql", "postgres"], "protocols": ["mysql_text", "pg_simple", "pg_extended"],
+      "statement_mode": "single", "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "allow"}, {"policy": "allow", "outcome": "allow"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-DQL-071",
+      "sql_file": "dql/nested-alias-shadowing.sql",
+      "family": "dql", "capability": "dql.subquery",
+      "dialects": ["mysql", "postgres"], "frontends": ["mysql_text", "pg_simple", "pg_extended"],
+      "backends": ["mysql", "postgres"], "protocols": ["mysql_text", "pg_simple", "pg_extended"],
+      "statement_mode": "single", "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "allow"}, {"policy": "allow", "outcome": "allow"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-DQL-072",
+      "sql_file": "dql/duplicate-qualified-columns.sql",
+      "family": "dql", "capability": "dql.join",
+      "dialects": ["mysql", "postgres"], "frontends": ["mysql_text", "pg_simple", "pg_extended"],
+      "backends": ["mysql", "postgres"], "protocols": ["mysql_text", "pg_simple", "pg_extended"],
+      "statement_mode": "single", "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "allow"}, {"policy": "allow", "outcome": "allow"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-DQL-073", "sql_file": "dql/postgres-array-index.sql",
+      "family": "dql", "capability": "dql.array", "dialects": ["postgres"],
+      "frontends": ["pg_simple", "pg_extended"], "backends": ["postgres"], "protocols": ["pg_simple", "pg_extended"],
+      "statement_mode": "single", "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "allow"}, {"policy": "allow", "outcome": "allow"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-DQL-074", "sql_file": "dql/postgres-array-containment.sql",
+      "family": "dql", "capability": "dql.array", "dialects": ["postgres"],
+      "frontends": ["pg_simple", "pg_extended"], "backends": ["postgres"], "protocols": ["pg_simple", "pg_extended"],
+      "statement_mode": "single", "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "allow"}, {"policy": "allow", "outcome": "allow"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-DQL-075", "sql_file": "dql/postgres-json-nested-path.sql",
+      "family": "dql", "capability": "dql.json", "dialects": ["postgres"],
+      "frontends": ["pg_simple", "pg_extended"], "backends": ["postgres"], "protocols": ["pg_simple", "pg_extended"],
+      "statement_mode": "single", "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "allow"}, {"policy": "allow", "outcome": "allow"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-DQL-076", "sql_file": "dql/mysql-json-nested-path.sql",
+      "family": "dql", "capability": "dql.json", "dialects": ["mysql"],
+      "frontends": ["mysql_text", "mysql_binary"], "backends": ["mysql"], "protocols": ["mysql_text", "mysql_binary"],
+      "statement_mode": "single", "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "allow"}, {"policy": "allow", "outcome": "allow"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-DQL-077", "sql_file": "dql/postgres-json-array.sql",
+      "family": "dql", "capability": "dql.json", "dialects": ["postgres"],
+      "frontends": ["pg_simple", "pg_extended"], "backends": ["postgres"], "protocols": ["pg_simple", "pg_extended"],
+      "statement_mode": "single", "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "allow"}, {"policy": "allow", "outcome": "allow"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-DQL-078", "sql_file": "dql/postgres-date-interval.sql",
+      "family": "dql", "capability": "dql.date_time", "dialects": ["postgres"],
+      "frontends": ["pg_simple", "pg_extended"], "backends": ["postgres"], "protocols": ["pg_simple", "pg_extended"],
+      "statement_mode": "single", "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "allow"}, {"policy": "allow", "outcome": "allow"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-DQL-079", "sql_file": "dql/mysql-date-interval.sql",
+      "family": "dql", "capability": "dql.date_time", "dialects": ["mysql"],
+      "frontends": ["mysql_text", "mysql_binary"], "backends": ["mysql"], "protocols": ["mysql_text", "mysql_binary"],
+      "statement_mode": "single", "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "allow"}, {"policy": "allow", "outcome": "allow"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-DQL-080", "sql_file": "dql/timestamp-half-open-range.sql",
+      "family": "dql", "capability": "dql.date_time", "dialects": ["mysql", "postgres"],
+      "frontends": ["mysql_text", "pg_simple", "pg_extended"], "backends": ["mysql", "postgres"], "protocols": ["mysql_text", "pg_simple", "pg_extended"],
+      "statement_mode": "single", "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "allow"}, {"policy": "allow", "outcome": "allow"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
       "id": "SQLT-DML-001",
       "sql_file": "dml/insert-update-delete.sql",
       "family": "dml",
