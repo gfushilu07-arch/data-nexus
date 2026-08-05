@@ -16,3 +16,4 @@ DROP TABLE IF EXISTS sqlt_ddl_alter;
 DROP TABLE IF EXISTS sqlt_ddl_renamed;
 DROP TABLE IF EXISTS sqlt_ddl_truncate;
 DROP TABLE IF EXISTS sqlt_ddl_missing;
+DROP TABLE IF EXISTS sqlt_ddl_temp;

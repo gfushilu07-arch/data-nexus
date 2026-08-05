@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "results": {
+    "SQLT-DDL-014": {
+      "mysql": {
+        "same_session": "SQLT_TEMP\t2\t30\n",
+        "isolated_session_error": "mysql\t1146\t42S02\n",
+        "after_disconnect_error": "mysql\t1146\t42S02\n"
+      },
+      "postgres": {
+        "same_session": "SQLT_TEMP\t2\t30\n",
+        "isolated_session_error": "postgres\t42P01\n",
+        "after_disconnect_error": "postgres\t42P01\n"
+      }
+    }
+  }
+}

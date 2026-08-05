@@ -288,6 +288,20 @@ class ValidateSqlMatrixTest(unittest.TestCase):
         oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
         self.assert_has_error("SQLT-DDL-013.mysql.data_query escapes matrix root")
 
+    def test_ddl_temp_oracle_must_cover_every_declared_dialect(self) -> None:
+        oracle_path = self.root / "ddl-temp-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        del oracles["results"]["SQLT-DDL-014"]["postgres"]
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-DDL-014 dialects must be")
+
+    def test_ddl_temp_oracle_requires_all_session_fields(self) -> None:
+        oracle_path = self.root / "ddl-temp-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        del oracles["results"]["SQLT-DDL-014"]["mysql"]["after_disconnect_error"]
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-DDL-014.mysql fields must be")
+
 
 if __name__ == "__main__":
     unittest.main()

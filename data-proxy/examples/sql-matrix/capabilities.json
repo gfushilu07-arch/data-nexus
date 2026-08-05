@@ -105,6 +105,7 @@
     "ddl.create_table": "Create a table and preserve idempotent and duplicate-object semantics",
     "ddl.alter_table": "Add, drop, rename, and change table columns or names",
     "ddl.drop_truncate": "Drop tables idempotently and truncate table data without schema drift",
+    "ddl.temporary_table": "Create connection-scoped temporary tables and reclaim them on disconnect",
     "tcl.savepoint": "Create and roll back to a transaction savepoint",
     "cursor.named_forward": "Declare, fetch from, and close a forward named cursor",
     "security.mask_row_filter": "Apply masking and tenant row filtering to a query",

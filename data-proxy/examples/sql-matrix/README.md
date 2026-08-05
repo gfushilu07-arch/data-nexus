@@ -145,3 +145,15 @@ compares exact before/after data probes. The default range through D1c1 performs
 executions. `SQLT_DDL_CASE_FROM` and `SQLT_DDL_CASE_TO` are development
 filters only; final acceptance leaves both unset. Raw client output, normalized
 catalog state, errors, diffs, and summaries remain below the external cache root.
+
+Temporary-table session isolation uses a dedicated two-connection runner:
+
+```bash
+data-proxy/examples/sql-matrix/run-ddl-temp-corpus.sh
+```
+
+For each dialect and direct/gateway source, a FIFO keeps the creating client connected
+while another client proves the temporary object is invisible. After the holder
+disconnects, a fresh client proves the object was reclaimed. Exact same-session output
+and stable missing-object errors come from `ddl-temp-oracles.json`. The default run
+performs four executions; `SQLT_DDL_TEMP_SOURCES` is a development filter only.

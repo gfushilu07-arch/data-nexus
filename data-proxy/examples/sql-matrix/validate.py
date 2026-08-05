@@ -515,6 +515,7 @@ def _validate_ddl_oracles(root: Path, cases: list[Any], errors: list[str]) -> No
         if (
             isinstance(case, dict)
             and case.get("family") == "ddl"
+            and case.get("capability") != "ddl.temporary_table"
             and isinstance(case.get("id"), str)
         ):
             expected[case["id"]] = {
@@ -597,7 +598,48 @@ def _validate_ddl_oracles(root: Path, cases: list[Any], errors: list[str]) -> No
                             f"{label}.{field} must be an empty or newline-terminated string"
                         )
                 if result != "success":
-                    errors.append(f"{label} data probes require a success oracle")
+                        errors.append(f"{label} data probes require a success oracle")
+
+
+def _validate_ddl_temp_oracles(root: Path, cases: list[Any], errors: list[str]) -> None:
+    """Validate connection-scoped temporary-table behavior contracts."""
+    oracles = _load_json(root / "ddl-temp-oracles.json", errors)
+    if not isinstance(oracles, dict):
+        errors.append("ddl-temp-oracles.json must contain an object")
+        return
+    if oracles.get("schema_version") != 1:
+        errors.append("ddl-temp-oracles.json schema_version must be 1")
+    expected = {
+        case["id"]: {dialect for dialect in case.get("dialects", []) if isinstance(dialect, str)}
+        for case in cases
+        if isinstance(case, dict)
+        and case.get("capability") == "ddl.temporary_table"
+        and isinstance(case.get("id"), str)
+    }
+    results = oracles.get("results")
+    if not isinstance(results, dict):
+        errors.append("ddl-temp-oracles.json results must be an object")
+        return
+    if set(results) != set(expected):
+        errors.append(
+            f"ddl-temp-oracles.json cases must be {sorted(expected)}, got {sorted(results)}"
+        )
+    fields = {"same_session", "isolated_session_error", "after_disconnect_error"}
+    for case_id, dialects in expected.items():
+        values = results.get(case_id)
+        if not isinstance(values, dict) or set(values) != dialects:
+            errors.append(
+                f"ddl-temp-oracles.json results.{case_id} dialects must be {sorted(dialects)}"
+            )
+            continue
+        for dialect, value in values.items():
+            label = f"ddl-temp-oracles.json results.{case_id}.{dialect}"
+            if not isinstance(value, dict) or set(value) != fields:
+                errors.append(f"{label} fields must be {sorted(fields)}")
+                continue
+            for field, output in value.items():
+                if not isinstance(output, str) or not output.endswith("\n"):
+                    errors.append(f"{label}.{field} must be a newline-terminated string")
 
 
 def _validate_string_array(
@@ -771,6 +813,7 @@ def validate_repository(root: Path) -> list[str]:
     _validate_dql_boundary_oracles(root, cases, errors)
     _validate_dml_oracles(root, cases, errors)
     _validate_ddl_oracles(root, cases, errors)
+    _validate_ddl_temp_oracles(root, cases, errors)
     return errors
 
 
