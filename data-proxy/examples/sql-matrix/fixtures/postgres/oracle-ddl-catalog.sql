@@ -7,7 +7,11 @@ SELECT
     table_name,
     ordinal_position,
     column_name,
-    data_type,
+    CASE
+        WHEN data_type = 'character varying' AND character_maximum_length IS NOT NULL
+            THEN data_type || '(' || character_maximum_length || ')'
+        ELSE data_type
+    END,
     is_nullable,
     COALESCE(column_default, '<NULL>')
 FROM information_schema.columns

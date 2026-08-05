@@ -26,7 +26,7 @@
       "postgres": {
         "result": "success",
         "setup": null,
-        "state": "sqlt_ddl_create\t1\tprobe_id\tinteger\tNO\t<NULL>\nsqlt_ddl_create\t2\tprobe_name\tcharacter varying\tNO\t<NULL>\n"
+        "state": "sqlt_ddl_create\t1\tprobe_id\tinteger\tNO\t<NULL>\nsqlt_ddl_create\t2\tprobe_name\tcharacter varying(64)\tNO\t<NULL>\n"
       }
     },
     "SQLT-DDL-003": {
@@ -39,7 +39,7 @@
       "postgres": {
         "result": "success",
         "setup": "fixtures/postgres/ddl-setup-if-not-exists.sql",
-        "state": "sqlt_ddl_if_not_exists\t1\tprobe_id\tinteger\tNO\t<NULL>\nsqlt_ddl_if_not_exists\t2\tprobe_name\tcharacter varying\tNO\t<NULL>\n",
+        "state": "sqlt_ddl_if_not_exists\t1\tprobe_id\tinteger\tNO\t<NULL>\nsqlt_ddl_if_not_exists\t2\tprobe_name\tcharacter varying(64)\tNO\t<NULL>\n",
         "unchanged": true
       }
     },
@@ -54,9 +54,71 @@
       "postgres": {
         "result": "error",
         "setup": "fixtures/postgres/ddl-setup-duplicate.sql",
-        "state": "sqlt_ddl_duplicate\t1\tprobe_id\tinteger\tNO\t<NULL>\nsqlt_ddl_duplicate\t2\tprobe_name\tcharacter varying\tNO\t<NULL>\n",
+        "state": "sqlt_ddl_duplicate\t1\tprobe_id\tinteger\tNO\t<NULL>\nsqlt_ddl_duplicate\t2\tprobe_name\tcharacter varying(64)\tNO\t<NULL>\n",
         "error": "postgres\t42P07\n",
         "unchanged": true
+      }
+    },
+    "SQLT-DDL-005": {
+      "mysql": {
+        "result": "success",
+        "setup": "fixtures/mysql/ddl-setup-alter-basic.sql",
+        "state": "sqlt_ddl_alter\t1\tprobe_id\tint\tNO\t<NULL>\nsqlt_ddl_alter\t2\tprobe_name\tvarchar(16)\tNO\t<NULL>\nsqlt_ddl_alter\t3\tprobe_note\tvarchar(32)\tYES\t<NULL>\n"
+      },
+      "postgres": {
+        "result": "success",
+        "setup": "fixtures/postgres/ddl-setup-alter-basic.sql",
+        "state": "sqlt_ddl_alter\t1\tprobe_id\tinteger\tNO\t<NULL>\nsqlt_ddl_alter\t2\tprobe_name\tcharacter varying(16)\tNO\t<NULL>\nsqlt_ddl_alter\t3\tprobe_note\tcharacter varying(32)\tYES\t<NULL>\n"
+      }
+    },
+    "SQLT-DDL-006": {
+      "mysql": {
+        "result": "success",
+        "setup": "fixtures/mysql/ddl-setup-alter-with-note.sql",
+        "state": "sqlt_ddl_alter\t1\tprobe_id\tint\tNO\t<NULL>\nsqlt_ddl_alter\t2\tprobe_name\tvarchar(16)\tNO\t<NULL>\n"
+      },
+      "postgres": {
+        "result": "success",
+        "setup": "fixtures/postgres/ddl-setup-alter-with-note.sql",
+        "state": "sqlt_ddl_alter\t1\tprobe_id\tinteger\tNO\t<NULL>\nsqlt_ddl_alter\t2\tprobe_name\tcharacter varying(16)\tNO\t<NULL>\n"
+      }
+    },
+    "SQLT-DDL-007": {
+      "mysql": {
+        "result": "success",
+        "setup": "fixtures/mysql/ddl-setup-alter-basic.sql",
+        "state": "sqlt_ddl_alter\t1\tprobe_id\tint\tNO\t<NULL>\nsqlt_ddl_alter\t2\tdisplay_name\tvarchar(16)\tNO\t<NULL>\n"
+      },
+      "postgres": {
+        "result": "success",
+        "setup": "fixtures/postgres/ddl-setup-alter-basic.sql",
+        "state": "sqlt_ddl_alter\t1\tprobe_id\tinteger\tNO\t<NULL>\nsqlt_ddl_alter\t2\tdisplay_name\tcharacter varying(16)\tNO\t<NULL>\n"
+      }
+    },
+    "SQLT-DDL-008": {
+      "mysql": {
+        "result": "success",
+        "setup": "fixtures/mysql/ddl-setup-alter-basic.sql",
+        "state": "sqlt_ddl_alter\t1\tprobe_id\tint\tNO\t<NULL>\nsqlt_ddl_alter\t2\tprobe_name\tvarchar(80)\tNO\t<NULL>\n"
+      }
+    },
+    "SQLT-DDL-009": {
+      "postgres": {
+        "result": "success",
+        "setup": "fixtures/postgres/ddl-setup-alter-basic.sql",
+        "state": "sqlt_ddl_alter\t1\tprobe_id\tinteger\tNO\t<NULL>\nsqlt_ddl_alter\t2\tprobe_name\tcharacter varying(80)\tNO\t<NULL>\n"
+      }
+    },
+    "SQLT-DDL-010": {
+      "mysql": {
+        "result": "success",
+        "setup": "fixtures/mysql/ddl-setup-alter-basic.sql",
+        "state": "sqlt_ddl_renamed\t1\tprobe_id\tint\tNO\t<NULL>\nsqlt_ddl_renamed\t2\tprobe_name\tvarchar(16)\tNO\t<NULL>\n"
+      },
+      "postgres": {
+        "result": "success",
+        "setup": "fixtures/postgres/ddl-setup-alter-basic.sql",
+        "state": "sqlt_ddl_renamed\t1\tprobe_id\tinteger\tNO\t<NULL>\nsqlt_ddl_renamed\t2\tprobe_name\tcharacter varying(16)\tNO\t<NULL>\n"
       }
     }
   }
