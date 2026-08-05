@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "results": {
+    "SQLT-DQL-081": {
+      "mysql": {
+        "behavior": "block_then_complete",
+        "during_lock": "",
+        "after_rollback": "4001\n"
+      },
+      "postgres": {
+        "behavior": "block_then_complete",
+        "during_lock": "",
+        "after_rollback": "4001\n"
+      }
+    },
+    "SQLT-DQL-082": {
+      "mysql": {
+        "behavior": "shared_compatible",
+        "during_lock": "4001\n",
+        "conflict_error": "mysql\t3572\tHY000\n",
+        "after_rollback": "4001\n"
+      },
+      "postgres": {
+        "behavior": "shared_compatible",
+        "during_lock": "4001\n",
+        "conflict_error": "postgres\t55P03\n",
+        "after_rollback": "4001\n"
+      }
+    },
+    "SQLT-DQL-083": {
+      "mysql": {
+        "behavior": "fail_nowait",
+        "during_lock_error": "mysql\t3572\tHY000\n",
+        "after_rollback": "4001\n"
+      },
+      "postgres": {
+        "behavior": "fail_nowait",
+        "during_lock_error": "postgres\t55P03\n",
+        "after_rollback": "4001\n"
+      }
+    },
+    "SQLT-DQL-084": {
+      "mysql": {
+        "behavior": "skip_locked",
+        "during_lock": "4002\n",
+        "after_rollback": "4001\n4002\n"
+      },
+      "postgres": {
+        "behavior": "skip_locked",
+        "during_lock": "4002\n",
+        "after_rollback": "4001\n4002\n"
+      }
+    }
+  }
+}

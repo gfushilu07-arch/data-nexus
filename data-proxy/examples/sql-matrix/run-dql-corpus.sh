@@ -130,7 +130,11 @@ import sys
 manifest = json.load(open(sys.argv[1], encoding="utf-8"))
 case_from, case_to = sys.argv[2:]
 for case in manifest["cases"]:
-    if case["family"] != "dql" or not case_from <= case["id"] <= case_to:
+    if (
+        case["family"] != "dql"
+        or case["transaction_mode"] != "autocommit"
+        or not case_from <= case["id"] <= case_to
+    ):
         continue
     for dialect in case["dialects"]:
         print(f'{case["id"]}\t{dialect}\t{case["sql_file"]}')

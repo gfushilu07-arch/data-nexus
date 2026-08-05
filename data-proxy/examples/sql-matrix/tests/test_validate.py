@@ -143,7 +143,7 @@ class ValidateSqlMatrixTest(unittest.TestCase):
         self.assertGreaterEqual(len(dql_cases), 80)
         self.assertEqual(
             {case["id"] for case in dql_cases},
-            {f"SQLT-DQL-{index:03d}" for index in range(1, 81)},
+            {f"SQLT-DQL-{index:03d}" for index in range(1, 85)},
         )
 
     def test_dql_oracle_must_cover_every_declared_dialect(self) -> None:
@@ -152,6 +152,20 @@ class ValidateSqlMatrixTest(unittest.TestCase):
         del oracles["results"]["SQLT-DQL-001"]["postgres"]
         oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
         self.assert_has_error("SQLT-DQL-001 dialects must be")
+
+    def test_dql_lock_oracle_must_cover_explicit_dql_cases(self) -> None:
+        oracle_path = self.root / "dql-lock-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        del oracles["results"]["SQLT-DQL-081"]["postgres"]
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-DQL-081 dialects must be")
+
+    def test_dql_lock_oracle_requires_behavior_fields(self) -> None:
+        oracle_path = self.root / "dql-lock-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        del oracles["results"]["SQLT-DQL-084"]["mysql"]["after_rollback"]
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-DQL-084.mysql fields must be")
 
     def test_dml_tranches_have_contiguous_case_ids(self) -> None:
         manifest = self.manifest()

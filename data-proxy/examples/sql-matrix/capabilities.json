@@ -83,6 +83,7 @@
     "dql.array": "Construct, index, and filter PostgreSQL arrays",
     "dql.json": "Construct and query nested JSON objects and arrays",
     "dql.date_time": "Filter timestamp ranges and perform dialect-specific interval arithmetic",
+    "dql.locking": "Apply row-level read and update locks with wait, no-wait, and skip semantics",
     "dml.basic": "Insert, update, and delete rows",
     "dml.insert_values": "Insert one or more rows with explicit values and defaults",
     "dml.insert_select": "Insert rows produced by a SELECT statement",

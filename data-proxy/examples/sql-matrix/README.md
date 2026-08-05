@@ -55,9 +55,9 @@ The metadata/session/diagnostic tranche currently contains 20 canonical cases
 budget test prevents this tranche from shrinking while DQL, DML, DDL, and failure
 families are added.
 
-The SQLT-3B DQL tranche currently contains 80 canonical cases
-(`SQLT-DQL-001` through `SQLT-DQL-080`). Run its direct fixed-version backend
-acceptance with:
+The SQLT-3B DQL tranche currently contains 84 canonical cases
+(`SQLT-DQL-001` through `SQLT-DQL-084`). The first 80 are deterministic
+autocommit queries. Run their direct fixed-version backend acceptance with:
 
 ```bash
 data-proxy/examples/sql-matrix/run-dql-corpus.sh
@@ -77,6 +77,20 @@ and per-case artifacts are stored below the configured external cache.
 During corpus development, a bounded ID range can be selected with
 `SQLT_DQL_CASE_FROM` and `SQLT_DQL_CASE_TO`. Final acceptance must leave both unset
 so the complete registered DQL corpus runs.
+
+The final four cases exercise explicit row-lock transactions with two real
+connections. Run their fixed-version direct and security-off gateway acceptance with:
+
+```bash
+data-proxy/examples/sql-matrix/run-dql-lock-corpus.sh
+```
+
+The lock runner verifies blocking until rollback, compatible shared locks, stable
+MySQL errno/SQLSTATE and PostgreSQL SQLSTATE for `NOWAIT`, exact `SKIP LOCKED`
+results, and transaction/connection recovery. Its default range performs 16
+`case x dialect x path` executions. `SQLT_DQL_LOCK_CASE_FROM`,
+`SQLT_DQL_LOCK_CASE_TO`, and `SQLT_DQL_LOCK_SOURCES` are development filters only;
+final acceptance leaves all three unset.
 
 The DML corpus contains the SQLT-3C1 INSERT tranche and SQLT-3C2 UPDATE/DELETE
 tranches (`SQLT-DML-003` through `SQLT-DML-043`). They cover values, defaults, exact
