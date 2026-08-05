@@ -196,6 +196,7 @@ examples/        smoke + gateway config 样例
 | SQLT-3B1 | DQL 基础投影、谓词、NULL/三值逻辑、聚合、排序分页达到 24 case，独立 SQL 文件和固定 Docker 双库逐条执行 runner + 精确语义 oracle | `3c66509` |
 | SQLT-3B2 | DQL JOIN、子查询、CTE、集合运算、窗口函数扩展至 48 case，固定 Docker 双库 94/94 精确语义 oracle | `6d1914c` |
 | SQLT-3B3 | DQL 字符串/数值/日期/JSON/正则/cast/窗口 frame 扩展至 64 case，方言差异独立 SQL，完整 Docker 120/120 | `26aae14` |
+| SQLT-3B4 | DQL 扩展至 86 case；方言排序/array/JSON/日期、双连接行锁、1 MiB 字段和 10,000 行流式摘要；完整 Docker 141/141 + 16/16 + 8/8 | `e73fde0`、`57e1c67`、`8ab72e7` |
 | SQLT-3C1 | INSERT 值类型、默认值、INSERT SELECT、约束错误扩展至 14 个 DML case，固定 Docker 双库 direct/gateway 22/22 | `2617366` |
 | SQLT-3C2 | UPDATE/DELETE、子查询、方言 JOIN/USING、affected rows 和精确最终状态，固定 Docker 单 tranche 28/28、DML 合并 50/50 | `f234439` |
 | SQLT-3C3 | 13 条冲突写入/RETURNING/MERGE/data-modifying CTE/savepoint/错误恢复 DML，精确返回行、状态、错误身份和事务 marker，固定 Docker 64/64 | `7adb345`、`b9e401a`、`b104033` |
@@ -222,6 +223,7 @@ examples/        smoke + gateway config 样例
 - [x] **UI01 / UI02**  
 - [x] **A05** 透传路径观测  
 - [x] **S0–S6 / A1–A4 / v1 L0**  
+- [x] **SQLT-3B4** DQL canonical corpus 收口至 86 条
 
 **仍开整项（详见 todo.md）**：A06、A08、A09、A10、B08、H05（含 H08 内存明文边界）、
 H04b-4 生产部署验收、T01、F30（延后）、P01–P04（延后）。
