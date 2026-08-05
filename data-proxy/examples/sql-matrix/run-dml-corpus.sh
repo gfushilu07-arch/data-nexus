@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Execute the registered SQLT-3C1/3C2 DML corpus against fixed Docker backends.
+# Execute the registered SQLT-3C DML corpus against fixed Docker backends.
 # Each case is reset before direct and gateway execution; all artifacts stay external.
 set -euo pipefail
 
@@ -16,7 +16,7 @@ CACHE_ROOT="${DATA_NEXUS_SQL_MATRIX_CACHE:-/Volumes/fushilu/.caches/data-nexus/s
 RUN_ID="${SQLT_DML_RUN_ID:-dml-$(date -u +%Y%m%dT%H%M%SZ)}"
 RUN_DIR="$CACHE_ROOT/$RUN_ID"
 CASE_FROM="${SQLT_DML_CASE_FROM:-SQLT-DML-003}"
-CASE_TO="${SQLT_DML_CASE_TO:-SQLT-DML-030}"
+CASE_TO="${SQLT_DML_CASE_TO:-SQLT-DML-035}"
 COMPOSE_PROJECT="sqlt3cdml-${RUN_ID//[^a-zA-Z0-9]/}"
 COMPOSE=(docker compose -p "$COMPOSE_PROJECT" -f "$ROOT/fixtures/docker-compose.yml")
 RESULTS="$RUN_DIR/results.jsonl"
@@ -43,12 +43,12 @@ command -v docker >/dev/null 2>&1 || { echo "missing required command: docker" >
 command -v python3 >/dev/null 2>&1 || { echo "missing required command: python3" >&2; exit 1; }
 command -v curl >/dev/null 2>&1 || { echo "missing required command: curl" >&2; exit 1; }
 [[ "$(rustc --version)" == rustc\ 1.94.1\ * ]] || {
-  echo "SQLT-3C1/3C2 requires rustc 1.94.1; found: $(rustc --version)" >&2
+  echo "SQLT-3C requires rustc 1.94.1; found: $(rustc --version)" >&2
   exit 1
 }
 python3 "$ROOT/validate.py"
 
-echo "==> starting fixed-version SQLT-3C1/3C2 Docker backends"
+echo "==> starting fixed-version SQLT-3C Docker backends"
 "${COMPOSE[@]}" up -d >"$RUN_DIR/logs/compose-up.log" 2>&1
 for _ in $(seq 1 90); do
   mysql_ok="$("${COMPOSE[@]}" exec -T mysql mysqladmin ping -h 127.0.0.1 -uroot -proot --silent 2>/dev/null || true)"
@@ -295,6 +295,6 @@ summary = {
 }
 Path(output).write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 if summary["failed"]:
-    raise SystemExit(f"SQLT-3C1/3C2 failed: {summary['passed']} passed, {summary['failed']} failed")
-print(f"SQLT-3C1/3C2 passed: {summary['passed']} case/dialect executions")
+    raise SystemExit(f"SQLT-3C failed: {summary['passed']} passed, {summary['failed']} failed")
+print(f"SQLT-3C passed: {summary['passed']} case/dialect executions")
 PY

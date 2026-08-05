@@ -272,7 +272,7 @@ def _validate_dml_oracles(root: Path, cases: list[Any], errors: list[str]) -> No
             isinstance(case, dict)
             and case.get("family") == "dml"
             and isinstance(case.get("id"), str)
-            and case["id"] in {f"SQLT-DML-{index:03d}" for index in range(3, 31)}
+            and case["id"] in {f"SQLT-DML-{index:03d}" for index in range(3, 36)}
         ):
             expected[case["id"]] = set(case.get("dialects", []))
     results = oracles.get("results")

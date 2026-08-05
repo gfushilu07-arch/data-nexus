@@ -352,6 +352,46 @@
         "state": "",
         "state_query": "update_delete"
       }
+    },
+    "SQLT-DML-031": {
+      "postgres": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\t10.00\tnew\n4002\t102\t10\tbeta\t20.00\tnew\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 0,
+        "state_query": "update_delete"
+      }
+    },
+    "SQLT-DML-032": {
+      "postgres": {
+        "result": "success",
+        "state": "4001\t101\t10\tconflict-updated\t92.00\tupserted\n4002\t102\t10\tbeta\t20.00\tnew\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 1,
+        "state_query": "update_delete"
+      }
+    },
+    "SQLT-DML-033": {
+      "mysql": {
+        "result": "success",
+        "state": "4001\t101\t10\tduplicate-updated\t93.00\tupserted\n4002\t102\t10\tbeta\t20.00\tnew\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 2,
+        "state_query": "update_delete"
+      }
+    },
+    "SQLT-DML-034": {
+      "mysql": {
+        "result": "success",
+        "state": "4001\t101\t10\talpha\t10.00\tnew\n4002\t102\t10\tbeta\t20.00\tnew\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 0,
+        "state_query": "update_delete"
+      }
+    },
+    "SQLT-DML-035": {
+      "mysql": {
+        "result": "success",
+        "state": "4001\t101\t10\treplaced\t95.00\treplaced\n4002\t102\t10\tbeta\t20.00\tnew\n4003\t201\t20\tgamma\t30.00\tready\n4004\t202\t20\tdelta\tNULL\tready\n4005\t101\t10\tepsilon\t50.00\tarchived\n",
+        "affected_rows": 2,
+        "state_query": "update_delete"
+      }
     }
   }
 }

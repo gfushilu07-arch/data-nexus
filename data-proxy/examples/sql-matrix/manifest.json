@@ -2313,6 +2313,111 @@
       "profiles": ["pr", "nightly", "release"]
     },
     {
+      "id": "SQLT-DML-031",
+      "sql_file": "dml/postgres-on-conflict-nothing.sql",
+      "family": "dml",
+      "capability": "dml.upsert",
+      "dialects": ["postgres"],
+      "frontends": ["pg_simple", "pg_extended"],
+      "backends": ["postgres"],
+      "protocols": ["pg_simple", "pg_extended"],
+      "statement_mode": "single",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"},
+        {"policy": "ticket", "outcome": "deny"}
+      ],
+      "side_effect": "write",
+      "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-DML-032",
+      "sql_file": "dml/postgres-on-conflict-update.sql",
+      "family": "dml",
+      "capability": "dml.upsert",
+      "dialects": ["postgres"],
+      "frontends": ["pg_simple", "pg_extended"],
+      "backends": ["postgres"],
+      "protocols": ["pg_simple", "pg_extended"],
+      "statement_mode": "single",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"},
+        {"policy": "ticket", "outcome": "deny"}
+      ],
+      "side_effect": "write",
+      "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-DML-033",
+      "sql_file": "dml/mysql-on-duplicate-update.sql",
+      "family": "dml",
+      "capability": "dml.upsert",
+      "dialects": ["mysql"],
+      "frontends": ["mysql_text", "mysql_binary"],
+      "backends": ["mysql"],
+      "protocols": ["mysql_text", "mysql_binary"],
+      "statement_mode": "single",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"},
+        {"policy": "ticket", "outcome": "deny"}
+      ],
+      "side_effect": "write",
+      "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-DML-034",
+      "sql_file": "dml/mysql-insert-ignore.sql",
+      "family": "dml",
+      "capability": "dml.insert_ignore",
+      "dialects": ["mysql"],
+      "frontends": ["mysql_text", "mysql_binary"],
+      "backends": ["mysql"],
+      "protocols": ["mysql_text", "mysql_binary"],
+      "statement_mode": "single",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"},
+        {"policy": "ticket", "outcome": "deny"}
+      ],
+      "side_effect": "write",
+      "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-DML-035",
+      "sql_file": "dml/mysql-replace.sql",
+      "family": "dml",
+      "capability": "dml.replace",
+      "dialects": ["mysql"],
+      "frontends": ["mysql_text", "mysql_binary"],
+      "backends": ["mysql"],
+      "protocols": ["mysql_text", "mysql_binary"],
+      "statement_mode": "single",
+      "transaction_mode": "autocommit",
+      "parameter_mode": "none",
+      "expectations": [
+        {"policy": "security_off", "outcome": "allow"},
+        {"policy": "allow", "outcome": "allow"},
+        {"policy": "deny", "outcome": "deny"},
+        {"policy": "ticket", "outcome": "deny"}
+      ],
+      "side_effect": "write",
+      "profiles": ["pr", "nightly", "release"]
+    },
+    {
       "id": "SQLT-DDL-001",
       "sql_file": "ddl/create-alter-drop.sql",
       "family": "ddl",

@@ -156,9 +156,9 @@ class ValidateSqlMatrixTest(unittest.TestCase):
     def test_dml_tranches_have_contiguous_case_ids(self) -> None:
         manifest = self.manifest()
         dml_cases = [case for case in manifest["cases"] if case["family"] == "dml"]
-        self.assertGreaterEqual(len(dml_cases), 30)
+        self.assertGreaterEqual(len(dml_cases), 35)
         self.assertTrue(
-            {f"SQLT-DML-{index:03d}" for index in range(1, 31)}
+            {f"SQLT-DML-{index:03d}" for index in range(1, 36)}
             <= {case["id"] for case in dml_cases}
         )
 

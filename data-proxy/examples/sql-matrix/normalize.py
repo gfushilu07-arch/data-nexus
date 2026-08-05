@@ -36,7 +36,12 @@ def normalize_affected_rows(text: str, dialect: str) -> str:
     if dialect == "mysql":
         matches = re.findall(r"Query OK, (\d+) row[s]? affected", text)
     elif dialect == "postgres":
-        matches = re.findall(r"^(?:UPDATE|DELETE) (\d+)$", text, re.MULTILINE)
+        matches = re.findall(
+            r"^(?:(?:UPDATE|DELETE) (\d+)|INSERT \d+ (\d+))$",
+            text,
+            re.MULTILINE,
+        )
+        matches = [next(value for value in match if value) for match in matches]
     else:
         raise ValueError(f"unsupported affected-row dialect: {dialect}")
     if len(matches) != 1:

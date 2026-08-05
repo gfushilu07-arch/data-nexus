@@ -49,6 +49,9 @@ class NormalizeSqlOutputTest(unittest.TestCase):
     def test_normalizes_postgres_affected_rows(self) -> None:
         self.assertEqual(NORMALIZE.normalize_affected_rows("UPDATE 3\n", "postgres"), "3\n")
 
+    def test_normalizes_postgres_insert_affected_rows(self) -> None:
+        self.assertEqual(NORMALIZE.normalize_affected_rows("INSERT 0 0\n", "postgres"), "0\n")
+
     def test_affected_rows_requires_one_marker(self) -> None:
         with self.assertRaisesRegex(ValueError, "expected one"):
             NORMALIZE.normalize_affected_rows("UPDATE 1\nDELETE 1\n", "postgres")
