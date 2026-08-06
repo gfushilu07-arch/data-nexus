@@ -664,6 +664,72 @@
         "before_data": "",
         "after_data": ""
       }
+    },
+    "SQLT-DDL-047": {
+      "postgres": {
+        "result": "success",
+        "setup": null,
+        "state": "",
+        "data_query": "fixtures/postgres/oracle-ddl-sequences.sql",
+        "before_data": "",
+        "after_data": "public\tsqlt_ddl_sequence\tsqlt\tbigint\t10\t10\t1000\t5\tNO\t3\t<NULL>\n"
+      }
+    },
+    "SQLT-DDL-048": {
+      "postgres": {
+        "result": "success",
+        "setup": "fixtures/postgres/ddl-setup-sequence-called.sql",
+        "state": "",
+        "data_query": "fixtures/postgres/oracle-ddl-sequences.sql",
+        "before_data": "public\tsqlt_ddl_sequence\tsqlt\tbigint\t10\t10\t1000\t5\tNO\t3\t20\n",
+        "after_data": "public\tsqlt_ddl_sequence\tsqlt\tbigint\t200\t5\t2000\t7\tYES\t5\t<NULL>\n"
+      }
+    },
+    "SQLT-DDL-049": {
+      "postgres": {
+        "result": "success",
+        "setup": "fixtures/postgres/ddl-setup-sequence-basic.sql",
+        "state": "",
+        "data_query": "fixtures/postgres/oracle-ddl-sequences.sql",
+        "before_data": "public\tsqlt_ddl_sequence\tsqlt\tbigint\t10\t10\t1000\t5\tNO\t3\t<NULL>\n",
+        "after_data": ""
+      }
+    },
+    "SQLT-DDL-050": {
+      "postgres": {
+        "result": "error",
+        "setup": "fixtures/postgres/ddl-setup-sequence-called.sql",
+        "state": "",
+        "error": "postgres\t42P07\n",
+        "unchanged": true,
+        "data_query": "fixtures/postgres/oracle-ddl-sequences.sql",
+        "before_data": "public\tsqlt_ddl_sequence\tsqlt\tbigint\t10\t10\t1000\t5\tNO\t3\t20\n",
+        "after_data": "public\tsqlt_ddl_sequence\tsqlt\tbigint\t10\t10\t1000\t5\tNO\t3\t20\n"
+      }
+    },
+    "SQLT-DDL-051": {
+      "postgres": {
+        "result": "error",
+        "setup": null,
+        "state": "",
+        "error": "postgres\t42P01\n",
+        "unchanged": true,
+        "data_query": "fixtures/postgres/oracle-ddl-sequences.sql",
+        "before_data": "",
+        "after_data": ""
+      }
+    },
+    "SQLT-DDL-052": {
+      "postgres": {
+        "result": "error",
+        "setup": null,
+        "state": "",
+        "error": "postgres\t42P01\n",
+        "unchanged": true,
+        "data_query": "fixtures/postgres/oracle-ddl-sequences.sql",
+        "before_data": "",
+        "after_data": ""
+      }
     }
   }
 }

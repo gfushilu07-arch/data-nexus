@@ -110,6 +110,7 @@
     "ddl.indexes": "Create and drop named indexes with exact column-order and uniqueness verification",
     "ddl.views": "Create and drop views with exact object and projected-column metadata verification",
     "ddl.schemas": "Create and drop PostgreSQL schemas with exact namespace and contained-object verification",
+    "ddl.sequences": "Create, alter, and drop PostgreSQL sequences with exact parameter and runtime-state verification",
     "tcl.savepoint": "Create and roll back to a transaction savepoint",
     "cursor.named_forward": "Declare, fetch from, and close a forward named cursor",
     "security.mask_row_filter": "Apply masking and tenant row filtering to a query",

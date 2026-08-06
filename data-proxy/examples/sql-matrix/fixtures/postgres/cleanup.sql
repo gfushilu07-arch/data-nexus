@@ -24,3 +24,4 @@ DROP TABLE IF EXISTS sqlt_ddl_column;
 DROP TABLE IF EXISTS sqlt_ddl_index;
 DROP TABLE IF EXISTS sqlt_ddl_view_source;
 DROP SCHEMA IF EXISTS sqlt_ddl_schema CASCADE;
+DROP SEQUENCE IF EXISTS sqlt_ddl_sequence;
