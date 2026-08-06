@@ -4,6 +4,7 @@
 -- Dialect: mysql
 
 SET FOREIGN_KEY_CHECKS = 0;
+DROP VIEW IF EXISTS sqlt_ddl_view;
 DROP TABLE IF EXISTS sqlt_dml_targets;
 DROP TABLE IF EXISTS sqlt_orders;
 DROP TABLE IF EXISTS sqlt_customers;
@@ -22,4 +23,5 @@ DROP TABLE IF EXISTS sqlt_ddl_constraint;
 DROP TABLE IF EXISTS sqlt_ddl_parent;
 DROP TABLE IF EXISTS sqlt_ddl_column;
 DROP TABLE IF EXISTS sqlt_ddl_index;
+DROP TABLE IF EXISTS sqlt_ddl_view_source;
 SET FOREIGN_KEY_CHECKS = 1;

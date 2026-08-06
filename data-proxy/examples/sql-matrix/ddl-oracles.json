@@ -506,6 +506,108 @@
         "before_data": "sqlt_idx_probe\t1\tprobe_name\tNO\nsqlt_idx_probe\t2\tprobe_id\tNO\n",
         "after_data": "sqlt_idx_probe\t1\tprobe_name\tNO\nsqlt_idx_probe\t2\tprobe_id\tNO\n"
       }
+    },
+    "SQLT-DDL-037": {
+      "mysql": {
+        "result": "success",
+        "setup": "fixtures/mysql/ddl-setup-view-source.sql",
+        "state": "sqlt_ddl_view\t1\tview_id\tint\tNO\t<NULL>\nsqlt_ddl_view\t2\tview_name\tvarchar(32)\tNO\t<NULL>\nsqlt_ddl_view_source\t1\tsource_id\tint\tNO\t<NULL>\nsqlt_ddl_view_source\t2\tsource_name\tvarchar(32)\tNO\t<NULL>\n",
+        "data_query": "fixtures/mysql/oracle-ddl-views.sql",
+        "before_data": "",
+        "after_data": "VIEW\t1\tview_id\tint\tNO\nVIEW\t2\tview_name\tvarchar(32)\tNO\n"
+      },
+      "postgres": {
+        "result": "success",
+        "setup": "fixtures/postgres/ddl-setup-view-source.sql",
+        "state": "sqlt_ddl_view\t1\tview_id\tinteger\tYES\t<NULL>\nsqlt_ddl_view\t2\tview_name\tcharacter varying(32)\tYES\t<NULL>\nsqlt_ddl_view_source\t1\tsource_id\tinteger\tNO\t<NULL>\nsqlt_ddl_view_source\t2\tsource_name\tcharacter varying(32)\tNO\t<NULL>\n",
+        "data_query": "fixtures/postgres/oracle-ddl-views.sql",
+        "before_data": "",
+        "after_data": "VIEW\t1\tview_id\tinteger\tYES\nVIEW\t2\tview_name\tcharacter varying(32)\tYES\n"
+      }
+    },
+    "SQLT-DDL-038": {
+      "mysql": {
+        "result": "success",
+        "setup": "fixtures/mysql/ddl-setup-view-existing.sql",
+        "state": "sqlt_ddl_view_source\t1\tsource_id\tint\tNO\t<NULL>\nsqlt_ddl_view_source\t2\tsource_name\tvarchar(32)\tNO\t<NULL>\n",
+        "data_query": "fixtures/mysql/oracle-ddl-views.sql",
+        "before_data": "VIEW\t1\tview_id\tint\tNO\nVIEW\t2\tview_name\tvarchar(32)\tNO\n",
+        "after_data": ""
+      },
+      "postgres": {
+        "result": "success",
+        "setup": "fixtures/postgres/ddl-setup-view-existing.sql",
+        "state": "sqlt_ddl_view_source\t1\tsource_id\tinteger\tNO\t<NULL>\nsqlt_ddl_view_source\t2\tsource_name\tcharacter varying(32)\tNO\t<NULL>\n",
+        "data_query": "fixtures/postgres/oracle-ddl-views.sql",
+        "before_data": "VIEW\t1\tview_id\tinteger\tYES\nVIEW\t2\tview_name\tcharacter varying(32)\tYES\n",
+        "after_data": ""
+      }
+    },
+    "SQLT-DDL-039": {
+      "mysql": {
+        "result": "error",
+        "setup": "fixtures/mysql/ddl-setup-view-existing.sql",
+        "state": "sqlt_ddl_view\t1\tview_id\tint\tNO\t<NULL>\nsqlt_ddl_view\t2\tview_name\tvarchar(32)\tNO\t<NULL>\nsqlt_ddl_view_source\t1\tsource_id\tint\tNO\t<NULL>\nsqlt_ddl_view_source\t2\tsource_name\tvarchar(32)\tNO\t<NULL>\n",
+        "error": "mysql\t1050\t42S01\n",
+        "unchanged": true,
+        "data_query": "fixtures/mysql/oracle-ddl-views.sql",
+        "before_data": "VIEW\t1\tview_id\tint\tNO\nVIEW\t2\tview_name\tvarchar(32)\tNO\n",
+        "after_data": "VIEW\t1\tview_id\tint\tNO\nVIEW\t2\tview_name\tvarchar(32)\tNO\n"
+      },
+      "postgres": {
+        "result": "error",
+        "setup": "fixtures/postgres/ddl-setup-view-existing.sql",
+        "state": "sqlt_ddl_view\t1\tview_id\tinteger\tYES\t<NULL>\nsqlt_ddl_view\t2\tview_name\tcharacter varying(32)\tYES\t<NULL>\nsqlt_ddl_view_source\t1\tsource_id\tinteger\tNO\t<NULL>\nsqlt_ddl_view_source\t2\tsource_name\tcharacter varying(32)\tNO\t<NULL>\n",
+        "error": "postgres\t42P07\n",
+        "unchanged": true,
+        "data_query": "fixtures/postgres/oracle-ddl-views.sql",
+        "before_data": "VIEW\t1\tview_id\tinteger\tYES\nVIEW\t2\tview_name\tcharacter varying(32)\tYES\n",
+        "after_data": "VIEW\t1\tview_id\tinteger\tYES\nVIEW\t2\tview_name\tcharacter varying(32)\tYES\n"
+      }
+    },
+    "SQLT-DDL-040": {
+      "mysql": {
+        "result": "error",
+        "setup": null,
+        "state": "",
+        "error": "mysql\t1146\t42S02\n",
+        "unchanged": true,
+        "data_query": "fixtures/mysql/oracle-ddl-views.sql",
+        "before_data": "",
+        "after_data": ""
+      },
+      "postgres": {
+        "result": "error",
+        "setup": null,
+        "state": "",
+        "error": "postgres\t42P01\n",
+        "unchanged": true,
+        "data_query": "fixtures/postgres/oracle-ddl-views.sql",
+        "before_data": "",
+        "after_data": ""
+      }
+    },
+    "SQLT-DDL-041": {
+      "mysql": {
+        "result": "error",
+        "setup": null,
+        "state": "",
+        "error": "mysql\t1051\t42S02\n",
+        "unchanged": true,
+        "data_query": "fixtures/mysql/oracle-ddl-views.sql",
+        "before_data": "",
+        "after_data": ""
+      },
+      "postgres": {
+        "result": "error",
+        "setup": null,
+        "state": "",
+        "error": "postgres\t42P01\n",
+        "unchanged": true,
+        "data_query": "fixtures/postgres/oracle-ddl-views.sql",
+        "before_data": "",
+        "after_data": ""
+      }
     }
   }
 }

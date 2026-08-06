@@ -16,7 +16,7 @@ CACHE_ROOT="${DATA_NEXUS_SQL_MATRIX_CACHE:-/Volumes/fushilu/.caches/data-nexus/s
 RUN_ID="${SQLT_DDL_RUN_ID:-ddl-$(date -u +%Y%m%dT%H%M%SZ)}"
 RUN_DIR="$CACHE_ROOT/$RUN_ID"
 CASE_FROM="${SQLT_DDL_CASE_FROM:-SQLT-DDL-001}"
-CASE_TO="${SQLT_DDL_CASE_TO:-SQLT-DDL-036}"
+CASE_TO="${SQLT_DDL_CASE_TO:-SQLT-DDL-041}"
 COMPOSE_PROJECT="sqlt3dddl-${RUN_ID//[^a-zA-Z0-9]/}"
 COMPOSE=(docker compose -p "$COMPOSE_PROJECT" -f "$ROOT/fixtures/docker-compose.yml")
 RESULTS="$RUN_DIR/results.jsonl"
@@ -155,7 +155,7 @@ import sys
 from pathlib import Path
 
 (
-    results, case_id, dialect, path, status, execution, before, after, error,
+    results, case_id, dialect, path, status, execution, expected_result, before, after, error,
     before_data, after_data,
 ) = sys.argv[1:]
 with Path(results).open("a", encoding="utf-8") as handle:
@@ -165,6 +165,7 @@ with Path(results).open("a", encoding="utf-8") as handle:
         "path": path,
         "status": status,
         "execution": execution,
+        "expected_result": expected_result,
         "before_catalog": before,
         "after_catalog": after,
         "error": error,
@@ -306,7 +307,12 @@ PY
     else
       pass_count=$((pass_count + 1))
     fi
-    write_result "$case_id" "$dialect" "$path" "$status" "$expected_result" \
+    if [[ "$exec_status" -eq 0 ]]; then
+      execution=success
+    else
+      execution=error
+    fi
+    write_result "$case_id" "$dialect" "$path" "$status" "$execution" "$expected_result" \
       "$before" "$after" "$actual_error" "$before_data" "$after_data"
   done
 done < <(

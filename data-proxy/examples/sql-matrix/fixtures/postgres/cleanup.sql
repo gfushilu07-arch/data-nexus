@@ -3,6 +3,7 @@
 -- Expected: The public schema contains none of the versioned fixture and DDL probe tables.
 -- Dialect: postgres
 
+DROP VIEW IF EXISTS sqlt_ddl_view;
 DROP TABLE IF EXISTS sqlt_dml_targets;
 DROP TABLE IF EXISTS sqlt_orders;
 DROP TABLE IF EXISTS sqlt_customers;
@@ -21,3 +22,4 @@ DROP TABLE IF EXISTS sqlt_ddl_constraint;
 DROP TABLE IF EXISTS sqlt_ddl_parent;
 DROP TABLE IF EXISTS sqlt_ddl_column;
 DROP TABLE IF EXISTS sqlt_ddl_index;
+DROP TABLE IF EXISTS sqlt_ddl_view_source;
