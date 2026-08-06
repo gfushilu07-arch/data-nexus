@@ -109,6 +109,7 @@
     "ddl.constraints": "Add and remove named table constraints with exact metadata verification",
     "ddl.indexes": "Create and drop named indexes with exact column-order and uniqueness verification",
     "ddl.views": "Create and drop views with exact object and projected-column metadata verification",
+    "ddl.schemas": "Create and drop PostgreSQL schemas with exact namespace and contained-object verification",
     "tcl.savepoint": "Create and roll back to a transaction savepoint",
     "cursor.named_forward": "Declare, fetch from, and close a forward named cursor",
     "security.mask_row_filter": "Apply masking and tenant row filtering to a query",

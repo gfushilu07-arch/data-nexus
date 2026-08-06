@@ -608,6 +608,62 @@
         "before_data": "",
         "after_data": ""
       }
+    },
+    "SQLT-DDL-042": {
+      "postgres": {
+        "result": "success",
+        "setup": null,
+        "state": "",
+        "data_query": "fixtures/postgres/oracle-ddl-schemas.sql",
+        "before_data": "",
+        "after_data": "sqlt_ddl_schema\tsqlt\t<NULL>\t<NULL>\t<NULL>\t<NULL>\t<NULL>\t<NULL>\n"
+      }
+    },
+    "SQLT-DDL-043": {
+      "postgres": {
+        "result": "success",
+        "setup": "fixtures/postgres/ddl-setup-schema-empty.sql",
+        "state": "",
+        "data_query": "fixtures/postgres/oracle-ddl-schemas.sql",
+        "before_data": "sqlt_ddl_schema\tsqlt\t<NULL>\t<NULL>\t<NULL>\t<NULL>\t<NULL>\t<NULL>\n",
+        "after_data": ""
+      }
+    },
+    "SQLT-DDL-044": {
+      "postgres": {
+        "result": "error",
+        "setup": "fixtures/postgres/ddl-setup-schema-empty.sql",
+        "state": "",
+        "error": "postgres\t42P06\n",
+        "unchanged": true,
+        "data_query": "fixtures/postgres/oracle-ddl-schemas.sql",
+        "before_data": "sqlt_ddl_schema\tsqlt\t<NULL>\t<NULL>\t<NULL>\t<NULL>\t<NULL>\t<NULL>\n",
+        "after_data": "sqlt_ddl_schema\tsqlt\t<NULL>\t<NULL>\t<NULL>\t<NULL>\t<NULL>\t<NULL>\n"
+      }
+    },
+    "SQLT-DDL-045": {
+      "postgres": {
+        "result": "error",
+        "setup": "fixtures/postgres/ddl-setup-schema-nonempty.sql",
+        "state": "",
+        "error": "postgres\t2BP01\n",
+        "unchanged": true,
+        "data_query": "fixtures/postgres/oracle-ddl-schemas.sql",
+        "before_data": "sqlt_ddl_schema\tsqlt\tTABLE\tsqlt_ddl_probe\t1\tprobe_id\tinteger\tNO\nsqlt_ddl_schema\tsqlt\tTABLE\tsqlt_ddl_probe\t2\tprobe_name\tcharacter varying(32)\tNO\n",
+        "after_data": "sqlt_ddl_schema\tsqlt\tTABLE\tsqlt_ddl_probe\t1\tprobe_id\tinteger\tNO\nsqlt_ddl_schema\tsqlt\tTABLE\tsqlt_ddl_probe\t2\tprobe_name\tcharacter varying(32)\tNO\n"
+      }
+    },
+    "SQLT-DDL-046": {
+      "postgres": {
+        "result": "error",
+        "setup": null,
+        "state": "",
+        "error": "postgres\t3F000\n",
+        "unchanged": true,
+        "data_query": "fixtures/postgres/oracle-ddl-schemas.sql",
+        "before_data": "",
+        "after_data": ""
+      }
     }
   }
 }
