@@ -69,11 +69,12 @@ pub struct MySqlFrontendProtocol {
     password: String,
     database: String,
     server_version: String,
+    suppress_next_response: bool,
 }
 
 impl MySqlFrontendProtocol {
     pub fn new(user: String, password: String, database: String, server_version: String) -> Self {
-        Self { user, password, database, server_version }
+        Self { user, password, database, server_version, suppress_next_response: false }
     }
 
     pub async fn handshake(
@@ -134,6 +135,9 @@ impl FrontendProtocolAdapter for MySqlFrontendProtocol {
                 decode_stmt_execute(payload)?
             }
             COM_STMT_CLOSE => {
+                // COM_STMT_CLOSE has no server response. Suppress the internal
+                // registry acknowledgment so the next command starts at seq 0.
+                self.suppress_next_response = true;
                 GatewayCommand::CloseStatement { statement_id: decode_statement_id(payload)? }
             }
             // A10: clients (mysql-connector-python) send COM_STMT_RESET between executes.
@@ -155,6 +159,10 @@ impl FrontendProtocolAdapter for MySqlFrontendProtocol {
         response: GatewayResponse,
         session: &SessionState,
     ) -> GatewayResult<Vec<Vec<u8>>> {
+        if self.suppress_next_response {
+            self.suppress_next_response = false;
+            return Ok(vec![]);
+        }
         match response {
             GatewayResponse::Ok { .. } | GatewayResponse::Pong | GatewayResponse::Bye => {
                 Ok(vec![ok_packet()[4..].to_vec()])
@@ -464,15 +472,22 @@ fn decode_binary_param_value(data: &[u8], type_byte: u8) -> Option<(GatewayValue
             let text = decode_mysql_binary_time_text(&data[1..1 + len])?;
             Some((GatewayValue::String(text), 1 + len))
         }
-        // String-like / decimal / binary blobs as length-encoded strings.
-        MYSQL_TYPE_STRING
-        | MYSQL_TYPE_VAR_STRING
-        | MYSQL_TYPE_VARCHAR
-        | MYSQL_TYPE_BLOB
-        | MYSQL_TYPE_TINY_BLOB
-        | MYSQL_TYPE_MEDIUM_BLOB
-        | MYSQL_TYPE_LONG_BLOB
-        | MYSQL_TYPE_DECIMAL
+        MYSQL_TYPE_BLOB | MYSQL_TYPE_TINY_BLOB | MYSQL_TYPE_MEDIUM_BLOB | MYSQL_TYPE_LONG_BLOB => {
+            let (bytes, n) = read_lenc_bytes(data)?;
+            Some((GatewayValue::Bytes(bytes), n))
+        }
+        // mysql-connector-python can label a Python `bytes` bind as a string
+        // wire type. Preserve invalid UTF-8 as bytes instead of replacing it.
+        MYSQL_TYPE_STRING | MYSQL_TYPE_VAR_STRING | MYSQL_TYPE_VARCHAR => {
+            let (bytes, n) = read_lenc_bytes(data)?;
+            let value = match String::from_utf8(bytes) {
+                Ok(text) => GatewayValue::String(text),
+                Err(error) => GatewayValue::Bytes(error.into_bytes()),
+            };
+            Some((value, n))
+        }
+        // Decimal and remaining textual values use length-encoded UTF-8.
+        MYSQL_TYPE_DECIMAL
         | MYSQL_TYPE_NEWDECIMAL
         | MYSQL_TYPE_ENUM
         | MYSQL_TYPE_SET
@@ -485,6 +500,13 @@ fn decode_binary_param_value(data: &[u8], type_byte: u8) -> Option<(GatewayValue
 }
 
 fn read_lenc_string(data: &[u8]) -> Option<(String, usize)> {
+    let (bytes, consumed) = read_lenc_bytes(data)?;
+    let value = String::from_utf8(bytes.clone())
+        .unwrap_or_else(|_| String::from_utf8_lossy(&bytes).into_owned());
+    Some((value, consumed))
+}
+
+fn read_lenc_bytes(data: &[u8]) -> Option<(Vec<u8>, usize)> {
     if data.is_empty() {
         return None;
     }
@@ -511,17 +533,13 @@ fn read_lenc_string(data: &[u8]) -> Option<(String, usize)> {
             let len = u64::from_le_bytes(data[1..9].try_into().ok()?) as usize;
             (len, 9)
         }
-        0xfb => return Some((String::new(), 1)), // NULL as empty for safety
+        0xfb => return Some((Vec::new(), 1)), // NULL as empty for safety
         n => (n as usize, 1),
     };
     if data.len() < hdr + len {
         return None;
     }
-    let s = std::str::from_utf8(&data[hdr..hdr + len])
-        .ok()
-        .map(|s| s.to_string())
-        .unwrap_or_else(|| String::from_utf8_lossy(&data[hdr..hdr + len]).into_owned());
-    Some((s, hdr + len))
+    Some((data[hdr..hdr + len].to_vec(), hdr + len))
 }
 
 /// COM_STMT_PREPARE OK body (without packet header):
@@ -1304,6 +1322,17 @@ mod tests {
             commands,
             Ok(vec![GatewayCommand::CloseStatement { statement_id: "42".into() }])
         );
+        assert_eq!(
+            adapter.encode(
+                GatewayResponse::Ok { affected_rows: 0, last_insert_id: None },
+                &session,
+            ),
+            Ok(vec![])
+        );
+        assert_eq!(
+            adapter.encode(GatewayResponse::Pong, &session),
+            Ok(vec![ok_packet()[4..].to_vec()])
+        );
     }
 
     #[test]
@@ -1622,6 +1651,24 @@ mod tests {
         .unwrap();
         assert_eq!(v, GatewayValue::String("-1 10:08:21".into()));
         assert_eq!(n, 9);
+    }
+
+    #[test]
+    fn a10_decodes_binary_blob_param_without_utf8_loss() {
+        let bytes = [6, 0x00, 0x01, 0x02, 0x7f, 0x80, 0xff];
+        let (value, consumed) =
+            decode_binary_param_value(&bytes, ColumnType::MYSQL_TYPE_BLOB as u8).unwrap();
+        assert_eq!(value, GatewayValue::Bytes(vec![0x00, 0x01, 0x02, 0x7f, 0x80, 0xff]));
+        assert_eq!(consumed, bytes.len());
+    }
+
+    #[test]
+    fn a10_preserves_invalid_utf8_string_param_as_bytes() {
+        let bytes = [6, 0x00, 0x01, 0x02, 0x7f, 0x80, 0xff];
+        let (value, consumed) =
+            decode_binary_param_value(&bytes, ColumnType::MYSQL_TYPE_STRING as u8).unwrap();
+        assert_eq!(value, GatewayValue::Bytes(vec![0x00, 0x01, 0x02, 0x7f, 0x80, 0xff]));
+        assert_eq!(consumed, bytes.len());
     }
 
     #[test]

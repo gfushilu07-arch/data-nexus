@@ -1535,6 +1535,9 @@ impl MySqlBackendConnection {
 
     /// A10: result columns from COM_STMT_PREPARE catalog (no execute).
     async fn prepare_result_columns(&mut self, sql: &str) -> GatewayResult<Vec<GatewayColumn>> {
+        // A client re-prepare must observe schema changes. A pooled backend
+        // connection may still cache the old statement metadata for this SQL.
+        self.stmt_cache.lock().remove(sql);
         let prepared = self.get_or_prepare(sql).await?;
         Ok(prepared.columns)
     }
