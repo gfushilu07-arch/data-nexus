@@ -15,6 +15,7 @@ FETCH FORWARD 1 FROM sqlt_backend_cursor;
 -- @action backend_terminate
 SELECT pg_terminate_backend(:backend_pid);
 -- @step fetch_after_terminate
+-- @action reconnect_after_backend_failure
 FETCH FORWARD 1 FROM sqlt_backend_cursor;
 -- @step cleanup_probe
 SELECT COUNT(*) FROM pg_stat_activity

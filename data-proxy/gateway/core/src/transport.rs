@@ -93,6 +93,12 @@ impl ResponseWriter for CollectingWriter {
 pub trait BackendConnector: Send + Sync {
     fn protocol(&self) -> ProtocolKind;
 
+    /// Check whether backend state held for the current frontend session is usable.
+    /// Stateless connectors and sessions without a lease are healthy by default.
+    async fn check_session_health(&self) -> GatewayResult<()> {
+        Ok(())
+    }
+
     async fn execute_with_mode(
         &self,
         command: GatewayCommand,

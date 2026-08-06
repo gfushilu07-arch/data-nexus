@@ -1480,6 +1480,16 @@ impl CoreGatewayConnection {
                     finish_command_metrics(&self.metrics, labels, started_at, "n/a", 0);
                     return Ok(());
                 };
+                if let Err(error) = self.backend.check_session_health().await {
+                    self.session.transaction_state = TransactionState::Failed;
+                    let response = GatewayResponse::Error {
+                        code: "08006".into(),
+                        message: format!("cursor backend connection failed: {error}"),
+                    };
+                    self.encode_response_to_writer(response, writer).await?;
+                    finish_command_metrics(&self.metrics, labels, started_at, "n/a", 0);
+                    return Ok(());
+                }
                 use gateway_core::PrefixedRowStream;
                 let mut rows = Vec::new();
                 let columns = held.query.columns.clone();

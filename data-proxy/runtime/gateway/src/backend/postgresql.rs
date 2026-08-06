@@ -1164,6 +1164,24 @@ impl BackendConnector for PostgreSqlBackendConnector {
         ProtocolKind::PostgreSql
     }
 
+    async fn check_session_health(&self) -> GatewayResult<()> {
+        let Some(conn) = self.txn_lease.lock().take() else {
+            return Ok(());
+        };
+        match conn.simple_query("SELECT 1").await {
+            Ok(_) => {
+                self.store_lease(conn);
+                Ok(())
+            }
+            Err(error) => {
+                drop(conn);
+                Err(GatewayError::Backend(format!(
+                    "postgresql transaction connection is closed: {error}"
+                )))
+            }
+        }
+    }
+
     async fn execute_with_mode(
         &self,
         command: GatewayCommand,

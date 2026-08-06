@@ -143,6 +143,10 @@ def run_case(args: argparse.Namespace, steps: list[CursorStep]) -> dict[str, Any
                 wire.close()
                 wire = reconnect(args)
 
+            if step.action == "reconnect_after_backend_failure":
+                wire.close()
+                wire = reconnect(args)
+
             if disconnect_after and step.name == disconnect_after:
                 if args.disconnect_mode == "terminate":
                     wire.send(message(b"X"))
@@ -164,6 +168,7 @@ def main() -> int:
     parser.add_argument("--database", default="sqlt")
     parser.add_argument("--disconnect-after")
     parser.add_argument("--disconnect-mode", choices=("terminate", "eof"), default="eof")
+    parser.add_argument("--path", choices=("direct", "gateway"), required=True)
     parser.add_argument("--oracle", type=Path)
     args = parser.parse_args()
     result = run_case(args, read_steps(args.sql))
@@ -178,6 +183,8 @@ def main() -> int:
             raise AssertionError(f"step set mismatch: {sorted(actual_steps)} != {sorted(expected_steps)}")
         for name, expected in expected_steps.items():
             actual = actual_steps[name]
+            if "direct" in expected or "gateway" in expected:
+                expected = expected[args.path]
             if name == "fetch_backend_pid" and expected.get("rows") == [["$PID", "101"]]:
                 expected = {**expected, "rows": [[actual["rows"][0][0], "101"]]}
             compare_step(actual, expected)

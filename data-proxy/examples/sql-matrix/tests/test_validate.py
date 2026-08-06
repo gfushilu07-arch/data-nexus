@@ -72,6 +72,14 @@ class ValidateSqlMatrixTest(unittest.TestCase):
         oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
         self.assert_has_error("sqlstates must contain SQLSTATE values")
 
+    def test_cursor_path_oracle_requires_stable_error_identity(self) -> None:
+        oracle_path = self.root / "cursor-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        step = oracles["results"]["SQLT-CURSOR-008"]["steps"]["fetch_after_terminate"]
+        step["gateway"]["sqlstates"] = ["any"]
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("gateway.sqlstates must contain SQLSTATE values")
+
     def test_duplicate_case_id_is_rejected(self) -> None:
         manifest = self.manifest()
         manifest["cases"].append(copy.deepcopy(manifest["cases"][0]))

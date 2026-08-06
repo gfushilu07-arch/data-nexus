@@ -71,7 +71,7 @@ run_client() {
   local port=25432 user=sqlt password=sqlt
   [[ "$path" == gateway ]] && { port=29089; user=root; password=root; }
   local args=(--case-id "$case_id" --sql "/matrix/cases/$sql_file" --oracle "/run/results/$oracle_file"
-    --host host.docker.internal --port "$port" --user "$user" --password "$password")
+    --host host.docker.internal --port "$port" --user "$user" --password "$password" --path "$path")
   if [[ "$case_id" == SQLT-CURSOR-007 ]]; then
     args+=(--disconnect-after fetch_before_disconnect --disconnect-mode "$mode")
   fi

@@ -818,8 +818,9 @@ def _validate_cursor_oracles(root: Path, cases: list[Any], errors: list[str]) ->
                 expected[case_id] = case
     if set(results) != set(expected):
         errors.append(f"cursor-oracles.json cases must be {sorted(expected)}, got {sorted(results)}")
-    allowed_step_fields = {"rows", "commands", "ready", "sqlstates", "control_rows", "eof", "action"}
-    allowed_actions = {"backend_terminate"}
+    observable_fields = {"rows", "commands", "ready", "sqlstates", "control_rows", "eof"}
+    allowed_step_fields = observable_fields | {"action", "direct", "gateway"}
+    allowed_actions = {"backend_terminate", "reconnect_after_backend_failure"}
     for case_id, case in expected.items():
         label = f"cursor-oracles.json results.{case_id}"
         value = results.get(case_id)
@@ -851,8 +852,34 @@ def _validate_cursor_oracles(root: Path, cases: list[Any], errors: list[str]) ->
             if not isinstance(step, dict) or not set(step) <= allowed_step_fields:
                 errors.append(f"{step_label} has unknown fields")
                 continue
-            if not (set(step) & {"rows", "commands", "ready", "sqlstates", "control_rows", "eof"}):
+            if not (set(step) & (observable_fields | {"direct", "gateway"})):
                 errors.append(f"{step_label} needs an observable contract")
+            if "direct" in step or "gateway" in step:
+                if set(step) - {"action", "direct", "gateway"} or not {"direct", "gateway"} <= set(step):
+                    errors.append(f"{step_label} path-specific fields must be action, direct, and gateway")
+                else:
+                    for path_name in ("direct", "gateway"):
+                        path_value = step[path_name]
+                        if not isinstance(path_value, dict) or not path_value or not set(path_value) <= observable_fields:
+                            errors.append(f"{step_label}.{path_name} has invalid fields")
+                            continue
+                        if "sqlstates" in path_value and (
+                            not isinstance(path_value["sqlstates"], list)
+                            or any(
+                                not isinstance(state, str)
+                                or not re.fullmatch(r"[0-9A-Z]{5}", state)
+                                for state in path_value["sqlstates"]
+                            )
+                        ):
+                            errors.append(f"{step_label}.{path_name}.sqlstates must contain SQLSTATE values")
+                        if "ready" in path_value and (
+                            not isinstance(path_value["ready"], list)
+                            or any(status not in {"I", "T", "E"} for status in path_value["ready"])
+                        ):
+                            errors.append(f"{step_label}.{path_name}.ready must contain I, T, or E")
+                        if "eof" in path_value and path_value["eof"] is not True:
+                            errors.append(f"{step_label}.{path_name}.eof must be true")
+                continue
             for field in ("rows", "control_rows"):
                 if field in step and (
                     not isinstance(step[field], list)
@@ -896,6 +923,8 @@ def _validate_cursor_oracles(root: Path, cases: list[Any], errors: list[str]) ->
                 errors.append(f"{label}.steps.terminate_backend must declare backend_terminate")
             elif steps.get("terminate_backend", {}).get("action") != "backend_terminate":
                 errors.append(f"{label}.steps.terminate_backend.action must match SQL @action")
+            if actions.get("fetch_after_terminate") != "reconnect_after_backend_failure":
+                errors.append(f"{label}.steps.fetch_after_terminate must declare reconnect action")
         elif actions:
             errors.append(f"{label}: actions are only allowed for SQLT-CURSOR-008")
         if case.get("frontends") != ["pg_simple"] or case.get("protocols") != ["pg_simple"]:
