@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "state_query": "fixtures/mysql/oracle-prepared-state.sql",
+  "results": {
+    "SQLT-PRP-001": {
+      "sql_file": "prepared/zero-parameter-select.sql",
+      "parameters": [],
+      "expected": {"columns": ["customer_id", "display_name"], "rows": [[101, "Ada"], [102, "Lin"]], "errors": [], "close_recovery": "closed"},
+      "state": "mutation_rows\t0\nprepared_table\t0\nprepared_columns\t0\n"
+    },
+    "SQLT-PRP-002": {
+      "sql_file": "prepared/single-parameter-select.sql",
+      "parameters": [101],
+      "expected": {"columns": ["customer_id", "display_name"], "rows": [[101, "Ada"]], "errors": [], "close_recovery": "closed"},
+      "state": "mutation_rows\t0\nprepared_table\t0\nprepared_columns\t0\n"
+    },
+    "SQLT-PRP-003": {
+      "sql_file": "prepared/null-parameters.sql",
+      "parameters": [null, null],
+      "expected": {"columns": ["null_value", "is_null"], "rows": [[null, 1]], "errors": [], "close_recovery": "closed"},
+      "state": "mutation_rows\t0\nprepared_table\t0\nprepared_columns\t0\n"
+    },
+    "SQLT-PRP-004": {
+      "sql_file": "prepared/scalar-types.sql",
+      "parameters": [{"decimal": "1234.50"}, {"date": "2026-08-06"}, {"time": "07:16:16"}, {"datetime": "2026-08-06 07:16:16"}],
+      "expected": {"columns": ["decimal_value", "date_value", "time_value", "datetime_value"], "rows": [["1234.50", "2026-08-06", "07:16:16", "2026-08-06 07:16:16"]], "errors": [], "close_recovery": "closed"},
+      "state": "mutation_rows\t0\nprepared_table\t0\nprepared_columns\t0\n"
+    },
+    "SQLT-PRP-005": {
+      "sql_file": "prepared/long-string-bytes.sql",
+      "parameters": [{"string": {"prefix": "prepared-", "repeat": "x", "count": 312, "suffix": "END!"}}, {"string": {"prefix": "prepared-", "repeat": "x", "count": 312, "suffix": "END!"}}, {"bytes_hex": "0001027f80ff"}],
+      "expected": {"columns": ["text_length", "text_suffix", "bytes_hex"], "rows": [[325, "END!", "0001027F80FF"]], "errors": [], "close_recovery": "closed"},
+      "state": "mutation_rows\t0\nprepared_table\t0\nprepared_columns\t0\n"
+    },
+    "SQLT-PRP-006": {
+      "sql_file": "prepared/parameter-count-recovery.sql",
+      "parameters": [101],
+      "expected": {"columns": ["customer_id"], "rows": [[101]], "errors": ["missing_binding_accepted_empty_result", "client_parameter_count"], "close_recovery": "closed"},
+      "state": "mutation_rows\t0\nprepared_table\t0\nprepared_columns\t0\n"
+    },
+    "SQLT-PRP-007": {
+      "sql_file": "prepared/rebind-repeat.sql",
+      "parameters": [[42, "first"], [7, "second"], [null, "third"]],
+      "expected": {"columns": ["left_value", "right_value"], "rows": [[42, "first"], [7, "second"], [null, "third"]], "errors": [], "close_recovery": "closed"},
+      "state": "mutation_rows\t0\nprepared_table\t0\nprepared_columns\t0\n"
+    },
+    "SQLT-PRP-008": {
+      "sql_file": "prepared/schema-change-reprepare.sql",
+      "parameters": [],
+      "control_sql": "fixtures/mysql/prepared-schema-change.sql",
+      "expected": {"columns_before": ["probe_id"], "rows_before": [[1]], "columns": ["probe_id", "label"], "rows": [[1, "after-change"]], "errors": ["result_rebind_required"], "close_recovery": "closed"},
+      "state": "mutation_rows\t0\nprepared_table\t1\nprepared_columns\t2\n"
+    }
+  }
+}

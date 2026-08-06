@@ -567,6 +567,136 @@ def _validate_tcl_oracles(root: Path, cases: list[Any], errors: list[str]) -> No
                     errors.append(f"{label}.error must be a newline-terminated string")
 
 
+def _validate_prepared_oracles(root: Path, cases: list[Any], errors: list[str]) -> None:
+    """Validate the strict MySQL binary-prepared corpus contract."""
+    oracles = _load_json(root / "prepared-oracles.json", errors)
+    if not isinstance(oracles, dict):
+        errors.append("prepared-oracles.json must contain an object")
+        return
+    if oracles.get("schema_version") != 1:
+        errors.append("prepared-oracles.json schema_version must be 1")
+    state_query = oracles.get("state_query")
+    if not isinstance(state_query, str) or not state_query.endswith(".sql"):
+        errors.append("prepared-oracles.json state_query must be an SQL path")
+    else:
+        state_path = root / PurePosixPath(state_query)
+        try:
+            state_path.resolve().relative_to(root.resolve())
+        except ValueError:
+            errors.append("prepared-oracles.json state_query escapes matrix root")
+        if not state_path.is_file():
+            errors.append(f"prepared-oracles.json state_query does not exist: {state_query}")
+
+    expected: dict[str, set[str]] = {}
+    for case in cases:
+        if (
+            isinstance(case, dict)
+            and case.get("family") == "cursor"
+            and case.get("capability") == "cursor.mysql_prepared"
+        ):
+            case_id = case.get("id")
+            if isinstance(case_id, str):
+                expected[case_id] = set(case.get("dialects", []))
+                if expected[case_id] != {"mysql"}:
+                    errors.append(f"{case_id} must declare only mysql dialect")
+                if case.get("backends") != ["mysql"]:
+                    errors.append(f"{case_id} must declare only mysql backend")
+                if case.get("frontends") != ["mysql_binary"] or case.get("protocols") != ["mysql_binary"]:
+                    errors.append(f"{case_id} must use mysql_binary frontend and protocol")
+
+    results = oracles.get("results")
+    if not isinstance(results, dict) or set(results) != set(expected):
+        errors.append(
+            f"prepared-oracles.json cases must be {sorted(expected)}, got {sorted(results or {})}"
+        )
+        return
+    for case_id, dialects in expected.items():
+        value = results[case_id]
+        label = f"prepared-oracles.json results.{case_id}"
+        if not isinstance(value, dict):
+            errors.append(f"{label} must be an object")
+            continue
+        required = {"sql_file", "parameters", "expected", "state"}
+        allowed = required | {"control_sql"}
+        if set(value) - allowed or not required <= set(value):
+            errors.append(f"{label} fields must be a subset of {sorted(allowed)} and include {sorted(required)}")
+        sql_file = value.get("sql_file")
+        manifest_case = next((case for case in cases if isinstance(case, dict) and case.get("id") == case_id), {})
+        if not isinstance(sql_file, str) or not (root / "cases" / PurePosixPath(sql_file)).is_file():
+            errors.append(f"{label}.sql_file must name an existing case SQL")
+        elif sql_file != manifest_case.get("sql_file"):
+            errors.append(f"{label}.sql_file must match manifest sql_file")
+        else:
+            sql_path = root / "cases" / PurePosixPath(sql_file)
+            try:
+                sql_path.resolve().relative_to((root / "cases").resolve())
+            except ValueError:
+                errors.append(f"{label}.sql_file escapes case root")
+            else:
+                sql_text = "\n".join(sql_path.read_text(encoding="utf-8").splitlines()[4:])
+                placeholder_count = len(re.findall(r"(?<!%)%s", sql_text))
+                parameters = value.get("parameters")
+                if case_id == "SQLT-PRP-007":
+                    if isinstance(parameters, list):
+                        for index, binding in enumerate(parameters):
+                            if not isinstance(binding, list) or len(binding) != placeholder_count:
+                                errors.append(f"{label}.parameters[{index}] must bind {placeholder_count} placeholders")
+                elif isinstance(parameters, list) and len(parameters) != placeholder_count:
+                    errors.append(f"{label}.parameters must bind {placeholder_count} placeholders")
+        parameters = value.get("parameters")
+        if not isinstance(parameters, list):
+            errors.append(f"{label}.parameters must be an array")
+        else:
+            for index, parameter in enumerate(parameters):
+                bindings = parameter if case_id == "SQLT-PRP-007" and isinstance(parameter, list) else [parameter]
+                for binding in bindings:
+                    if isinstance(binding, dict):
+                        if len(binding) != 1 or next(iter(binding), "") not in {"string", "bytes_hex", "decimal", "date", "time", "datetime"}:
+                            errors.append(f"{label}.parameters[{index}] has an unknown typed binding")
+                        elif "string" in binding:
+                            spec = binding["string"]
+                            if not isinstance(spec, dict) or set(spec) != {"prefix", "repeat", "count", "suffix"} or not isinstance(spec["count"], int) or spec["count"] < 0 or not all(isinstance(spec[key], str) for key in ("prefix", "repeat", "suffix")):
+                                errors.append(f"{label}.parameters[{index}].string has an invalid description")
+                        elif "bytes_hex" in binding:
+                            if not isinstance(binding["bytes_hex"], str) or re.fullmatch(r"[0-9A-Fa-f]*", binding["bytes_hex"]) is None or len(binding["bytes_hex"]) % 2:
+                                errors.append(f"{label}.parameters[{index}].bytes_hex must be even-length hexadecimal")
+                        else:
+                            key = next(iter(binding))
+                            if not isinstance(binding[key], str) or not binding[key]:
+                                errors.append(f"{label}.parameters[{index}].{key} must be a non-empty string")
+        expected_value = value.get("expected")
+        if not isinstance(expected_value, dict):
+            errors.append(f"{label}.expected must be an object")
+        else:
+            required_expected = {"columns", "rows", "errors", "close_recovery"}
+            if case_id == "SQLT-PRP-008":
+                required_expected |= {"columns_before", "rows_before"}
+            if set(expected_value) != required_expected:
+                errors.append(f"{label}.expected fields must be {sorted(required_expected)}")
+            if not isinstance(expected_value.get("columns"), list) or any(not isinstance(item, str) for item in expected_value.get("columns", [])):
+                errors.append(f"{label}.expected.columns must be a string array")
+            if not isinstance(expected_value.get("rows"), list) or any(not isinstance(row, list) for row in expected_value.get("rows", [])):
+                errors.append(f"{label}.expected.rows must be an array")
+            if not isinstance(expected_value.get("errors"), list) or any(not isinstance(item, str) for item in expected_value.get("errors", [])):
+                errors.append(f"{label}.expected.errors must be a string array")
+            if expected_value.get("close_recovery") != "closed":
+                errors.append(f"{label}.expected.close_recovery must be closed")
+        state = value.get("state")
+        if not isinstance(state, str) or not state.endswith("\n"):
+            errors.append(f"{label}.state must be newline-terminated")
+        if "control_sql" in value:
+            control = value["control_sql"]
+            control_path = root / PurePosixPath(control) if isinstance(control, str) else root
+            try:
+                control_path.resolve().relative_to(root.resolve())
+            except ValueError:
+                errors.append(f"{label}.control_sql escapes matrix root")
+            if not isinstance(control, str) or not control.endswith(".sql") or not control_path.is_file():
+                errors.append(f"{label}.control_sql must name an existing SQL fixture")
+        elif case_id == "SQLT-PRP-008":
+            errors.append(f"{label} must define control_sql")
+
+
 def _validate_ddl_oracles(root: Path, cases: list[Any], errors: list[str]) -> None:
     """Validate exact catalog and stable error contracts for canonical DDL cases."""
     oracles = _load_json(root / "ddl-oracles.json", errors)
@@ -1002,6 +1132,7 @@ def validate_repository(root: Path) -> list[str]:
     _validate_dql_boundary_oracles(root, cases, errors)
     _validate_dml_oracles(root, cases, errors)
     _validate_tcl_oracles(root, cases, errors)
+    _validate_prepared_oracles(root, cases, errors)
     _validate_ddl_oracles(root, cases, errors)
     _validate_ddl_temp_oracles(root, cases, errors)
     _validate_ddl_database_oracles(root, cases, errors)

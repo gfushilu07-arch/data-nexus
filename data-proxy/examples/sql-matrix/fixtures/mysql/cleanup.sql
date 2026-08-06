@@ -25,4 +25,5 @@ DROP TABLE IF EXISTS sqlt_ddl_column;
 DROP TABLE IF EXISTS sqlt_ddl_index;
 DROP TABLE IF EXISTS sqlt_ddl_view_source;
 DROP TABLE IF EXISTS sqlt_tcl_ddl;
+DROP TABLE IF EXISTS sqlt_prepared_schema;
 SET FOREIGN_KEY_CHECKS = 1;

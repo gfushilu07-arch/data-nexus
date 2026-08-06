@@ -274,6 +274,82 @@ class ValidateSqlMatrixTest(unittest.TestCase):
         oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
         self.assert_has_error("SQLT-TCL-001.mysql fields must be")
 
+    def test_prepared_oracle_must_cover_every_case(self) -> None:
+        oracle_path = self.root / "prepared-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        del oracles["results"]["SQLT-PRP-008"]
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("prepared-oracles.json cases must be")
+
+    def test_prepared_oracle_rejects_unknown_field(self) -> None:
+        oracle_path = self.root / "prepared-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["results"]["SQLT-PRP-001"]["unexpected"] = True
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-PRP-001 fields must be")
+
+    def test_prepared_case_must_use_binary_frontend(self) -> None:
+        manifest = self.manifest()
+        prepared = next(case for case in manifest["cases"] if case["id"] == "SQLT-PRP-001")
+        prepared["frontends"] = ["mysql_text"]
+        self.write_manifest(manifest)
+        self.assert_has_error("SQLT-PRP-001 must use mysql_binary frontend")
+
+    def test_prepared_case_must_be_mysql_only(self) -> None:
+        manifest = self.manifest()
+        prepared = next(case for case in manifest["cases"] if case["id"] == "SQLT-PRP-001")
+        prepared["dialects"] = ["mysql", "postgres"]
+        prepared["backends"] = ["mysql", "postgres"]
+        self.write_manifest(manifest)
+        self.assert_has_error("SQLT-PRP-001 must declare only mysql dialect")
+        self.assert_has_error("SQLT-PRP-001 must declare only mysql backend")
+
+    def test_prepared_oracle_sql_file_must_match_manifest(self) -> None:
+        oracle_path = self.root / "prepared-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["results"]["SQLT-PRP-001"]["sql_file"] = "prepared/single-parameter-select.sql"
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-PRP-001.sql_file must match manifest sql_file")
+
+    def test_prepared_oracle_rejects_parameter_count_mismatch(self) -> None:
+        oracle_path = self.root / "prepared-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["results"]["SQLT-PRP-002"]["parameters"] = []
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-PRP-002.parameters must bind 1 placeholders")
+
+    def test_prepared_oracle_rejects_rebind_parameter_count_mismatch(self) -> None:
+        oracle_path = self.root / "prepared-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["results"]["SQLT-PRP-007"]["parameters"][0] = [42]
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-PRP-007.parameters[0] must bind 2 placeholders")
+
+    def test_prepared_oracle_rejects_unknown_typed_binding(self) -> None:
+        oracle_path = self.root / "prepared-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["results"]["SQLT-PRP-002"]["parameters"] = [{"integer": 101}]
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-PRP-002.parameters[0] has an unknown typed binding")
+
+    def test_prepared_state_query_cannot_escape_matrix_root(self) -> None:
+        oracle_path = self.root / "prepared-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        outside = self.root.parent / "outside.sql"
+        outside.write_text("SELECT 1;\n", encoding="utf-8")
+        oracles["state_query"] = "../outside.sql"
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("prepared-oracles.json state_query escapes matrix root")
+
+    def test_prepared_control_sql_cannot_escape_matrix_root(self) -> None:
+        oracle_path = self.root / "prepared-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        outside = self.root.parent / "outside.sql"
+        outside.write_text("SELECT 1;\n", encoding="utf-8")
+        oracles["results"]["SQLT-PRP-008"]["control_sql"] = "../outside.sql"
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-PRP-008.control_sql escapes matrix root")
+
     def test_ddl_oracle_must_cover_every_declared_dialect(self) -> None:
         oracle_path = self.root / "ddl-oracles.json"
         oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
