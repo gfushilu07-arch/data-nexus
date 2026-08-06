@@ -265,6 +265,65 @@ class ValidateSqlMatrixTest(unittest.TestCase):
         oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
         self.assert_has_error("SQLT-DQL-085.mysql fields must be")
 
+    def test_invalid_oracle_cannot_claim_boundary_case(self) -> None:
+        oracle_path = self.root / "invalid-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["results"]["SQLT-INVALID-014"] = copy.deepcopy(
+            oracles["results"]["SQLT-INVALID-001"]
+        )
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("invalid-oracles.json cases must be")
+
+    def test_boundary_oracle_cannot_claim_deterministic_case(self) -> None:
+        oracle_path = self.root / "boundary-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["results"]["SQLT-INVALID-001"] = copy.deepcopy(
+            oracles["results"]["SQLT-INVALID-014"]
+        )
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("boundary-oracles.json cases must be")
+
+    def test_boundary_oracle_rejects_empty_semantic(self) -> None:
+        oracle_path = self.root / "boundary-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["results"]["SQLT-INVALID-014"]["expected"]["mysql"]["gateway"] = {}
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("must be a non-empty exact semantic object")
+
+    def test_boundary_oracle_rejects_nested_fuzzy_semantic(self) -> None:
+        oracle_path = self.root / "boundary-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        semantic = oracles["results"]["SQLT-INVALID-014"]["expected"]["mysql"]["gateway"]
+        semantic["malformed"][0]["error"] = "any"
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("must not contain fuzzy any values")
+
+    def test_boundary_case_rejects_frontend_flow_mismatch(self) -> None:
+        manifest = self.manifest()
+        case = next(item for item in manifest["cases"] if item["id"] == "SQLT-INVALID-014")
+        case["frontends"] = ["mysql_text"]
+        case["protocols"] = ["mysql_text"]
+        self.write_manifest(manifest)
+        self.assert_has_error("SQLT-INVALID-014 frontends and protocols must be ['mysql_binary']")
+
+    def test_boundary_generation_limits_cannot_be_changed(self) -> None:
+        sql_path = self.root / "cases" / "invalid" / "deep-nesting-large-in.sql"
+        sql = sql_path.read_text(encoding="utf-8").replace(
+            "-- @generate nesting=64 in_items=2048",
+            "-- @generate nesting=63 in_items=2048",
+        )
+        sql_path.write_text(sql, encoding="utf-8")
+        self.assert_has_error(
+            "SQLT-INVALID-020 @generate values must be {'nesting': 64, 'in_items': 2048}"
+        )
+
+    def test_boundary_probe_query_must_stay_below_matrix_root(self) -> None:
+        oracle_path = self.root / "boundary-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["probe_queries"]["postgres"] = "../outside.sql"
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("boundary-oracles.json probe_queries.postgres escapes matrix root")
+
     def test_dml_tranches_have_contiguous_case_ids(self) -> None:
         manifest = self.manifest()
         dml_cases = [case for case in manifest["cases"] if case["family"] == "dml"]

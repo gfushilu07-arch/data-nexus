@@ -4470,6 +4470,66 @@
       "protocols": ["mysql_text"], "statement_mode": "single", "transaction_mode": "autocommit", "parameter_mode": "none",
       "expectations": [{"policy": "security_off", "outcome": "deny"}, {"policy": "allow", "outcome": "deny"}, {"policy": "deny", "outcome": "deny"}],
       "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-INVALID-014", "sql_file": "invalid/mysql-binary-bind-boundary.sql", "family": "invalid",
+      "capability": "invalid.protocol_bind", "dialects": ["mysql"], "frontends": ["mysql_binary"], "backends": ["mysql"],
+      "protocols": ["mysql_binary"], "statement_mode": "single", "transaction_mode": "autocommit", "parameter_mode": "positional",
+      "expectations": [{"policy": "security_off", "outcome": "deny"}, {"policy": "allow", "outcome": "deny"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-INVALID-015", "sql_file": "invalid/postgres-extended-bind-boundary.sql", "family": "invalid",
+      "capability": "invalid.protocol_bind", "dialects": ["postgres"], "frontends": ["pg_extended"], "backends": ["postgres"],
+      "protocols": ["pg_extended"], "statement_mode": "single", "transaction_mode": "autocommit", "parameter_mode": "positional",
+      "expectations": [{"policy": "security_off", "outcome": "deny"}, {"policy": "allow", "outcome": "deny"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-INVALID-016", "sql_file": "invalid/postgres-multi-statement-atomicity.sql", "family": "invalid",
+      "capability": "invalid.lexical_boundary", "dialects": ["postgres"], "frontends": ["pg_simple"], "backends": ["postgres"],
+      "protocols": ["pg_simple"], "statement_mode": "script", "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "deny"}, {"policy": "allow", "outcome": "deny"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-INVALID-017", "sql_file": "invalid/comment-token-boundary.sql", "family": "invalid",
+      "capability": "invalid.lexical_boundary", "dialects": ["mysql", "postgres"], "frontends": ["mysql_text", "pg_simple"],
+      "backends": ["mysql", "postgres"], "protocols": ["mysql_text", "pg_simple"], "statement_mode": "single",
+      "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "allow"}, {"policy": "allow", "outcome": "allow"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-INVALID-018", "sql_file": "invalid/bound-quote-backslash.sql", "family": "invalid",
+      "capability": "invalid.lexical_boundary", "dialects": ["mysql", "postgres"], "frontends": ["mysql_binary", "pg_extended"],
+      "backends": ["mysql", "postgres"], "protocols": ["mysql_binary", "pg_extended"], "statement_mode": "single",
+      "transaction_mode": "autocommit", "parameter_mode": "positional",
+      "expectations": [{"policy": "security_off", "outcome": "allow"}, {"policy": "allow", "outcome": "allow"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-INVALID-019", "sql_file": "invalid/overlong-identifier.sql", "family": "invalid",
+      "capability": "invalid.resource_boundary", "dialects": ["mysql", "postgres"], "frontends": ["mysql_text", "pg_simple"],
+      "backends": ["mysql", "postgres"], "protocols": ["mysql_text", "pg_simple"], "statement_mode": "single",
+      "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "deny"}, {"policy": "allow", "outcome": "deny"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-INVALID-020", "sql_file": "invalid/deep-nesting-large-in.sql", "family": "invalid",
+      "capability": "invalid.resource_boundary", "dialects": ["mysql", "postgres"], "frontends": ["mysql_text", "pg_simple"],
+      "backends": ["mysql", "postgres"], "protocols": ["mysql_text", "pg_simple"], "statement_mode": "single",
+      "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "allow"}, {"policy": "allow", "outcome": "allow"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-INVALID-021", "sql_file": "invalid/postgres-frontend-message-limit.sql", "family": "invalid",
+      "capability": "invalid.resource_boundary", "dialects": ["postgres"], "frontends": ["pg_simple"], "backends": ["postgres"],
+      "protocols": ["pg_simple"], "statement_mode": "single", "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "deny"}, {"policy": "allow", "outcome": "deny"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["nightly", "release"]
     }
   ]
 }

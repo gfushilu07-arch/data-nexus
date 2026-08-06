@@ -1,0 +1,776 @@
+{
+  "schema_version": 1,
+  "probe_queries": {
+    "mysql": "fixtures/mysql/oracle-invalid-state.sql",
+    "postgres": "fixtures/postgres/oracle-invalid-state.sql"
+  },
+  "probe_state": {
+    "mysql": "4\t6\t0\t5\talpha\t10.00\n",
+    "postgres": "4\t6\t0\t5\talpha\t10.00\n"
+  },
+  "results": {
+    "SQLT-INVALID-014": {
+      "sql_file": "invalid/mysql-binary-bind-boundary.sql",
+      "flow": "mysql_bind",
+      "expected": {
+        "mysql": {
+          "direct": {
+            "connection": "same",
+            "malformed": [
+              {
+                "error": "mysql\t1835\tHY000",
+                "kind": "missing",
+                "recovery_rows": [
+                  [
+                    42
+                  ]
+                ]
+              },
+              {
+                "error": "mysql\t1210\tHY000",
+                "kind": "extra",
+                "recovery_rows": [
+                  [
+                    42
+                  ]
+                ]
+              },
+              {
+                "error": "mysql\t1210\tHY000",
+                "kind": "invalid_type",
+                "recovery_rows": [
+                  [
+                    42
+                  ]
+                ]
+              }
+            ],
+            "recovery_rows": [
+              [
+                43
+              ]
+            ]
+          },
+          "gateway": {
+            "connection": "same",
+            "malformed": [
+              {
+                "error": "mysql\t1105\tHY000",
+                "kind": "missing",
+                "recovery_rows": [
+                  [
+                    42
+                  ]
+                ]
+              },
+              {
+                "error": "mysql\t1105\tHY000",
+                "kind": "extra",
+                "recovery_rows": [
+                  [
+                    42
+                  ]
+                ]
+              },
+              {
+                "error": "mysql\t1105\tHY000",
+                "kind": "invalid_type",
+                "recovery_rows": [
+                  [
+                    42
+                  ]
+                ]
+              }
+            ],
+            "recovery_rows": [
+              [
+                43
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "SQLT-INVALID-015": {
+      "sql_file": "invalid/postgres-extended-bind-boundary.sql",
+      "flow": "pg_bind",
+      "expected": {
+        "postgres": {
+          "direct": {
+            "attempts": [
+              {
+                "failed": {
+                  "commands": [],
+                  "errors": [
+                    "postgres\t08P01"
+                  ],
+                  "ready": [
+                    "I"
+                  ],
+                  "rows": []
+                },
+                "kind": "missing",
+                "recovered": {
+                  "commands": [
+                    "SELECT 1"
+                  ],
+                  "errors": [],
+                  "ready": [
+                    "I"
+                  ],
+                  "rows": [
+                    [
+                      "42"
+                    ]
+                  ]
+                }
+              },
+              {
+                "failed": {
+                  "commands": [],
+                  "errors": [
+                    "postgres\t08P01"
+                  ],
+                  "ready": [
+                    "I"
+                  ],
+                  "rows": []
+                },
+                "kind": "extra",
+                "recovered": {
+                  "commands": [
+                    "SELECT 1"
+                  ],
+                  "errors": [],
+                  "ready": [
+                    "I"
+                  ],
+                  "rows": [
+                    [
+                      "42"
+                    ]
+                  ]
+                }
+              },
+              {
+                "failed": {
+                  "commands": [],
+                  "errors": [
+                    "postgres\t22P02"
+                  ],
+                  "ready": [
+                    "I"
+                  ],
+                  "rows": []
+                },
+                "kind": "invalid_type",
+                "recovered": {
+                  "commands": [
+                    "SELECT 1"
+                  ],
+                  "errors": [],
+                  "ready": [
+                    "I"
+                  ],
+                  "rows": [
+                    [
+                      "42"
+                    ]
+                  ]
+                }
+              }
+            ],
+            "connection": "same"
+          },
+          "gateway": {
+            "attempts": [
+              {
+                "failed": {
+                  "commands": [],
+                  "errors": [
+                    "postgres\t08P01"
+                  ],
+                  "ready": [
+                    "I"
+                  ],
+                  "rows": []
+                },
+                "kind": "missing",
+                "recovered": {
+                  "commands": [
+                    "SELECT 1"
+                  ],
+                  "errors": [],
+                  "ready": [
+                    "I"
+                  ],
+                  "rows": [
+                    [
+                      "42"
+                    ]
+                  ]
+                }
+              },
+              {
+                "failed": {
+                  "commands": [],
+                  "errors": [
+                    "postgres\t08P01"
+                  ],
+                  "ready": [
+                    "I"
+                  ],
+                  "rows": []
+                },
+                "kind": "extra",
+                "recovered": {
+                  "commands": [
+                    "SELECT 1"
+                  ],
+                  "errors": [],
+                  "ready": [
+                    "I"
+                  ],
+                  "rows": [
+                    [
+                      "42"
+                    ]
+                  ]
+                }
+              },
+              {
+                "failed": {
+                  "commands": [],
+                  "errors": [
+                    "postgres\t22P02"
+                  ],
+                  "ready": [
+                    "I"
+                  ],
+                  "rows": []
+                },
+                "kind": "invalid_type",
+                "recovered": {
+                  "commands": [
+                    "SELECT 1"
+                  ],
+                  "errors": [],
+                  "ready": [
+                    "I"
+                  ],
+                  "rows": [
+                    [
+                      "42"
+                    ]
+                  ]
+                }
+              }
+            ],
+            "connection": "same"
+          }
+        }
+      }
+    },
+    "SQLT-INVALID-016": {
+      "sql_file": "invalid/postgres-multi-statement-atomicity.sql",
+      "flow": "multi_statement",
+      "expected": {
+        "postgres": {
+          "direct": {
+            "commands": [
+              "INSERT 0 1"
+            ],
+            "errors": [
+              "postgres\t42P01"
+            ],
+            "ready": [
+              "I"
+            ],
+            "recovery": {
+              "commands": [
+                "SELECT 1"
+              ],
+              "errors": [],
+              "ready": [
+                "I"
+              ],
+              "rows": [
+                [
+                  "42"
+                ]
+              ]
+            },
+            "rows": []
+          },
+          "gateway": {
+            "commands": [
+              "INSERT 0 1"
+            ],
+            "errors": [
+              "postgres\t42P01"
+            ],
+            "ready": [
+              "I"
+            ],
+            "recovery": {
+              "commands": [
+                "SELECT 1"
+              ],
+              "errors": [],
+              "ready": [
+                "I"
+              ],
+              "rows": [
+                [
+                  "42"
+                ]
+              ]
+            },
+            "rows": []
+          }
+        }
+      }
+    },
+    "SQLT-INVALID-017": {
+      "sql_file": "invalid/comment-token-boundary.sql",
+      "flow": "comments",
+      "expected": {
+        "mysql": {
+          "direct": {
+            "errors": [],
+            "recovery_rows": [
+              [
+                42
+              ]
+            ],
+            "rows": [
+              [
+                2
+              ]
+            ]
+          },
+          "gateway": {
+            "errors": [],
+            "recovery_rows": [
+              [
+                42
+              ]
+            ],
+            "rows": [
+              [
+                2
+              ]
+            ]
+          }
+        },
+        "postgres": {
+          "direct": {
+            "commands": [
+              "SELECT 1"
+            ],
+            "errors": [],
+            "ready": [
+              "I"
+            ],
+            "recovery": {
+              "commands": [
+                "SELECT 1"
+              ],
+              "errors": [],
+              "ready": [
+                "I"
+              ],
+              "rows": [
+                [
+                  "42"
+                ]
+              ]
+            },
+            "rows": [
+              [
+                "2"
+              ]
+            ]
+          },
+          "gateway": {
+            "commands": [
+              "SELECT 1"
+            ],
+            "errors": [],
+            "ready": [
+              "I"
+            ],
+            "recovery": {
+              "commands": [
+                "SELECT 1"
+              ],
+              "errors": [],
+              "ready": [
+                "I"
+              ],
+              "rows": [
+                [
+                  "42"
+                ]
+              ]
+            },
+            "rows": [
+              [
+                "2"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "SQLT-INVALID-018": {
+      "sql_file": "invalid/bound-quote-backslash.sql",
+      "flow": "bound_value",
+      "expected": {
+        "mysql": {
+          "direct": {
+            "connection": "same",
+            "rows": [
+              [
+                "quote=' backslash=\\ semicolon=; line=-- block=/* */ sql=SELECT 9918"
+              ]
+            ]
+          },
+          "gateway": {
+            "connection": "same",
+            "rows": [
+              [
+                "quote=' backslash=\\ semicolon=; line=-- block=/* */ sql=SELECT 9918"
+              ]
+            ]
+          }
+        },
+        "postgres": {
+          "direct": {
+            "commands": [
+              "SELECT 1"
+            ],
+            "connection": "same",
+            "errors": [],
+            "ready": [
+              "I"
+            ],
+            "rows": [
+              [
+                "quote=' backslash=\\ semicolon=; line=-- block=/* */ sql=SELECT 9918"
+              ]
+            ]
+          },
+          "gateway": {
+            "commands": [
+              "SELECT 1"
+            ],
+            "connection": "same",
+            "errors": [],
+            "ready": [
+              "I"
+            ],
+            "rows": [
+              [
+                "quote=' backslash=\\ semicolon=; line=-- block=/* */ sql=SELECT 9918"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "SQLT-INVALID-019": {
+      "sql_file": "invalid/overlong-identifier.sql",
+      "flow": "identifier",
+      "expected": {
+        "mysql": {
+          "direct": {
+            "errors": [
+              "mysql\t1059\t42000"
+            ],
+            "recovery_rows": [
+              [
+                42
+              ]
+            ],
+            "rows": []
+          },
+          "gateway": {
+            "errors": [
+              "mysql\t1059\t42000"
+            ],
+            "recovery_rows": [
+              [
+                42
+              ]
+            ],
+            "rows": []
+          }
+        },
+        "postgres": {
+          "direct": {
+            "commands": [],
+            "errors": [
+              "postgres\t42P01"
+            ],
+            "ready": [
+              "I"
+            ],
+            "recovery": {
+              "commands": [
+                "SELECT 1"
+              ],
+              "errors": [],
+              "ready": [
+                "I"
+              ],
+              "rows": [
+                [
+                  "42"
+                ]
+              ]
+            },
+            "rows": []
+          },
+          "gateway": {
+            "commands": [],
+            "errors": [
+              "postgres\t42P01"
+            ],
+            "ready": [
+              "I"
+            ],
+            "recovery": {
+              "commands": [
+                "SELECT 1"
+              ],
+              "errors": [],
+              "ready": [
+                "I"
+              ],
+              "rows": [
+                [
+                  "42"
+                ]
+              ]
+            },
+            "rows": []
+          }
+        }
+      }
+    },
+    "SQLT-INVALID-020": {
+      "sql_file": "invalid/deep-nesting-large-in.sql",
+      "flow": "nested_in",
+      "expected": {
+        "mysql": {
+          "direct": {
+            "errors": [],
+            "generated": {
+              "bytes": 9294,
+              "in_items": 2048,
+              "nesting": 64,
+              "sha256": "5e8cc0a50a399c35ad5f8d10d727cfa94b50c18e3393da06cc2bcaa89133cf54"
+            },
+            "recovery_rows": [
+              [
+                42
+              ]
+            ],
+            "rows": [
+              [
+                1
+              ]
+            ]
+          },
+          "gateway": {
+            "errors": [],
+            "generated": {
+              "bytes": 9294,
+              "in_items": 2048,
+              "nesting": 64,
+              "sha256": "5e8cc0a50a399c35ad5f8d10d727cfa94b50c18e3393da06cc2bcaa89133cf54"
+            },
+            "recovery_rows": [
+              [
+                42
+              ]
+            ],
+            "rows": [
+              [
+                1
+              ]
+            ]
+          }
+        },
+        "postgres": {
+          "direct": {
+            "commands": [
+              "SELECT 1"
+            ],
+            "errors": [],
+            "generated": {
+              "bytes": 9294,
+              "in_items": 2048,
+              "nesting": 64,
+              "sha256": "5e8cc0a50a399c35ad5f8d10d727cfa94b50c18e3393da06cc2bcaa89133cf54"
+            },
+            "ready": [
+              "I"
+            ],
+            "recovery": {
+              "commands": [
+                "SELECT 1"
+              ],
+              "errors": [],
+              "ready": [
+                "I"
+              ],
+              "rows": [
+                [
+                  "42"
+                ]
+              ]
+            },
+            "rows": [
+              [
+                "t"
+              ]
+            ]
+          },
+          "gateway": {
+            "commands": [
+              "SELECT 1"
+            ],
+            "errors": [],
+            "generated": {
+              "bytes": 9294,
+              "in_items": 2048,
+              "nesting": 64,
+              "sha256": "5e8cc0a50a399c35ad5f8d10d727cfa94b50c18e3393da06cc2bcaa89133cf54"
+            },
+            "ready": [
+              "I"
+            ],
+            "recovery": {
+              "commands": [
+                "SELECT 1"
+              ],
+              "errors": [],
+              "ready": [
+                "I"
+              ],
+              "rows": [
+                [
+                  "42"
+                ]
+              ]
+            },
+            "rows": [
+              [
+                "t"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "SQLT-INVALID-021": {
+      "sql_file": "invalid/postgres-frontend-message-limit.sql",
+      "flow": "message_limit",
+      "expected": {
+        "postgres": {
+          "direct": {
+            "at_limit": {
+              "bytes": 16777216,
+              "commands": [
+                "SELECT 1"
+              ],
+              "eof": false,
+              "errors": [],
+              "ready": [
+                "I"
+              ],
+              "rows": [
+                [
+                  "1"
+                ]
+              ],
+              "sha256": "88ce4746fe3a98461e952b511a668f347c2142a2c02fbd7edced6095f13884cd"
+            },
+            "new_connection": {
+              "commands": [
+                "SELECT 1"
+              ],
+              "errors": [],
+              "ready": [
+                "I"
+              ],
+              "rows": [
+                [
+                  "42"
+                ]
+              ]
+            },
+            "over_limit": {
+              "bytes": 16777217,
+              "commands": [
+                "SELECT 1"
+              ],
+              "eof": false,
+              "errors": [],
+              "ready": [
+                "I"
+              ],
+              "rows": [
+                [
+                  "1"
+                ]
+              ],
+              "sha256": "3d2a77d8e61a177c595ea43e7d703838e214b2af445d6040527967098ab41027"
+            }
+          },
+          "gateway": {
+            "at_limit": {
+              "bytes": 16777216,
+              "commands": [
+                "SELECT 1"
+              ],
+              "eof": false,
+              "errors": [],
+              "ready": [
+                "I"
+              ],
+              "rows": [
+                [
+                  "1"
+                ]
+              ],
+              "sha256": "88ce4746fe3a98461e952b511a668f347c2142a2c02fbd7edced6095f13884cd"
+            },
+            "new_connection": {
+              "commands": [
+                "SELECT 1"
+              ],
+              "errors": [],
+              "ready": [
+                "I"
+              ],
+              "rows": [
+                [
+                  "42"
+                ]
+              ]
+            },
+            "over_limit": {
+              "bytes": 16777217,
+              "eof": true,
+              "error_kind": "BrokenPipeError",
+              "sha256": "3d2a77d8e61a177c595ea43e7d703838e214b2af445d6040527967098ab41027"
+            }
+          }
+        }
+      }
+    }
+  }
+}

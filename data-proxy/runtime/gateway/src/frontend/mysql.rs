@@ -400,7 +400,7 @@ fn try_decode_params_with_count(rest: &[u8], n: usize) -> Option<Vec<GatewayValu
 
 fn decode_binary_param_value(data: &[u8], type_byte: u8) -> Option<(GatewayValue, usize)> {
     use ColumnType::*;
-    let ty = ColumnType::from(type_byte);
+    let ty = mysql_column_type_from_wire(type_byte)?;
     match ty {
         MYSQL_TYPE_TINY => {
             if data.is_empty() {
@@ -503,6 +503,40 @@ fn decode_binary_param_value(data: &[u8], type_byte: u8) -> Option<(GatewayValue
             Some((GatewayValue::String(s), n))
         }
     }
+}
+
+fn mysql_column_type_from_wire(value: u8) -> Option<ColumnType> {
+    use ColumnType::*;
+    Some(match value {
+        0x00 => MYSQL_TYPE_DECIMAL,
+        0x01 => MYSQL_TYPE_TINY,
+        0x02 => MYSQL_TYPE_SHORT,
+        0x03 => MYSQL_TYPE_LONG,
+        0x04 => MYSQL_TYPE_FLOAT,
+        0x05 => MYSQL_TYPE_DOUBLE,
+        0x06 => MYSQL_TYPE_NULL,
+        0x07 => MYSQL_TYPE_TIMESTAMP,
+        0x08 => MYSQL_TYPE_LONGLONG,
+        0x09 => MYSQL_TYPE_INT24,
+        0x0a => MYSQL_TYPE_DATE,
+        0x0b => MYSQL_TYPE_TIME,
+        0x0c => MYSQL_TYPE_DATETIME,
+        0x0d => MYSQL_TYPE_YEAR,
+        0x0e => MYSQL_TYPE_NEWDATE,
+        0x0f => MYSQL_TYPE_VARCHAR,
+        0x10 => MYSQL_TYPE_BIT,
+        0xf6 => MYSQL_TYPE_NEWDECIMAL,
+        0xf7 => MYSQL_TYPE_ENUM,
+        0xf8 => MYSQL_TYPE_SET,
+        0xf9 => MYSQL_TYPE_TINY_BLOB,
+        0xfa => MYSQL_TYPE_MEDIUM_BLOB,
+        0xfb => MYSQL_TYPE_LONG_BLOB,
+        0xfc => MYSQL_TYPE_BLOB,
+        0xfd => MYSQL_TYPE_VAR_STRING,
+        0xfe => MYSQL_TYPE_STRING,
+        0xff => MYSQL_TYPE_GEOMETRY,
+        _ => return None,
+    })
 }
 
 fn read_lenc_string(data: &[u8]) -> Option<(String, usize)> {
@@ -1505,7 +1539,7 @@ mod tests {
     }
 
     #[test]
-        fn a10_decodes_stmt_execute_with_int_params() {
+    fn a10_decodes_stmt_execute_with_int_params() {
         let mut adapter = adapter();
         let mut session = SessionState::default();
         // stmt_id=7, flags=0, iteration=1, null_bitmap for 2 params (1 byte=0),
@@ -1528,6 +1562,43 @@ mod tests {
                 statement_id: "7".into(),
                 parameters: vec![GatewayValue::Integer(1), GatewayValue::Integer(2)],
             }]
+        );
+    }
+
+    #[test]
+    fn sqlt_3f2_rejects_unknown_stmt_execute_type_without_panicking() {
+        let mut adapter = adapter();
+        let mut session = SessionState::default();
+        let mut frame = vec![COM_STMT_EXECUTE];
+        frame.extend_from_slice(&7u32.to_le_bytes());
+        frame.push(0);
+        frame.extend_from_slice(&1u32.to_le_bytes());
+        frame.push(0);
+        frame.push(1);
+        frame.extend_from_slice(&[0x29, 0]);
+        frame.extend_from_slice(&41i32.to_le_bytes());
+
+        let error = adapter.decode(&frame, &mut session).unwrap_err();
+
+        assert_eq!(
+            error,
+            GatewayError::Protocol(
+                "mysql COM_STMT_EXECUTE: unable to decode bound parameters".into()
+            )
+        );
+    }
+
+    #[test]
+    fn sqlt_3f2_rejects_truncated_stmt_execute_without_panicking() {
+        let mut adapter = adapter();
+        let mut session = SessionState::default();
+        let frame = [COM_STMT_EXECUTE, 7, 0, 0, 0, 0];
+
+        let error = adapter.decode(&frame, &mut session).unwrap_err();
+
+        assert_eq!(
+            error,
+            GatewayError::Protocol("mysql COM_STMT_EXECUTE payload too short".into())
         );
     }
 

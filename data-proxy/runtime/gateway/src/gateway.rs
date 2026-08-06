@@ -19,10 +19,14 @@ use std::{
 };
 
 use conn_pool::Pool;
-use gateway_core::{GatewayConfig, GatewayError, GatewayResult, ProtocolKind, ResponseWriter};
+use gateway_core::{
+    GatewayConfig, GatewayError, GatewayResult, ProtocolKind, ResponseWriter, SessionState,
+    TransactionState,
+};
 use mysql_protocol::client::conn::ClientConn;
 use parking_lot::Mutex;
 use pisa_error::error::{Error, ErrorKind};
+use postgresql_protocol::encode_error_response;
 use proxy::{
     factory::{
         PoolEndpointRefresh, PoolEndpointSnapshot, PoolRefresh, PoolRefresher, PoolSnapshot,
@@ -530,6 +534,17 @@ async fn run_postgresql_core_session(
         };
         if let Err(error) = connection.handle_frame_to_writer(&frame, &mut writer).await {
             error!("postgresql core frame handling error {:?}", error);
+            if let Some(packet) = postgresql_extended_error_packet(
+                &frame,
+                connection.session_mut(),
+                &error,
+            ) {
+                if let Err(write_error) = writer.write_packets(vec![packet]).await {
+                    error!("postgresql error response write failed {:?}", write_error);
+                    break;
+                }
+                continue;
+            }
             break;
         }
 
@@ -537,6 +552,30 @@ async fn run_postgresql_core_session(
             break;
         }
     }
+}
+
+fn postgresql_extended_error_packet(
+    frame: &[u8],
+    session: &mut SessionState,
+    error: &GatewayError,
+) -> Option<Vec<u8>> {
+    if !matches!(error, GatewayError::Protocol(_)) {
+        return None;
+    }
+    let extended_tag = matches!(
+        frame.first(),
+        Some(b'P' | b'B' | b'D' | b'E' | b'C' | b'H' | b'S')
+    );
+    if !session.pg_extended_query && !extended_tag {
+        return None;
+    }
+
+    session.pg_extended_query = true;
+    session.pg_extended_error = true;
+    if session.transaction_state == TransactionState::Active {
+        session.transaction_state = TransactionState::Failed;
+    }
+    Some(encode_error_response("ERROR", "08P01", &error.to_string()))
 }
 
 async fn read_postgresql_frontend_frame<S>(stream: &mut S) -> GatewayResult<Option<Vec<u8>>>
@@ -770,8 +809,107 @@ mod tests {
         EndpointConfig, EndpointRole, GatewayConfig, ListenerConfig, ProtocolKind, ServiceConfig,
     };
     use proxy::factory::Proxy as _;
+    use tokio::io::{AsyncWriteExt as _, duplex};
 
     use super::*;
+
+    #[test]
+    fn sqlt_3f2_postgresql_extended_error_waits_for_sync() {
+        let mut session = SessionState {
+            pg_extended_query: true,
+            transaction_state: TransactionState::Active,
+            ..SessionState::default()
+        };
+        let packet = postgresql_extended_error_packet(
+            b"B\0\0\0\x04",
+            &mut session,
+            &GatewayError::Protocol("postgresql Bind expects 1 parameters, got 0".into()),
+        )
+        .expect("Bind failure must produce an ErrorResponse");
+
+        assert_eq!(packet.first(), Some(&b'E'));
+        assert!(packet.windows(7).any(|field| field == b"C08P01\0"));
+        assert!(session.pg_extended_query);
+        assert!(session.pg_extended_error);
+        assert_eq!(session.transaction_state, TransactionState::Failed);
+    }
+
+    #[test]
+    fn sqlt_3f2_postgresql_simple_query_error_is_not_reclassified() {
+        let mut session = SessionState::default();
+
+        assert_eq!(
+            postgresql_extended_error_packet(
+                b"Q\0\0\0\x04",
+                &mut session,
+                &GatewayError::Protocol("simple query error".into()),
+            ),
+            None
+        );
+        assert!(!session.pg_extended_error);
+    }
+
+    #[test]
+    fn sqlt_3f2_postgresql_backend_error_is_not_reclassified() {
+        let mut session = SessionState {
+            pg_extended_query: true,
+            ..SessionState::default()
+        };
+
+        assert_eq!(
+            postgresql_extended_error_packet(
+                b"B\0\0\0\x04",
+                &mut session,
+                &GatewayError::Backend("backend disconnected".into()),
+            ),
+            None
+        );
+        assert!(!session.pg_extended_error);
+    }
+
+    #[tokio::test]
+    async fn sqlt_3f2_reads_postgresql_frontend_frame_at_16_mib_limit() {
+        let frame_len = MAX_POSTGRESQL_FRONTEND_MESSAGE_LEN;
+        let protocol_len = frame_len - 1;
+        let mut frame = vec![b'Q'; frame_len];
+        frame[1..5].copy_from_slice(&(protocol_len as i32).to_be_bytes());
+        let (mut client, mut server) = duplex(64 * 1024);
+        let writer = tokio::spawn(async move {
+            client.write_all(&frame).await.unwrap();
+        });
+
+        let received = read_postgresql_frontend_frame(&mut server)
+            .await
+            .unwrap()
+            .expect("frame at the limit must be accepted");
+        writer.await.unwrap();
+
+        assert_eq!(received.len(), frame_len);
+        assert_eq!(received[0], b'Q');
+    }
+
+    #[tokio::test]
+    async fn sqlt_3f2_rejects_postgresql_frontend_frame_over_16_mib_limit() {
+        let protocol_len = MAX_POSTGRESQL_FRONTEND_MESSAGE_LEN;
+        let mut header = [0u8; 5];
+        header[0] = b'Q';
+        header[1..].copy_from_slice(&(protocol_len as i32).to_be_bytes());
+        let (mut client, mut server) = duplex(5);
+        client.write_all(&header).await.unwrap();
+
+        let error = read_postgresql_frontend_frame(&mut server)
+            .await
+            .expect_err("frame over the limit must be rejected from its header");
+
+        assert_eq!(
+            error,
+            GatewayError::Protocol(format!(
+                "postgresql frontend message length {} exceeds limit {}",
+                MAX_POSTGRESQL_FRONTEND_MESSAGE_LEN + 1,
+                MAX_POSTGRESQL_FRONTEND_MESSAGE_LEN
+            ))
+        );
+    }
 
     fn mysql_config() -> GatewayConfig {
         GatewayConfig {

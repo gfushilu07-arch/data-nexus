@@ -123,7 +123,10 @@
     "invalid.name_resolution": "Reject missing or ambiguous table and column references",
     "invalid.type_assignment": "Reject values that cannot be assigned to the declared column type",
     "invalid.numeric_range": "Reject values outside a declared numeric or string range",
-    "invalid.expression": "Reject invalid arithmetic, casts, and function signatures"
+    "invalid.expression": "Reject invalid arithmetic, casts, and function signatures",
+    "invalid.protocol_bind": "Reject malformed binary or extended-protocol parameter bindings and recover",
+    "invalid.lexical_boundary": "Keep comments, delimiters, quotes, and bound payloads within their lexical role",
+    "invalid.resource_boundary": "Apply fixed identifier, parser-complexity, and frontend-message resource limits"
   },
   "policies": [
     "security_off",

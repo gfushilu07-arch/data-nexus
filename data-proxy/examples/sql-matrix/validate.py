@@ -1234,11 +1234,19 @@ def _validate_invalid_oracles(root: Path, cases: list[Any], errors: list[str]) -
                     f"invalid-oracles.json probe_state.{dialect} must be newline-terminated"
                 )
 
+    deterministic_capabilities = {
+        "invalid.syntax",
+        "invalid.name_resolution",
+        "invalid.type_assignment",
+        "invalid.numeric_range",
+        "invalid.expression",
+    }
     expected: dict[str, set[str]] = {}
     for case in cases:
         if (
             isinstance(case, dict)
             and case.get("family") == "invalid"
+            and case.get("capability") in deterministic_capabilities
             and isinstance(case.get("id"), str)
         ):
             allowed_frontends = {"mysql_text", "pg_simple"}
@@ -1289,6 +1297,131 @@ def _validate_invalid_oracles(root: Path, cases: list[Any], errors: list[str]) -
                 errors.append(f"{label}.error must be a stable {dialect} error identity")
             if value["unchanged"] is not True:
                 errors.append(f"{label}.unchanged must be true")
+
+
+def _validate_boundary_oracles(root: Path, cases: list[Any], errors: list[str]) -> None:
+    """Validate SQLT-3F2 protocol/lexical/resource boundary ownership and exact results."""
+    oracles = _load_json(root / "boundary-oracles.json", errors)
+    if not isinstance(oracles, dict):
+        errors.append("boundary-oracles.json must contain an object")
+        return
+    if oracles.get("schema_version") != 1:
+        errors.append("boundary-oracles.json schema_version must be 1")
+
+    for field in ("probe_queries", "probe_state"):
+        values = oracles.get(field)
+        if not isinstance(values, dict) or set(values) != {"mysql", "postgres"}:
+            errors.append(f"boundary-oracles.json {field} must define mysql and postgres")
+            continue
+        for dialect, value in values.items():
+            label = f"boundary-oracles.json {field}.{dialect}"
+            if field == "probe_state":
+                if not isinstance(value, str) or not value.endswith("\n"):
+                    errors.append(f"{label} must be newline-terminated")
+                continue
+            if not isinstance(value, str) or not value.endswith(".sql"):
+                errors.append(f"{label} must be an SQL path")
+                continue
+            path = root / PurePosixPath(value)
+            try:
+                path.resolve().relative_to(root.resolve())
+            except ValueError:
+                errors.append(f"{label} escapes matrix root")
+            else:
+                if not path.is_file():
+                    errors.append(f"{label} does not exist: {value}")
+
+    capabilities = {
+        "invalid.protocol_bind",
+        "invalid.lexical_boundary",
+        "invalid.resource_boundary",
+    }
+    expected_cases: dict[str, dict[str, Any]] = {}
+    for case in cases:
+        if isinstance(case, dict) and case.get("family") == "invalid" and case.get("capability") in capabilities:
+            case_id = case.get("id")
+            if isinstance(case_id, str):
+                expected_cases[case_id] = case
+    results = oracles.get("results")
+    if not isinstance(results, dict):
+        errors.append("boundary-oracles.json results must be an object")
+        return
+    if set(results) != set(expected_cases):
+        errors.append(
+            f"boundary-oracles.json cases must be {sorted(expected_cases)}, got {sorted(results)}"
+        )
+
+    flows = {
+        "SQLT-INVALID-014": ("mysql_bind", {"mysql_binary"}),
+        "SQLT-INVALID-015": ("pg_bind", {"pg_extended"}),
+        "SQLT-INVALID-016": ("multi_statement", {"pg_simple"}),
+        "SQLT-INVALID-017": ("comments", {"mysql_text", "pg_simple"}),
+        "SQLT-INVALID-018": ("bound_value", {"mysql_binary", "pg_extended"}),
+        "SQLT-INVALID-019": ("identifier", {"mysql_text", "pg_simple"}),
+        "SQLT-INVALID-020": ("nested_in", {"mysql_text", "pg_simple"}),
+        "SQLT-INVALID-021": ("message_limit", {"pg_simple"}),
+    }
+    generation_limits = {
+        "SQLT-INVALID-020": {"nesting": 64, "in_items": 2048},
+        "SQLT-INVALID-021": {"message_bytes": 16 * 1024 * 1024, "over_bytes": 16 * 1024 * 1024 + 1},
+    }
+    for case_id, case in expected_cases.items():
+        value = results.get(case_id)
+        label = f"boundary-oracles.json results.{case_id}"
+        if not isinstance(value, dict) or set(value) != {"sql_file", "flow", "expected"}:
+            errors.append(f"{label} fields must be ['expected', 'flow', 'sql_file']")
+            continue
+        if value.get("sql_file") != case.get("sql_file"):
+            errors.append(f"{label}.sql_file must match manifest sql_file")
+        flow, frontends = flows.get(case_id, (None, set()))
+        if value.get("flow") != flow:
+            errors.append(f"{label}.flow must be {flow!r}")
+        if set(case.get("frontends", [])) != frontends or set(case.get("protocols", [])) != frontends:
+            errors.append(f"{case_id} frontends and protocols must be {sorted(frontends)}")
+        if case.get("side_effect") != "none":
+            errors.append(f"{case_id}.side_effect must be none")
+
+        dialects = {dialect for dialect in case.get("dialects", []) if isinstance(dialect, str)}
+        expected = value.get("expected")
+        if not isinstance(expected, dict) or set(expected) != dialects:
+            errors.append(f"{label}.expected dialects must be {sorted(dialects)}")
+        else:
+            for dialect, paths in expected.items():
+                path_label = f"{label}.expected.{dialect}"
+                if not isinstance(paths, dict) or set(paths) != {"direct", "gateway"}:
+                    errors.append(f"{path_label} must define direct and gateway")
+                    continue
+                for path, semantic in paths.items():
+                    if not isinstance(semantic, dict) or not semantic:
+                        errors.append(f"{path_label}.{path} must be a non-empty exact semantic object")
+                    elif _contains_fuzzy_any(semantic):
+                        errors.append(f"{path_label}.{path} must not contain fuzzy any values")
+
+        sql_path = root / "cases" / PurePosixPath(str(case.get("sql_file", "")))
+        directives: dict[str, int] = {}
+        if sql_path.is_file():
+            for line in sql_path.read_text(encoding="utf-8").splitlines()[4:]:
+                if line.startswith("-- @generate "):
+                    try:
+                        directives = {
+                            key: int(number)
+                            for key, number in (field.split("=", 1) for field in line.removeprefix("-- @generate ").split())
+                        }
+                    except (TypeError, ValueError):
+                        errors.append(f"{case_id} has an invalid @generate directive")
+        required_generation = generation_limits.get(case_id, {})
+        if directives != required_generation:
+            errors.append(f"{case_id} @generate values must be {required_generation}")
+
+
+def _contains_fuzzy_any(value: Any) -> bool:
+    if value == "any":
+        return True
+    if isinstance(value, dict):
+        return any(_contains_fuzzy_any(item) for item in value.values())
+    if isinstance(value, list):
+        return any(_contains_fuzzy_any(item) for item in value)
+    return False
 
 
 def _validate_string_array(
@@ -1466,6 +1599,7 @@ def validate_repository(root: Path) -> list[str]:
     _validate_extended_oracles(root, cases, errors)
     _validate_cursor_oracles(root, cases, errors)
     _validate_invalid_oracles(root, cases, errors)
+    _validate_boundary_oracles(root, cases, errors)
     _validate_ddl_oracles(root, cases, errors)
     _validate_ddl_temp_oracles(root, cases, errors)
     _validate_ddl_database_oracles(root, cases, errors)
