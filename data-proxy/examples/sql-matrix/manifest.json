@@ -28,9 +28,9 @@
       "family": "metadata",
       "capability": "metadata.list_tables",
       "dialects": ["postgres"],
-      "frontends": ["pg_simple", "pg_extended"],
+      "frontends": ["pg_simple"],
       "backends": ["postgres"],
-      "protocols": ["pg_simple", "pg_extended"],
+      "protocols": ["pg_simple"],
       "statement_mode": "single",
       "transaction_mode": "autocommit",
       "parameter_mode": "none",
@@ -4185,9 +4185,9 @@
       "family": "cursor",
       "capability": "cursor.named_forward",
       "dialects": ["postgres"],
-      "frontends": ["pg_simple", "pg_extended"],
+      "frontends": ["pg_simple"],
       "backends": ["postgres"],
-      "protocols": ["pg_simple", "pg_extended"],
+      "protocols": ["pg_simple"],
       "statement_mode": "script",
       "transaction_mode": "explicit",
       "parameter_mode": "none",
@@ -4198,6 +4198,62 @@
       ],
       "side_effect": "session_state",
       "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-CURSOR-002", "sql_file": "cursor/postgres-fetch-all.sql", "family": "cursor",
+      "capability": "cursor.named_forward", "dialects": ["postgres"], "frontends": ["pg_simple"],
+      "backends": ["postgres"], "protocols": ["pg_simple"], "statement_mode": "script",
+      "transaction_mode": "explicit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "allow"}, {"policy": "allow", "outcome": "allow"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "session_state", "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-CURSOR-003", "sql_file": "cursor/postgres-interleaved-cursors.sql", "family": "cursor",
+      "capability": "cursor.named_forward", "dialects": ["postgres"], "frontends": ["pg_simple"],
+      "backends": ["postgres"], "protocols": ["pg_simple"], "statement_mode": "script",
+      "transaction_mode": "explicit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "allow"}, {"policy": "allow", "outcome": "allow"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "session_state", "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-CURSOR-004", "sql_file": "cursor/postgres-duplicate-name.sql", "family": "cursor",
+      "capability": "cursor.named_forward", "dialects": ["postgres"], "frontends": ["pg_simple"],
+      "backends": ["postgres"], "protocols": ["pg_simple"], "statement_mode": "script",
+      "transaction_mode": "explicit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "allow"}, {"policy": "allow", "outcome": "allow"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "session_state", "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-CURSOR-005", "sql_file": "cursor/postgres-commit-cleanup.sql", "family": "cursor",
+      "capability": "cursor.named_forward", "dialects": ["postgres"], "frontends": ["pg_simple"],
+      "backends": ["postgres"], "protocols": ["pg_simple"], "statement_mode": "script",
+      "transaction_mode": "explicit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "allow"}, {"policy": "allow", "outcome": "allow"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "session_state", "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-CURSOR-006", "sql_file": "cursor/postgres-with-hold.sql", "family": "cursor",
+      "capability": "cursor.named_forward", "dialects": ["postgres"], "frontends": ["pg_simple"],
+      "backends": ["postgres"], "protocols": ["pg_simple"], "statement_mode": "script",
+      "transaction_mode": "explicit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "allow"}, {"policy": "allow", "outcome": "allow"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "session_state", "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-CURSOR-007", "sql_file": "cursor/postgres-session-cleanup.sql", "family": "cursor",
+      "capability": "cursor.named_forward", "dialects": ["postgres"], "frontends": ["pg_simple"],
+      "backends": ["postgres"], "protocols": ["pg_simple"], "statement_mode": "script",
+      "transaction_mode": "explicit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "allow"}, {"policy": "allow", "outcome": "allow"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "session_state", "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-CURSOR-008", "sql_file": "cursor/postgres-backend-disconnect.sql", "family": "cursor",
+      "capability": "cursor.named_forward", "dialects": ["postgres"], "frontends": ["pg_simple"],
+      "backends": ["postgres"], "protocols": ["pg_simple"], "statement_mode": "script",
+      "transaction_mode": "explicit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "allow"}, {"policy": "allow", "outcome": "allow"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "session_state", "profiles": ["nightly", "release"]
     },
     {
       "id": "SQLT-PGX-001", "sql_file": "extended/lifecycle.sql", "family": "cursor",

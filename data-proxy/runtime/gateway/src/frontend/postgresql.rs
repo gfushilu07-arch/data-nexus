@@ -473,6 +473,13 @@ impl FrontendProtocolAdapter for PostgreSqlFrontendProtocol {
                 }
                 Ok(out)
             }
+            GatewayResponse::CommandComplete { tag } => {
+                let mut out = vec![encode_command_complete(&tag)];
+                if let Some(r) = ready {
+                    out.push(r);
+                }
+                Ok(out)
+            }
             GatewayResponse::Pong => {
                 let mut out = vec![encode_command_complete("SELECT 1")];
                 if let Some(r) = ready {
@@ -503,6 +510,9 @@ impl FrontendProtocolAdapter for PostgreSqlFrontendProtocol {
                 } else {
                     encode_resultset_opts(columns, rows, ready_pkt, skip_header)
                 }
+            }
+            GatewayResponse::TaggedResultSet { columns, rows, tag } => {
+                encode_resultset_with_tag(columns, rows, ready.unwrap_or_default(), &tag)
             }
             GatewayResponse::Wire { packets } => Ok(packets),
             GatewayResponse::Prepared {
@@ -1238,6 +1248,21 @@ fn encode_resultset_opts(
     Ok(messages)
 }
 
+fn encode_resultset_with_tag(
+    columns: Vec<GatewayColumn>,
+    rows: Vec<Vec<GatewayValue>>,
+    ready: Vec<u8>,
+    tag: &str,
+) -> GatewayResult<Vec<Vec<u8>>> {
+    let mut messages = encode_pg_resultset_header(&columns)?;
+    messages.extend(encode_pg_resultset_rows(&columns, &rows)?);
+    messages.push(encode_command_complete(tag));
+    if !ready.is_empty() {
+        messages.push(ready);
+    }
+    Ok(messages)
+}
+
 fn encode_resultset_binary(
     columns: Vec<GatewayColumn>,
     rows: Vec<Vec<GatewayValue>>,
@@ -1767,6 +1792,31 @@ mod tests {
             "{:?}",
             packets[0]
         );
+    }
+
+    #[test]
+    fn a10_tagged_cursor_resultset_preserves_fetch_command_tag() {
+        let mut protocol = PostgreSqlFrontendProtocol::new("14.0".into());
+        let session = SessionState::default();
+        let packets = protocol
+            .encode(
+                GatewayResponse::TaggedResultSet {
+                    columns: vec![GatewayColumn {
+                        name: "id".into(),
+                        data_type: "int4".into(),
+                    }],
+                    rows: vec![vec![GatewayValue::Integer(7)]],
+                    tag: "FETCH 1".into(),
+                },
+                &session,
+            )
+            .unwrap();
+        assert_eq!(packets.len(), 4);
+        assert_eq!(packets[0][0], b'T');
+        assert_eq!(packets[1][0], b'D');
+        assert_eq!(packets[2][0], b'C');
+        assert!(String::from_utf8_lossy(&packets[2]).contains("FETCH 1"));
+        assert_eq!(packets[3][0], b'Z');
     }
 
     #[test]

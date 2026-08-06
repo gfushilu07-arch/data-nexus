@@ -790,6 +790,120 @@ def _validate_extended_oracles(root: Path, cases: list[Any], errors: list[str]) 
             errors.append(f"{case_id} must use only pg_extended frontend and protocol")
 
 
+def _sql_step_names(path: Path) -> list[str]:
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()[4:]
+    except (OSError, UnicodeError):
+        return []
+    return [line.removeprefix("-- @step ").strip() for line in lines if line.startswith("-- @step ")]
+
+
+def _validate_cursor_oracles(root: Path, cases: list[Any], errors: list[str]) -> None:
+    """Validate the simple-query named-cursor step contract."""
+    oracles = _load_json(root / "cursor-oracles.json", errors)
+    if not isinstance(oracles, dict):
+        errors.append("cursor-oracles.json must contain an object")
+        return
+    if oracles.get("schema_version") != 1:
+        errors.append("cursor-oracles.json schema_version must be 1")
+    results = oracles.get("results")
+    if not isinstance(results, dict):
+        errors.append("cursor-oracles.json results must be an object")
+        return
+    expected: dict[str, dict[str, Any]] = {}
+    for case in cases:
+        if isinstance(case, dict) and case.get("capability") == "cursor.named_forward":
+            case_id = case.get("id")
+            if isinstance(case_id, str):
+                expected[case_id] = case
+    if set(results) != set(expected):
+        errors.append(f"cursor-oracles.json cases must be {sorted(expected)}, got {sorted(results)}")
+    allowed_step_fields = {"rows", "commands", "ready", "sqlstates", "control_rows", "eof", "action"}
+    allowed_actions = {"backend_terminate"}
+    for case_id, case in expected.items():
+        label = f"cursor-oracles.json results.{case_id}"
+        value = results.get(case_id)
+        if not isinstance(value, dict) or set(value) != {"sql_file", "cleanup", "steps"}:
+            errors.append(f"{label} fields must be ['cleanup', 'sql_file', 'steps']")
+            continue
+        if value["sql_file"] != case.get("sql_file"):
+            errors.append(f"{label}.sql_file must match manifest")
+        sql_path = root / "cases" / PurePosixPath(value["sql_file"])
+        try:
+            sql_path.resolve().relative_to(root.resolve())
+        except ValueError:
+            errors.append(f"{label}.sql_file escapes matrix root")
+            continue
+        if not sql_path.is_file():
+            errors.append(f"{label}.sql_file does not exist")
+            continue
+        steps = value["steps"]
+        if not isinstance(steps, dict) or not steps:
+            errors.append(f"{label}.steps must be a non-empty object")
+            continue
+        names = _sql_step_names(sql_path)
+        if names != list(steps):
+            errors.append(f"{label}.steps must match SQL @step order {names}")
+        if value["cleanup"] not in {"none", "session_disconnect", "backend_disconnect"}:
+            errors.append(f"{label}.cleanup is unknown")
+        for name, step in steps.items():
+            step_label = f"{label}.steps.{name}"
+            if not isinstance(step, dict) or not set(step) <= allowed_step_fields:
+                errors.append(f"{step_label} has unknown fields")
+                continue
+            if not (set(step) & {"rows", "commands", "ready", "sqlstates", "control_rows", "eof"}):
+                errors.append(f"{step_label} needs an observable contract")
+            for field in ("rows", "control_rows"):
+                if field in step and (
+                    not isinstance(step[field], list)
+                    or any(
+                        not isinstance(row, list)
+                        or any(not isinstance(cell, str) and cell is not None for cell in row)
+                        for row in step[field]
+                    )
+                ):
+                    errors.append(f"{step_label}.{field} must be an array of string/null arrays")
+            for field in ("commands", "ready", "sqlstates"):
+                if field in step and (
+                    not isinstance(step[field], list)
+                    or any(not isinstance(value, str) for value in step[field])
+                ):
+                    errors.append(f"{step_label}.{field} must be an array of strings")
+            if "sqlstates" in step and any(not re.fullmatch(r"[0-9A-Z]{5}", v) for v in step["sqlstates"]):
+                errors.append(f"{step_label}.sqlstates must contain SQLSTATE values")
+            if "eof" in step and step["eof"] is not True:
+                errors.append(f"{step_label}.eof must be true")
+            if "action" in step and step["action"] not in allowed_actions:
+                errors.append(f"{step_label}.action is unknown")
+        sql_lines = sql_path.read_text(encoding="utf-8").splitlines()[4:]
+        actions: dict[str, str] = {}
+        current_step: str | None = None
+        for line in sql_lines:
+            if line.startswith("-- @step "):
+                current_step = line.removeprefix("-- @step ").strip()
+            elif line.startswith("-- @action "):
+                action = line.removeprefix("-- @action ").strip()
+                if current_step is None:
+                    errors.append(f"{label}: @action must follow @step")
+                elif action not in allowed_actions:
+                    errors.append(f"{label}.steps.{current_step}: unknown action {action!r}")
+                elif current_step in actions:
+                    errors.append(f"{label}.steps.{current_step}: duplicate action")
+                else:
+                    actions[current_step] = action
+        if case_id == "SQLT-CURSOR-008":
+            if actions.get("terminate_backend") != "backend_terminate":
+                errors.append(f"{label}.steps.terminate_backend must declare backend_terminate")
+            elif steps.get("terminate_backend", {}).get("action") != "backend_terminate":
+                errors.append(f"{label}.steps.terminate_backend.action must match SQL @action")
+        elif actions:
+            errors.append(f"{label}: actions are only allowed for SQLT-CURSOR-008")
+        if case.get("frontends") != ["pg_simple"] or case.get("protocols") != ["pg_simple"]:
+            errors.append(f"{case_id} must use only pg_simple frontend and protocol")
+        if case.get("dialects") != ["postgres"] or case.get("backends") != ["postgres"]:
+            errors.append(f"{case_id} must declare only postgres dialect and backend")
+
+
 def _validate_ddl_oracles(root: Path, cases: list[Any], errors: list[str]) -> None:
     """Validate exact catalog and stable error contracts for canonical DDL cases."""
     oracles = _load_json(root / "ddl-oracles.json", errors)
@@ -1227,6 +1341,7 @@ def validate_repository(root: Path) -> list[str]:
     _validate_tcl_oracles(root, cases, errors)
     _validate_prepared_oracles(root, cases, errors)
     _validate_extended_oracles(root, cases, errors)
+    _validate_cursor_oracles(root, cases, errors)
     _validate_ddl_oracles(root, cases, errors)
     _validate_ddl_temp_oracles(root, cases, errors)
     _validate_ddl_database_oracles(root, cases, errors)

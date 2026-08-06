@@ -213,8 +213,16 @@ pub enum GatewayCommand {
 #[serde(rename_all = "snake_case", tag = "type", content = "payload")]
 pub enum GatewayResponse {
     Ok { affected_rows: u64, last_insert_id: Option<u64> },
+    /// Successful command with a frontend-visible command tag (for example PG cursor commands).
+    CommandComplete { tag: String },
     Error { code: String, message: String },
     ResultSet { columns: Vec<Column>, rows: Vec<Vec<GatewayValue>> },
+    /// Result rows with an explicit command tag (for example `FETCH 2`).
+    TaggedResultSet {
+        columns: Vec<Column>,
+        rows: Vec<Vec<GatewayValue>>,
+        tag: String,
+    },
     /// Same-protocol wire payloads ready for the frontend writer (A3).
     ///
     /// MySQL: packet payloads **without** the 4-byte frame header (as

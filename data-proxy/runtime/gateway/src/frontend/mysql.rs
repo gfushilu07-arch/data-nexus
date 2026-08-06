@@ -164,7 +164,10 @@ impl FrontendProtocolAdapter for MySqlFrontendProtocol {
             return Ok(vec![]);
         }
         match response {
-            GatewayResponse::Ok { .. } | GatewayResponse::Pong | GatewayResponse::Bye => {
+            GatewayResponse::Ok { .. }
+            | GatewayResponse::CommandComplete { .. }
+            | GatewayResponse::Pong
+            | GatewayResponse::Bye => {
                 Ok(vec![ok_packet()[4..].to_vec()])
             }
             GatewayResponse::Error { code, message } => {
@@ -178,6 +181,9 @@ impl FrontendProtocolAdapter for MySqlFrontendProtocol {
                 } else {
                     encode_text_resultset(columns, rows)
                 }
+            }
+            GatewayResponse::TaggedResultSet { columns, rows, .. } => {
+                self.encode(GatewayResponse::ResultSet { columns, rows }, session)
             }
             GatewayResponse::Wire { packets } => Ok(packets),
             // A10: COM_STMT_PREPARE OK + optional parameter column definitions + EOF.

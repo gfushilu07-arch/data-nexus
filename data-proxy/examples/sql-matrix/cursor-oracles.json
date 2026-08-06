@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "results": {
+    "SQLT-CURSOR-001": {"sql_file": "cursor/postgres-declare-fetch-close.sql", "cleanup": "none", "steps": {
+      "begin": {"commands": ["BEGIN"], "ready": ["T"]},
+      "declare": {"commands": ["DECLARE CURSOR"], "ready": ["T"]},
+      "fetch_first": {"rows": [["1001", "101", "12.50"], ["1002", "101", "99.99"]], "commands": ["FETCH 2"], "ready": ["T"]},
+      "fetch_second": {"rows": [["1003", "102", "15.00"], ["2001", "201", "42.25"]], "commands": ["FETCH 2"], "ready": ["T"]},
+      "close": {"commands": ["CLOSE CURSOR"], "ready": ["T"]},
+      "commit": {"commands": ["COMMIT"], "ready": ["I"]},
+      "after_close": {"sqlstates": ["34000"], "ready": ["I"]}
+    }},
+    "SQLT-CURSOR-002": {"sql_file": "cursor/postgres-fetch-all.sql", "cleanup": "none", "steps": {
+      "begin": {"commands": ["BEGIN"], "ready": ["T"]}, "declare": {"commands": ["DECLARE CURSOR"], "ready": ["T"]},
+      "fetch_all": {"rows": [["101"], ["102"], ["201"], ["202"]], "commands": ["FETCH 4"], "ready": ["T"]},
+      "fetch_exhausted": {"rows": [], "commands": ["FETCH 0"], "ready": ["T"]}, "close": {"commands": ["CLOSE CURSOR"], "ready": ["T"]}, "commit": {"commands": ["COMMIT"], "ready": ["I"]}
+    }},
+    "SQLT-CURSOR-003": {"sql_file": "cursor/postgres-interleaved-cursors.sql", "cleanup": "none", "steps": {
+      "begin": {"commands": ["BEGIN"], "ready": ["T"]}, "declare_a": {"commands": ["DECLARE CURSOR"], "ready": ["T"]}, "declare_b": {"commands": ["DECLARE CURSOR"], "ready": ["T"]},
+      "fetch_a_first": {"rows": [["101", "Ada"]], "commands": ["FETCH 1"], "ready": ["T"]}, "fetch_b_first": {"rows": [["202", "Edsger"]], "commands": ["FETCH 1"], "ready": ["T"]},
+      "fetch_a_rest": {"rows": [["102", "Lin"]], "commands": ["FETCH 1"], "ready": ["T"]}, "close_a": {"commands": ["CLOSE CURSOR"], "ready": ["T"]}, "fetch_b_rest": {"rows": [["201", "Grace"]], "commands": ["FETCH 1"], "ready": ["T"]}, "close_b": {"commands": ["CLOSE CURSOR"], "ready": ["T"]}, "commit": {"commands": ["COMMIT"], "ready": ["I"]}
+    }},
+    "SQLT-CURSOR-004": {"sql_file": "cursor/postgres-duplicate-name.sql", "cleanup": "none", "steps": {
+      "begin": {"commands": ["BEGIN"], "ready": ["T"]}, "declare": {"commands": ["DECLARE CURSOR"], "ready": ["T"]}, "savepoint": {"commands": ["SAVEPOINT"], "ready": ["T"]},
+      "duplicate": {"sqlstates": ["42P03"], "ready": ["E"]}, "recover": {"commands": ["ROLLBACK"], "ready": ["T"]}, "fetch_original": {"rows": [["101"]], "commands": ["FETCH 1"], "ready": ["T"]}, "close_original": {"commands": ["CLOSE CURSOR"], "ready": ["T"]},
+      "redeclare": {"commands": ["DECLARE CURSOR"], "ready": ["T"]}, "fetch_redeclared": {"rows": [["202"]], "commands": ["FETCH 1"], "ready": ["T"]}, "close_redeclared": {"commands": ["CLOSE CURSOR"], "ready": ["T"]}, "commit": {"commands": ["COMMIT"], "ready": ["I"]}
+    }},
+    "SQLT-CURSOR-005": {"sql_file": "cursor/postgres-commit-cleanup.sql", "cleanup": "none", "steps": {
+      "begin": {"commands": ["BEGIN"], "ready": ["T"]}, "declare": {"commands": ["DECLARE CURSOR"], "ready": ["T"]}, "fetch_before_commit": {"rows": [["101"]], "commands": ["FETCH 1"], "ready": ["T"]}, "commit": {"commands": ["COMMIT"], "ready": ["I"]},
+      "fetch_after_commit": {"sqlstates": ["34000"], "ready": ["I"]}, "close_after_commit": {"sqlstates": ["34000"], "ready": ["I"]}, "reuse_begin": {"commands": ["BEGIN"], "ready": ["T"]}, "reuse_declare": {"commands": ["DECLARE CURSOR"], "ready": ["T"]}, "reuse_fetch": {"rows": [["202"]], "commands": ["FETCH 1"], "ready": ["T"]}, "reuse_close": {"commands": ["CLOSE CURSOR"], "ready": ["T"]}, "reuse_commit": {"commands": ["COMMIT"], "ready": ["I"]}
+    }},
+    "SQLT-CURSOR-006": {"sql_file": "cursor/postgres-with-hold.sql", "cleanup": "none", "steps": {
+      "begin": {"commands": ["BEGIN"], "ready": ["T"]}, "declare": {"commands": ["DECLARE CURSOR"], "ready": ["T"]}, "fetch_before_commit": {"rows": [["101"]], "commands": ["FETCH 1"], "ready": ["T"]}, "commit": {"commands": ["COMMIT"], "ready": ["I"]},
+      "fetch_after_commit": {"rows": [["102"], ["201"]], "commands": ["FETCH 2"], "ready": ["I"]}, "fetch_rest": {"rows": [["202"]], "commands": ["FETCH 1"], "ready": ["I"]}, "fetch_exhausted": {"rows": [], "commands": ["FETCH 0"], "ready": ["I"]}, "close": {"commands": ["CLOSE CURSOR"], "ready": ["I"]}, "after_close": {"sqlstates": ["34000"], "ready": ["I"]}
+    }},
+    "SQLT-CURSOR-007": {"sql_file": "cursor/postgres-session-cleanup.sql", "cleanup": "session_disconnect", "steps": {
+      "begin": {"commands": ["BEGIN"], "ready": ["T"]}, "declare": {"commands": ["DECLARE CURSOR"], "ready": ["T"]}, "fetch_before_disconnect": {"rows": [["101"]], "commands": ["FETCH 1"], "ready": ["T"]}, "cleanup_probe": {"rows": [["0"]], "commands": ["SELECT 1"], "ready": ["I"]}, "reuse_begin": {"commands": ["BEGIN"], "ready": ["T"]}, "reuse_declare": {"commands": ["DECLARE CURSOR"], "ready": ["T"]}, "reuse_fetch": {"rows": [["202"], ["201"], ["102"], ["101"]], "commands": ["FETCH 4"], "ready": ["T"]}, "reuse_close": {"commands": ["CLOSE CURSOR"], "ready": ["T"]}, "reuse_commit": {"commands": ["COMMIT"], "ready": ["I"]}
+    }},
+    "SQLT-CURSOR-008": {"sql_file": "cursor/postgres-backend-disconnect.sql", "cleanup": "backend_disconnect", "steps": {
+      "begin": {"commands": ["BEGIN"], "ready": ["T"]}, "declare": {"commands": ["DECLARE CURSOR"], "ready": ["T"]}, "fetch_backend_pid": {"rows": [["$PID", "101"]], "commands": ["FETCH 1"], "ready": ["T"]}, "terminate_backend": {"action": "backend_terminate", "control_rows": [["t"]]}, "fetch_after_terminate": {"eof": true}, "cleanup_probe": {"rows": [["0"]], "commands": ["SELECT 1"], "ready": ["I"]}, "reuse_begin": {"commands": ["BEGIN"], "ready": ["T"]}, "reuse_declare": {"commands": ["DECLARE CURSOR"], "ready": ["T"]}, "reuse_fetch": {"rows": [["101"], ["102"], ["201"], ["202"]], "commands": ["FETCH 4"], "ready": ["T"]}, "reuse_close": {"commands": ["CLOSE CURSOR"], "ready": ["T"]}, "reuse_commit": {"commands": ["COMMIT"], "ready": ["I"]}
+    }}
+  }
+}

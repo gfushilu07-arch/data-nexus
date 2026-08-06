@@ -46,6 +46,32 @@ class ValidateSqlMatrixTest(unittest.TestCase):
     def test_repository_fixture_is_valid(self) -> None:
         self.assertEqual(self.errors(), [])
 
+    def test_cursor_backend_action_is_declared_in_sql(self) -> None:
+        sql_path = self.root / "cases" / "cursor" / "postgres-backend-disconnect.sql"
+        text = sql_path.read_text(encoding="utf-8")
+        sql_path.write_text(text.replace("-- @action backend_terminate\n", ""), encoding="utf-8")
+        self.assert_has_error("terminate_backend must declare backend_terminate")
+
+    def test_cursor_rejects_unknown_action(self) -> None:
+        sql_path = self.root / "cases" / "cursor" / "postgres-backend-disconnect.sql"
+        text = sql_path.read_text(encoding="utf-8")
+        sql_path.write_text(text.replace("-- @action backend_terminate", "-- @action drop_backend"), encoding="utf-8")
+        self.assert_has_error("unknown action 'drop_backend'")
+
+    def test_cursor_control_rows_require_string_or_null_cells(self) -> None:
+        oracle_path = self.root / "cursor-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["results"]["SQLT-CURSOR-008"]["steps"]["terminate_backend"]["control_rows"] = [[True]]
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("control_rows must be an array of string/null arrays")
+
+    def test_cursor_oracle_rejects_arbitrary_error_identity(self) -> None:
+        oracle_path = self.root / "cursor-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["results"]["SQLT-CURSOR-004"]["steps"]["duplicate"]["sqlstates"] = ["any"]
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("sqlstates must contain SQLSTATE values")
+
     def test_duplicate_case_id_is_rejected(self) -> None:
         manifest = self.manifest()
         manifest["cases"].append(copy.deepcopy(manifest["cases"][0]))

@@ -87,6 +87,7 @@ pub struct CoreGatewayConnection {
 struct NamedCursorHeld {
     with_hold: bool,
     query: gateway_core::StreamingQuery,
+    exhausted: bool,
 }
 
 impl CoreGatewayConnection {
@@ -1227,8 +1228,10 @@ impl CoreGatewayConnection {
                     "xproto_stream".to_owned()
                 }
                 GatewayResponse::ResultSet { .. } => "resultset".to_owned(),
+                GatewayResponse::TaggedResultSet { .. } => "resultset".to_owned(),
                 GatewayResponse::Wire { .. } => "passthrough".to_owned(),
                 GatewayResponse::Ok { .. } => "ok".to_owned(),
+                GatewayResponse::CommandComplete { .. } => "ok".to_owned(),
                 GatewayResponse::Pong => "pong".to_owned(),
                 GatewayResponse::Bye => "bye".to_owned(),
                 GatewayResponse::Prepared { .. } => "prepared".to_owned(),
@@ -1244,6 +1247,7 @@ impl CoreGatewayConnection {
                     gateway_core::ExecuteMode::Materialized => "materialized",
                     gateway_core::ExecuteMode::Passthrough => "passthrough",
                 },
+                GatewayResponse::TaggedResultSet { .. } => "streaming",
                 _ => "n/a",
             };
             let sec_decision = if pending_obligations.has_result_obligations() {
@@ -1368,9 +1372,12 @@ impl CoreGatewayConnection {
                         "cursor \"{name}\" already exists (process-local; not SQL WITH HOLD)"
                     );
                     let response = GatewayResponse::Error {
-                        code: "34000".into(),
+                        code: "42P03".into(),
                         message: msg,
                     };
+                    if self.session.transaction_state == TransactionState::Active {
+                        self.session.transaction_state = TransactionState::Failed;
+                    }
                     self.encode_response_to_writer(response, writer).await?;
                     command_span.record("outcome", "error");
                     command_span.record("execute_path", "sql_cursor_declare");
@@ -1396,12 +1403,11 @@ impl CoreGatewayConnection {
                     ExecuteOutcome::Streaming(query) => {
                         self.named_cursors.insert(
                             name.clone(),
-                            NamedCursorHeld { with_hold, query },
+                            NamedCursorHeld { with_hold, query, exhausted: false },
                         );
                         self.metrics.record_portal_resume("sql_cursor_declare");
-                        let response = GatewayResponse::Ok {
-                            affected_rows: 0,
-                            last_insert_id: None,
+                        let response = GatewayResponse::CommandComplete {
+                            tag: "DECLARE CURSOR".into(),
                         };
                         self.encode_response_to_writer(response, writer).await?;
                         command_span.record("outcome", "sql_cursor_declare");
@@ -1423,12 +1429,11 @@ impl CoreGatewayConnection {
                         };
                         self.named_cursors.insert(
                             name.clone(),
-                            NamedCursorHeld { with_hold, query },
+                            NamedCursorHeld { with_hold, query, exhausted: false },
                         );
                         self.metrics.record_portal_resume("sql_cursor_declare");
-                        let response = GatewayResponse::Ok {
-                            affected_rows: 0,
-                            last_insert_id: None,
+                        let response = GatewayResponse::CommandComplete {
+                            tag: "DECLARE CURSOR".into(),
                         };
                         self.encode_response_to_writer(response, writer).await?;
                         command_span.record("outcome", "sql_cursor_declare");
@@ -1468,6 +1473,9 @@ impl CoreGatewayConnection {
                             "cursor \"{name}\" does not exist (process-local; not SQL WITH HOLD)"
                         ),
                     };
+                    if self.session.transaction_state == TransactionState::Active {
+                        self.session.transaction_state = TransactionState::Failed;
+                    }
                     self.encode_response_to_writer(response, writer).await?;
                     finish_command_metrics(&self.metrics, labels, started_at, "n/a", 0);
                     return Ok(());
@@ -1476,8 +1484,7 @@ impl CoreGatewayConnection {
                 let mut rows = Vec::new();
                 let columns = held.query.columns.clone();
                 let mut remaining = count;
-                let mut stream_ended = false;
-                while remaining > 0 {
+                while remaining > 0 && !held.exhausted {
                     let want = remaining.min(256);
                     match held.query.stream.poll_window(want).await? {
                         Some(chunk) if !chunk.is_empty() => {
@@ -1498,16 +1505,19 @@ impl CoreGatewayConnection {
                             }
                         }
                         _ => {
-                            stream_ended = true;
+                            held.exhausted = true;
                             break;
                         }
                     }
                 }
-                if !stream_ended {
-                    self.named_cursors.insert(name.clone(), held);
-                }
+                // PostgreSQL keeps an exhausted cursor valid until CLOSE or transaction end.
+                self.named_cursors.insert(name.clone(), held);
                 self.metrics.record_portal_resume("sql_cursor_fetch");
-                let response = GatewayResponse::ResultSet { columns, rows };
+                let response = GatewayResponse::TaggedResultSet {
+                    columns,
+                    tag: format!("FETCH {}", rows.len()),
+                    rows,
+                };
                 self.encode_response_to_writer(response, writer).await?;
                 command_span.record("outcome", "sql_cursor_fetch");
                 command_span.record("execute_path", "sql_cursor_fetch");
@@ -1529,14 +1539,16 @@ impl CoreGatewayConnection {
                             "cursor \"{name}\" does not exist (process-local; not SQL WITH HOLD)"
                         ),
                     };
+                    if self.session.transaction_state == TransactionState::Active {
+                        self.session.transaction_state = TransactionState::Failed;
+                    }
                     self.encode_response_to_writer(response, writer).await?;
                     finish_command_metrics(&self.metrics, labels, started_at, "n/a", 0);
                     return Ok(());
                 }
                 self.metrics.record_portal_resume("sql_cursor_close");
-                let response = GatewayResponse::Ok {
-                    affected_rows: 0,
-                    last_insert_id: None,
+                let response = GatewayResponse::CommandComplete {
+                    tag: "CLOSE CURSOR".into(),
                 };
                 self.encode_response_to_writer(response, writer).await?;
                 command_span.record("outcome", "sql_cursor_close");

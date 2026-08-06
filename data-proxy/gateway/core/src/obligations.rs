@@ -442,6 +442,24 @@ pub fn apply_obligations_to_response(
             }
             GatewayResponse::ResultSet { columns, rows }
         }
+        GatewayResponse::TaggedResultSet {
+            columns,
+            rows,
+            tag,
+        } => {
+            // Cursor FETCH responses carry a PostgreSQL command tag. Apply the
+            // same result obligations as an ordinary result set, then restore
+            // the tag so protocol encoding cannot bypass policy or semantics.
+            match apply_obligations_to_response(
+                GatewayResponse::ResultSet { columns, rows },
+                obligations,
+            ) {
+                GatewayResponse::ResultSet { columns, rows } => {
+                    GatewayResponse::TaggedResultSet { columns, rows, tag }
+                }
+                other => other,
+            }
+        }
         other => other,
     }
 }
@@ -733,6 +751,31 @@ mod tests {
                 other => panic!("{other:?}"),
             },
             other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn tagged_resultset_keeps_command_tag_while_applying_obligations() {
+        let mut obl = Obligations::default();
+        obl.column_masks
+            .push(MaskSpec::new("secret", MaskAlgorithm::Nullify, "cursor-mask"));
+        let out = apply_obligations_to_response(
+            GatewayResponse::TaggedResultSet {
+                columns: vec![
+                    Column { name: "id".into(), data_type: "int".into() },
+                    Column { name: "secret".into(), data_type: "text".into() },
+                ],
+                rows: vec![vec![GatewayValue::Integer(1), GatewayValue::String("x".into())]],
+                tag: "FETCH 1".into(),
+            },
+            &obl,
+        );
+        match out {
+            GatewayResponse::TaggedResultSet { tag, rows, .. } => {
+                assert_eq!(tag, "FETCH 1");
+                assert_eq!(rows[0][1], GatewayValue::Null);
+            }
+            other => panic!("expected tagged resultset, got {other:?}"),
         }
     }
 }
