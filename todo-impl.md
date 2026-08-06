@@ -205,6 +205,7 @@ examples/        smoke + gateway config 样例
 | SQLT-3D1c1 | DDL DROP、幂等 DROP、TRUNCATE 精确 catalog 与 3→0 数据探针，完整 Docker direct/security-off gateway 48/48 | `79c1f39` |
 | SQLT-3D1c2 | 临时表同连接读写、第二连接隔离、断线回收及稳定错误，双方言 direct/security-off gateway 多连接 Docker 4/4 | `6123c7f` |
 | SQLT-3F1 | 12 条确定性 SQL 错误、精确 vendor error identity、零副作用 probe 与 invalid Docker runner，direct/security-off gateway 44/44 | `7f599b7` |
+| SQLT-3F2 | 8 条协议/词法/固定资源边界、真实 binary/extended wire、精确 recovery 与零副作用 oracle，direct/security-off gateway 24/24 | `1481a1b` |
 
 ---
 
