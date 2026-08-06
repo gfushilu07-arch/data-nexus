@@ -1637,9 +1637,10 @@ fn parse_named_cursor_sql(sql: &str) -> Option<NamedCursorSql> {
     let trimmed = sql.trim().trim_end_matches(';').trim();
     let upper = trimmed.to_ascii_uppercase();
     if upper.starts_with("DECLARE ") {
-        // Find CURSOR … FOR
-        let cursor_pos = upper.find(" CURSOR ")?;
-        let for_pos = upper.find(" FOR ")?;
+        // Find CURSOR … FOR across arbitrary SQL whitespace while retaining
+        // byte offsets into the original text (the SELECT body is not rewritten).
+        let cursor_pos = find_ascii_keyword(&upper, "CURSOR", 8)?;
+        let for_pos = find_ascii_keyword(&upper, "FOR", cursor_pos + "CURSOR".len())?;
         if for_pos < cursor_pos {
             return None;
         }
@@ -1659,7 +1660,7 @@ fn parse_named_cursor_sql(sql: &str) -> Option<NamedCursorSql> {
         if name.is_empty() {
             return None;
         }
-        let select_sql = trimmed[for_pos + 5..].trim().to_string();
+        let select_sql = trimmed[for_pos + 3..].trim().to_string();
         if select_sql.is_empty() {
             return None;
         }
@@ -1741,6 +1742,26 @@ fn parse_named_cursor_sql(sql: &str) -> Option<NamedCursorSql> {
             return None;
         }
         return Some(NamedCursorSql::Close { name });
+    }
+    None
+}
+
+fn find_ascii_keyword(sql: &str, keyword: &str, start: usize) -> Option<usize> {
+    let bytes = sql.as_bytes();
+    let keyword_bytes = keyword.as_bytes();
+    let mut offset = start;
+    while offset + keyword_bytes.len() <= bytes.len() {
+        if bytes[offset..].starts_with(keyword_bytes) {
+            let before_ok = offset == 0
+                || (!bytes[offset - 1].is_ascii_alphanumeric() && bytes[offset - 1] != b'_');
+            let after = offset + keyword_bytes.len();
+            let after_ok = after == bytes.len()
+                || (!bytes[after].is_ascii_alphanumeric() && bytes[after] != b'_');
+            if before_ok && after_ok {
+                return Some(offset);
+            }
+        }
+        offset += 1;
     }
     None
 }
@@ -3301,6 +3322,15 @@ mod tests {
                 assert!(!with_hold);
             }
             other => panic!("declare no hold: {other:?}"),
+        }
+        match parse_named_cursor_sql(
+            "DECLARE c3 NO SCROLL CURSOR FOR\n    SELECT id FROM stream_smoke ORDER BY id;",
+        ) {
+            Some(NamedCursorSql::Declare { name, select_sql, .. }) => {
+                assert_eq!(name, "c3");
+                assert_eq!(select_sql, "SELECT id FROM stream_smoke ORDER BY id");
+            }
+            other => panic!("multiline declare: {other:?}"),
         }
         match parse_named_cursor_sql("FETCH 1 FROM c1") {
             Some(NamedCursorSql::Fetch { name, count }) => {
