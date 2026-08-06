@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "state_queries": {
+    "tcl": {
+      "mysql": "fixtures/mysql/oracle-tcl-state.sql",
+      "postgres": "fixtures/postgres/oracle-tcl-state.sql"
+    },
+    "tcl_ddl": {
+      "mysql": "fixtures/mysql/oracle-tcl-ddl-state.sql",
+      "postgres": "fixtures/postgres/oracle-tcl-ddl-state.sql"
+    }
+  },
+  "results": {
+    "SQLT-TCL-001": {
+      "mysql": {"result": "success", "state_query": "tcl", "state": "9003\tbefore savepoint\t30.00\tnew\nddl_table\t0\n", "transaction_markers": "SQLT_TXN\tsavepoint-rollback\t9003\tnew\n"},
+      "postgres": {"result": "success", "state_query": "tcl", "state": "9003\tbefore savepoint\t30.00\tnew\nddl_table\t0\n", "transaction_markers": "SQLT_TXN\tsavepoint-rollback\t9003\tnew\n"}
+    },
+    "SQLT-TCL-002": {
+      "mysql": {"result": "success", "state_query": "tcl", "state": "9202\ttransaction commit\t20.02\tnew\nddl_table\t0\n", "transaction_markers": "SQLT_TXN\tcommit\t9202\tnew\n"},
+      "postgres": {"result": "success", "state_query": "tcl", "state": "9202\ttransaction commit\t20.02\tnew\nddl_table\t0\n", "transaction_markers": "SQLT_TXN\tcommit\t9202\tnew\n"}
+    },
+    "SQLT-TCL-003": {
+      "mysql": {"result": "success", "state_query": "tcl", "state": "ddl_table\t0\n", "transaction_markers": "SQLT_TXN\trollback\t0\n"},
+      "postgres": {"result": "success", "state_query": "tcl", "state": "ddl_table\t0\n", "transaction_markers": "SQLT_TXN\trollback\t0\n"}
+    },
+    "SQLT-TCL-004": {
+      "mysql": {"result": "recovered_error", "state_query": "tcl", "state": "ddl_table\t0\n", "error": "mysql\t1305\t42000\n", "transaction_markers": "SQLT_TXN\treleased\t0\n"},
+      "postgres": {"result": "recovered_error", "state_query": "tcl", "state": "ddl_table\t0\n", "error": "postgres\t3B001\n", "transaction_markers": "SQLT_TXN\treleased\t0\n"}
+    },
+    "SQLT-TCL-005": {
+      "mysql": {"result": "success", "state_query": "tcl", "state": "9205\tbefore outer savepoint\t20.05\tnew\nddl_table\t0\n", "transaction_markers": "SQLT_TXN\tnested\t9205\tnew\n"},
+      "postgres": {"result": "success", "state_query": "tcl", "state": "9205\tbefore outer savepoint\t20.05\tnew\nddl_table\t0\n", "transaction_markers": "SQLT_TXN\tnested\t9205\tnew\n"}
+    },
+    "SQLT-TCL-006": {
+      "mysql": {"result": "recovered_error", "state_query": "tcl", "state": "9206\tbefore constraint error\t20.06\terror-recovered\nddl_table\t0\n", "error": "mysql\t1062\t23000\n", "transaction_markers": "SQLT_TXN\tconstraint-state\t1\terror-recovered\n"},
+      "postgres": {"result": "recovered_error", "state_query": "tcl", "state": "ddl_table\t0\n", "error": "postgres\t23505\n", "transaction_markers": "SQLT_TXN\tconstraint-state\t0\t<NONE>\n"}
+    },
+    "SQLT-TCL-007": {
+      "mysql": {"result": "recovered_error", "state_query": "tcl", "state": "ddl_table\t0\n", "error": "mysql\t1792\t25006\n", "transaction_markers": "SQLT_TXN\tread-only\t0\n"},
+      "postgres": {"result": "recovered_error", "state_query": "tcl", "state": "ddl_table\t0\n", "error": "postgres\t25006\n", "transaction_markers": "SQLT_TXN\tread-only\t0\n"}
+    },
+    "SQLT-TCL-008": {
+      "mysql": {"result": "success", "state_query": "tcl", "state": "ddl_table\t0\n", "transaction_markers": "SQLT_TXN\tisolation\tserializable\n"}
+    },
+    "SQLT-TCL-009": {
+      "postgres": {"result": "success", "state_query": "tcl", "state": "ddl_table\t0\n", "transaction_markers": "SQLT_TXN\tisolation\tserializable\n"}
+    },
+    "SQLT-TCL-010": {
+      "mysql": {"result": "success", "state_query": "tcl_ddl", "state": "ddl_table\t1\nddl_rows\t1\n", "transaction_markers": "SQLT_TXN\tddl-rollback-complete\n"},
+      "postgres": {"result": "success", "state_query": "tcl_ddl", "state": "ddl_table\t0\nddl_rows\t0\n", "transaction_markers": "SQLT_TXN\tddl-rollback-complete\n"}
+    },
+    "SQLT-TCL-011": {
+      "mysql": {"result": "recovered_error", "state_query": "tcl", "state": "9210\tsavepoint recovery\t21.10\terror-recovered\nddl_table\t0\n", "error": "mysql\t1062\t23000\n", "transaction_markers": "SQLT_TXN\tsavepoint-error-recovery\t9210\terror-recovered\n"},
+      "postgres": {"result": "recovered_error", "state_query": "tcl", "state": "9210\tsavepoint recovery\t21.10\terror-recovered\nddl_table\t0\n", "error": "postgres\t23505\n", "transaction_markers": "SQLT_TXN\tsavepoint-error-recovery\t9210\terror-recovered\n"}
+    }
+  }
+}

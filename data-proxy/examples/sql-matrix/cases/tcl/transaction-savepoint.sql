@@ -11,3 +11,6 @@ INSERT INTO sqlt_mutations (mutation_id, description, amount)
 VALUES (9004, 'after savepoint', 40.00);
 ROLLBACK TO SAVEPOINT sqlt_checkpoint;
 COMMIT;
+SELECT 'SQLT_TXN', 'savepoint-rollback', mutation_id, status
+FROM sqlt_mutations
+WHERE mutation_id = 9003;

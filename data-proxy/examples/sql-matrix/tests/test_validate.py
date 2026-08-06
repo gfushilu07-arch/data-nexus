@@ -246,6 +246,34 @@ class ValidateSqlMatrixTest(unittest.TestCase):
         oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
         self.assert_has_error("SQLT-DML-042.mysql.error")
 
+    def test_tcl_oracle_must_cover_every_case(self) -> None:
+        oracle_path = self.root / "tcl-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        del oracles["results"]["SQLT-TCL-011"]
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("tcl-oracles.json cases must be")
+
+    def test_tcl_oracle_must_cover_every_declared_dialect(self) -> None:
+        oracle_path = self.root / "tcl-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        del oracles["results"]["SQLT-TCL-001"]["postgres"]
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-TCL-001 dialects must be")
+
+    def test_tcl_state_query_must_exist_below_matrix_root(self) -> None:
+        oracle_path = self.root / "tcl-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["state_queries"]["tcl"]["mysql"] = "../outside.sql"
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("state_queries.tcl.mysql escapes matrix root")
+
+    def test_tcl_oracle_rejects_unknown_contract_field(self) -> None:
+        oracle_path = self.root / "tcl-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["results"]["SQLT-TCL-001"]["mysql"]["force_continue"] = False
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-TCL-001.mysql fields must be")
+
     def test_ddl_oracle_must_cover_every_declared_dialect(self) -> None:
         oracle_path = self.root / "ddl-oracles.json"
         oracles = json.loads(oracle_path.read_text(encoding="utf-8"))

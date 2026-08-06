@@ -113,6 +113,7 @@
     "ddl.sequences": "Create, alter, and drop PostgreSQL sequences with exact parameter and runtime-state verification",
     "ddl.database_boundary": "Verify MySQL database lifecycle statements preserve restricted-account privilege boundaries",
     "tcl.savepoint": "Create and roll back to a transaction savepoint",
+    "tcl.transactions": "Commit, roll back, recover, isolate, and compare explicit transaction behavior",
     "cursor.named_forward": "Declare, fetch from, and close a forward named cursor",
     "security.mask_row_filter": "Apply masking and tenant row filtering to a query",
     "unsupported.copy_program": "Reject PostgreSQL server-side program execution",

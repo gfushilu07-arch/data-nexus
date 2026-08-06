@@ -24,4 +24,5 @@ DROP TABLE IF EXISTS sqlt_ddl_parent;
 DROP TABLE IF EXISTS sqlt_ddl_column;
 DROP TABLE IF EXISTS sqlt_ddl_index;
 DROP TABLE IF EXISTS sqlt_ddl_view_source;
+DROP TABLE IF EXISTS sqlt_tcl_ddl;
 SET FOREIGN_KEY_CHECKS = 1;

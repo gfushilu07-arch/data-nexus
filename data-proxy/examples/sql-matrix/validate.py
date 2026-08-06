@@ -483,6 +483,90 @@ def _validate_dml_oracles(root: Path, cases: list[Any], errors: list[str]) -> No
                     errors.append(f"{label} error oracle cannot define returned_rows")
 
 
+def _validate_tcl_oracles(root: Path, cases: list[Any], errors: list[str]) -> None:
+    """Validate the strict per-dialect contract owned by the explicit TCL runner."""
+    oracles = _load_json(root / "tcl-oracles.json", errors)
+    if not isinstance(oracles, dict):
+        errors.append("tcl-oracles.json must contain an object")
+        return
+    if oracles.get("schema_version") != 1:
+        errors.append("tcl-oracles.json schema_version must be 1")
+
+    state_queries = oracles.get("state_queries")
+    if not isinstance(state_queries, dict) or set(state_queries) != {"tcl", "tcl_ddl"}:
+        errors.append("tcl-oracles.json state_queries must contain tcl and tcl_ddl")
+        state_queries = {}
+    for group, queries in state_queries.items():
+        if not isinstance(queries, dict) or set(queries) != {"mysql", "postgres"}:
+            errors.append(f"tcl-oracles.json state_queries.{group} must define mysql and postgres")
+            continue
+        for dialect, relative in queries.items():
+            label = f"tcl-oracles.json state_queries.{group}.{dialect}"
+            if not isinstance(relative, str) or not relative.endswith(".sql"):
+                errors.append(f"{label} must be an SQL path")
+                continue
+            path = root / PurePosixPath(relative)
+            try:
+                path.resolve().relative_to(root.resolve())
+            except ValueError:
+                errors.append(f"{label} escapes matrix root")
+            if not path.is_file():
+                errors.append(f"{label} does not exist: {relative}")
+
+    expected: dict[str, set[str]] = {}
+    for case in cases:
+        if isinstance(case, dict) and case.get("family") == "tcl":
+            case_id = case.get("id")
+            dialects = case.get("dialects")
+            if isinstance(case_id, str) and isinstance(dialects, list):
+                expected[case_id] = {item for item in dialects if isinstance(item, str)}
+
+    results = oracles.get("results")
+    if not isinstance(results, dict):
+        errors.append("tcl-oracles.json results must be an object")
+        return
+    if set(results) != set(expected):
+        errors.append(
+            f"tcl-oracles.json cases must be {sorted(expected)}, got {sorted(results)}"
+        )
+    required = {"result", "state_query", "state", "transaction_markers"}
+    for case_id, dialects in expected.items():
+        values = results.get(case_id)
+        if not isinstance(values, dict) or set(values) != dialects:
+            errors.append(
+                f"tcl-oracles.json results.{case_id} dialects must be {sorted(dialects)}"
+            )
+            continue
+        for dialect, value in values.items():
+            label = f"tcl-oracles.json results.{case_id}.{dialect}"
+            if not isinstance(value, dict):
+                errors.append(f"{label} must be an object")
+                continue
+            result = value.get("result")
+            if result not in {"success", "recovered_error"}:
+                errors.append(f"{label}.result must be success or recovered_error")
+                continue
+            expected_fields = required | ({"error"} if result == "recovered_error" else set())
+            if set(value) != expected_fields:
+                errors.append(f"{label} fields must be {sorted(expected_fields)}")
+            if value.get("state_query") not in state_queries:
+                errors.append(f"{label}.state_query must name a registered query group")
+            state = value.get("state")
+            if not isinstance(state, str) or (state and not state.endswith("\n")):
+                errors.append(f"{label}.state must be an empty or newline-terminated string")
+            markers = value.get("transaction_markers")
+            if (
+                not isinstance(markers, str)
+                or not markers.startswith("SQLT_TXN\t")
+                or not markers.endswith("\n")
+            ):
+                errors.append(f"{label}.transaction_markers must contain marker rows")
+            if result == "recovered_error":
+                error = value.get("error")
+                if not isinstance(error, str) or not error.endswith("\n"):
+                    errors.append(f"{label}.error must be a newline-terminated string")
+
+
 def _validate_ddl_oracles(root: Path, cases: list[Any], errors: list[str]) -> None:
     """Validate exact catalog and stable error contracts for canonical DDL cases."""
     oracles = _load_json(root / "ddl-oracles.json", errors)
@@ -917,6 +1001,7 @@ def validate_repository(root: Path) -> list[str]:
     _validate_dql_lock_oracles(root, cases, errors)
     _validate_dql_boundary_oracles(root, cases, errors)
     _validate_dml_oracles(root, cases, errors)
+    _validate_tcl_oracles(root, cases, errors)
     _validate_ddl_oracles(root, cases, errors)
     _validate_ddl_temp_oracles(root, cases, errors)
     _validate_ddl_database_oracles(root, cases, errors)
