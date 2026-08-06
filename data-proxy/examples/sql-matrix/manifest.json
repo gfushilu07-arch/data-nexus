@@ -4365,9 +4365,9 @@
       "family": "invalid",
       "capability": "invalid.syntax",
       "dialects": ["mysql", "postgres"],
-      "frontends": ["mysql_text", "pg_simple", "pg_extended"],
+      "frontends": ["mysql_text", "pg_simple"],
       "backends": ["mysql", "postgres"],
-      "protocols": ["mysql_text", "pg_simple", "pg_extended"],
+      "protocols": ["mysql_text", "pg_simple"],
       "statement_mode": "single",
       "transaction_mode": "autocommit",
       "parameter_mode": "none",
@@ -4378,6 +4378,98 @@
       ],
       "side_effect": "none",
       "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-INVALID-002", "sql_file": "invalid/unterminated-string.sql", "family": "invalid",
+      "capability": "invalid.syntax", "dialects": ["mysql", "postgres"], "frontends": ["mysql_text", "pg_simple"],
+      "backends": ["mysql", "postgres"], "protocols": ["mysql_text", "pg_simple"], "statement_mode": "single",
+      "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "deny"}, {"policy": "allow", "outcome": "deny"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-INVALID-003", "sql_file": "invalid/incomplete-select.sql", "family": "invalid",
+      "capability": "invalid.syntax", "dialects": ["mysql", "postgres"], "frontends": ["mysql_text", "pg_simple"],
+      "backends": ["mysql", "postgres"], "protocols": ["mysql_text", "pg_simple"], "statement_mode": "single",
+      "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "deny"}, {"policy": "allow", "outcome": "deny"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-INVALID-004", "sql_file": "invalid/missing-table.sql", "family": "invalid",
+      "capability": "invalid.name_resolution", "dialects": ["mysql", "postgres"], "frontends": ["mysql_text", "pg_simple"],
+      "backends": ["mysql", "postgres"], "protocols": ["mysql_text", "pg_simple"], "statement_mode": "single",
+      "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "deny"}, {"policy": "allow", "outcome": "deny"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-INVALID-005", "sql_file": "invalid/missing-column.sql", "family": "invalid",
+      "capability": "invalid.name_resolution", "dialects": ["mysql", "postgres"], "frontends": ["mysql_text", "pg_simple"],
+      "backends": ["mysql", "postgres"], "protocols": ["mysql_text", "pg_simple"], "statement_mode": "single",
+      "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "deny"}, {"policy": "allow", "outcome": "deny"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-INVALID-006", "sql_file": "invalid/ambiguous-column.sql", "family": "invalid",
+      "capability": "invalid.name_resolution", "dialects": ["mysql", "postgres"], "frontends": ["mysql_text", "pg_simple"],
+      "backends": ["mysql", "postgres"], "protocols": ["mysql_text", "pg_simple"], "statement_mode": "single",
+      "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "deny"}, {"policy": "allow", "outcome": "deny"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-INVALID-007", "sql_file": "invalid/integer-assignment.sql", "family": "invalid",
+      "capability": "invalid.type_assignment", "dialects": ["mysql", "postgres"], "frontends": ["mysql_text", "pg_simple"],
+      "backends": ["mysql", "postgres"], "protocols": ["mysql_text", "pg_simple"], "statement_mode": "single",
+      "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "deny"}, {"policy": "allow", "outcome": "deny"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-INVALID-008", "sql_file": "invalid/varchar-overflow.sql", "family": "invalid",
+      "capability": "invalid.numeric_range", "dialects": ["mysql", "postgres"], "frontends": ["mysql_text", "pg_simple"],
+      "backends": ["mysql", "postgres"], "protocols": ["mysql_text", "pg_simple"], "statement_mode": "single",
+      "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "deny"}, {"policy": "allow", "outcome": "deny"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-INVALID-009", "sql_file": "invalid/numeric-overflow.sql", "family": "invalid",
+      "capability": "invalid.numeric_range", "dialects": ["mysql", "postgres"], "frontends": ["mysql_text", "pg_simple"],
+      "backends": ["mysql", "postgres"], "protocols": ["mysql_text", "pg_simple"], "statement_mode": "single",
+      "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "deny"}, {"policy": "allow", "outcome": "deny"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-INVALID-010", "sql_file": "invalid/postgres-division-by-zero.sql", "family": "invalid",
+      "capability": "invalid.expression", "dialects": ["postgres"], "frontends": ["pg_simple"], "backends": ["postgres"],
+      "protocols": ["pg_simple"], "statement_mode": "single", "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "deny"}, {"policy": "allow", "outcome": "deny"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-INVALID-011", "sql_file": "invalid/postgres-invalid-cast.sql", "family": "invalid",
+      "capability": "invalid.expression", "dialects": ["postgres"], "frontends": ["pg_simple"], "backends": ["postgres"],
+      "protocols": ["pg_simple"], "statement_mode": "single", "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "deny"}, {"policy": "allow", "outcome": "deny"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-INVALID-012", "sql_file": "invalid/postgres-function-signature.sql", "family": "invalid",
+      "capability": "invalid.expression", "dialects": ["postgres"], "frontends": ["pg_simple"], "backends": ["postgres"],
+      "protocols": ["pg_simple"], "statement_mode": "single", "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "deny"}, {"policy": "allow", "outcome": "deny"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-INVALID-013", "sql_file": "invalid/mysql-function-arity.sql", "family": "invalid",
+      "capability": "invalid.expression", "dialects": ["mysql"], "frontends": ["mysql_text"], "backends": ["mysql"],
+      "protocols": ["mysql_text"], "statement_mode": "single", "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "deny"}, {"policy": "allow", "outcome": "deny"}, {"policy": "deny", "outcome": "deny"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
     }
   ]
 }

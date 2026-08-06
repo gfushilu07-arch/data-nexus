@@ -1197,6 +1197,100 @@ def _validate_ddl_database_oracles(root: Path, cases: list[Any], errors: list[st
                 errors.append(f"{label}.unchanged must be true")
 
 
+def _validate_invalid_oracles(root: Path, cases: list[Any], errors: list[str]) -> None:
+    """Validate stable error identities and unchanged probes for invalid SQL."""
+    oracles = _load_json(root / "invalid-oracles.json", errors)
+    if not isinstance(oracles, dict):
+        errors.append("invalid-oracles.json must contain an object")
+        return
+    if oracles.get("schema_version") != 1:
+        errors.append("invalid-oracles.json schema_version must be 1")
+
+    probe_queries = oracles.get("probe_queries")
+    if not isinstance(probe_queries, dict) or set(probe_queries) != {"mysql", "postgres"}:
+        errors.append("invalid-oracles.json probe_queries must define mysql and postgres")
+        probe_queries = {}
+    for dialect, relative in probe_queries.items():
+        label = f"invalid-oracles.json probe_queries.{dialect}"
+        if not isinstance(relative, str) or not relative.endswith(".sql"):
+            errors.append(f"{label} must be an SQL path")
+            continue
+        path = root / PurePosixPath(relative)
+        try:
+            path.resolve().relative_to(root.resolve())
+        except ValueError:
+            errors.append(f"{label} escapes matrix root")
+            continue
+        if not path.is_file():
+            errors.append(f"{label} does not exist: {relative}")
+
+    probe_state = oracles.get("probe_state")
+    if not isinstance(probe_state, dict) or set(probe_state) != {"mysql", "postgres"}:
+        errors.append("invalid-oracles.json probe_state must define mysql and postgres")
+    else:
+        for dialect, value in probe_state.items():
+            if not isinstance(value, str) or not value.endswith("\n"):
+                errors.append(
+                    f"invalid-oracles.json probe_state.{dialect} must be newline-terminated"
+                )
+
+    expected: dict[str, set[str]] = {}
+    for case in cases:
+        if (
+            isinstance(case, dict)
+            and case.get("family") == "invalid"
+            and isinstance(case.get("id"), str)
+        ):
+            allowed_frontends = {"mysql_text", "pg_simple"}
+            if set(case.get("frontends", [])) - allowed_frontends:
+                errors.append(
+                    f"{case['id']} invalid corpus supports only mysql_text and pg_simple frontends"
+                )
+            if set(case.get("protocols", [])) != set(case.get("frontends", [])):
+                errors.append(
+                    f"{case['id']} invalid corpus protocols must match frontends"
+                )
+            expected[case["id"]] = {
+                dialect
+                for dialect in case.get("dialects", [])
+                if isinstance(dialect, str)
+            }
+
+    results = oracles.get("results")
+    if not isinstance(results, dict):
+        errors.append("invalid-oracles.json results must be an object")
+        return
+    if set(results) != set(expected):
+        errors.append(
+            f"invalid-oracles.json cases must be {sorted(expected)}, got {sorted(results)}"
+        )
+    fields = {"class", "error", "unchanged"}
+    for case_id, dialects in expected.items():
+        values = results.get(case_id)
+        if not isinstance(values, dict) or set(values) != dialects:
+            errors.append(
+                f"invalid-oracles.json results.{case_id} dialects must be {sorted(dialects)}"
+            )
+            continue
+        for dialect, value in values.items():
+            label = f"invalid-oracles.json results.{case_id}.{dialect}"
+            if not isinstance(value, dict) or set(value) != fields:
+                errors.append(f"{label} fields must be {sorted(fields)}")
+                continue
+            if value["class"] != "backend_error":
+                errors.append(f"{label}.class must be backend_error")
+            error = value["error"]
+            pattern = (
+                r"mysql\t[0-9]+\t[0-9A-Z]{5}\n"
+                if dialect == "mysql"
+                else r"postgres\t[0-9A-Z]{5}\n"
+            )
+            if not isinstance(error, str) or re.fullmatch(pattern, error) is None:
+                errors.append(f"{label}.error must be a stable {dialect} error identity")
+            if value["unchanged"] is not True:
+                errors.append(f"{label}.unchanged must be true")
+
+
 def _validate_string_array(
     case: dict[str, Any],
     field: str,
@@ -1371,6 +1465,7 @@ def validate_repository(root: Path) -> list[str]:
     _validate_prepared_oracles(root, cases, errors)
     _validate_extended_oracles(root, cases, errors)
     _validate_cursor_oracles(root, cases, errors)
+    _validate_invalid_oracles(root, cases, errors)
     _validate_ddl_oracles(root, cases, errors)
     _validate_ddl_temp_oracles(root, cases, errors)
     _validate_ddl_database_oracles(root, cases, errors)

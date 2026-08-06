@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "probe_queries": {
+    "mysql": "fixtures/mysql/oracle-invalid-state.sql",
+    "postgres": "fixtures/postgres/oracle-invalid-state.sql"
+  },
+  "probe_state": {
+    "mysql": "4\t6\t0\t5\talpha\t10.00\n",
+    "postgres": "4\t6\t0\t5\talpha\t10.00\n"
+  },
+  "results": {
+    "SQLT-INVALID-001": {"mysql": {"class": "backend_error", "error": "mysql\t1064\t42000\n", "unchanged": true}, "postgres": {"class": "backend_error", "error": "postgres\t42601\n", "unchanged": true}},
+    "SQLT-INVALID-002": {"mysql": {"class": "backend_error", "error": "mysql\t1064\t42000\n", "unchanged": true}, "postgres": {"class": "backend_error", "error": "postgres\t42601\n", "unchanged": true}},
+    "SQLT-INVALID-003": {"mysql": {"class": "backend_error", "error": "mysql\t1064\t42000\n", "unchanged": true}, "postgres": {"class": "backend_error", "error": "postgres\t42601\n", "unchanged": true}},
+    "SQLT-INVALID-004": {"mysql": {"class": "backend_error", "error": "mysql\t1146\t42S02\n", "unchanged": true}, "postgres": {"class": "backend_error", "error": "postgres\t42P01\n", "unchanged": true}},
+    "SQLT-INVALID-005": {"mysql": {"class": "backend_error", "error": "mysql\t1054\t42S22\n", "unchanged": true}, "postgres": {"class": "backend_error", "error": "postgres\t42703\n", "unchanged": true}},
+    "SQLT-INVALID-006": {"mysql": {"class": "backend_error", "error": "mysql\t1052\t23000\n", "unchanged": true}, "postgres": {"class": "backend_error", "error": "postgres\t42702\n", "unchanged": true}},
+    "SQLT-INVALID-007": {"mysql": {"class": "backend_error", "error": "mysql\t1366\tHY000\n", "unchanged": true}, "postgres": {"class": "backend_error", "error": "postgres\t22P02\n", "unchanged": true}},
+    "SQLT-INVALID-008": {"mysql": {"class": "backend_error", "error": "mysql\t1406\t22001\n", "unchanged": true}, "postgres": {"class": "backend_error", "error": "postgres\t22001\n", "unchanged": true}},
+    "SQLT-INVALID-009": {"mysql": {"class": "backend_error", "error": "mysql\t1264\t22003\n", "unchanged": true}, "postgres": {"class": "backend_error", "error": "postgres\t22003\n", "unchanged": true}},
+    "SQLT-INVALID-010": {"postgres": {"class": "backend_error", "error": "postgres\t22012\n", "unchanged": true}},
+    "SQLT-INVALID-011": {"postgres": {"class": "backend_error", "error": "postgres\t22P02\n", "unchanged": true}},
+    "SQLT-INVALID-012": {"postgres": {"class": "backend_error", "error": "postgres\t42883\n", "unchanged": true}},
+    "SQLT-INVALID-013": {"mysql": {"class": "backend_error", "error": "mysql\t1582\t42000\n", "unchanged": true}}
+  }
+}

@@ -119,6 +119,42 @@ class ValidateSqlMatrixTest(unittest.TestCase):
         self.write_manifest(manifest)
         self.assert_has_error("capability is unknown")
 
+    def test_invalid_oracle_must_cover_every_declared_dialect(self) -> None:
+        oracle_path = self.root / "invalid-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        del oracles["results"]["SQLT-INVALID-004"]["postgres"]
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-INVALID-004 dialects must be")
+
+    def test_invalid_oracle_requires_stable_error_identity(self) -> None:
+        oracle_path = self.root / "invalid-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["results"]["SQLT-INVALID-005"]["mysql"]["error"] = "any\n"
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("must be a stable mysql error identity")
+
+    def test_invalid_oracle_requires_unchanged_probe(self) -> None:
+        oracle_path = self.root / "invalid-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["results"]["SQLT-INVALID-007"]["postgres"]["unchanged"] = False
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-INVALID-007.postgres.unchanged must be true")
+
+    def test_invalid_probe_query_must_stay_below_matrix_root(self) -> None:
+        oracle_path = self.root / "invalid-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["probe_queries"]["postgres"] = "../outside.sql"
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("probe_queries.postgres escapes matrix root")
+
+    def test_invalid_case_rejects_unverified_frontend(self) -> None:
+        manifest = self.manifest()
+        case = next(value for value in manifest["cases"] if value["id"] == "SQLT-INVALID-001")
+        case["frontends"].append("pg_extended")
+        case["protocols"].append("pg_extended")
+        self.write_manifest(manifest)
+        self.assert_has_error("supports only mysql_text and pg_simple frontends")
+
     def test_execution_metadata_is_required(self) -> None:
         manifest = self.manifest()
         del manifest["cases"][0]["transaction_mode"]
