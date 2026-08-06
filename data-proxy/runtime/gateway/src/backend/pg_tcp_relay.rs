@@ -117,6 +117,12 @@ pub enum SessionReturn {
         pool: Arc<PgTcpIdlePool>,
         key: String,
     },
+    /// Route an idle response to the pool and an active/failed response to the txn slot.
+    IdleOrTxn {
+        pool: Arc<PgTcpIdlePool>,
+        key: String,
+        txn: PgTcpTxnSlot,
+    },
     /// A08: multi-Execute client-frame unit held open (no Sync sent yet).
     Hold(PgTcpTxnSlot),
 }
@@ -474,6 +480,7 @@ impl PgTcpSession {
             return_to,
             done: false,
             stop_before_ready: false,
+            ready_status: None,
         })
     }
 
@@ -539,6 +546,7 @@ impl PgTcpSession {
             return_to,
             done: false,
             stop_before_ready: false,
+            ready_status: None,
         })
     }
 
@@ -604,6 +612,7 @@ impl PgTcpSession {
             return_to,
             done: false,
             stop_before_ready: true,
+            ready_status: None,
         })
     }
 
@@ -632,6 +641,7 @@ impl PgTcpSession {
             return_to,
             done: false,
             stop_before_ready: true,
+            ready_status: None,
         })
     }
 
@@ -651,6 +661,7 @@ impl PgTcpSession {
             return_to,
             done: false,
             stop_before_ready: false,
+            ready_status: None,
         })
     }
 
@@ -711,6 +722,7 @@ impl PgTcpSession {
             return_to,
             done: false,
             stop_before_ready: false,
+            ready_status: None,
         })
     }
 
@@ -850,6 +862,8 @@ pub struct PgTcpWireStream {
     done: bool,
     /// When true, do not wait for / include ReadyForQuery; stop after C/s/E.
     stop_before_ready: bool,
+    /// Backend transaction status from the terminal ReadyForQuery frame.
+    ready_status: Option<u8>,
 }
 
 impl PgTcpWireStream {
@@ -865,6 +879,13 @@ impl PgTcpWireStream {
                 SessionReturn::Idle { pool, key } => {
                     pool.put(key.clone(), sess);
                 }
+                SessionReturn::IdleOrTxn { pool, key, txn } => match self.ready_status {
+                    Some(b'I') => pool.put(key.clone(), sess),
+                    Some(b'T' | b'E') => *txn.lock() = Some(sess),
+                    _ => {
+                        // A partially drained or malformed response is not reusable.
+                    }
+                },
             }
         }
     }
@@ -872,8 +893,8 @@ impl PgTcpWireStream {
 
 impl Drop for PgTcpWireStream {
     fn drop(&mut self) {
-        // Mid-stream abort still returns the session so COMMIT/ROLLBACK or idle
-        // reuse can continue (caller may drop a bad session by clearing pool).
+        // Fixed destinations retain legacy behavior. IdleOrTxn only reuses a session
+        // after a terminal ReadyForQuery status proved its protocol state.
         self.finish_session();
     }
 }
@@ -905,6 +926,9 @@ impl WireStream for PgTcpWireStream {
             };
             let tag = frame.first().copied();
             let is_ready = tag == Some(b'Z');
+            if is_ready && frame.len() >= 6 {
+                self.ready_status = Some(frame[5]);
+            }
             if self.stop_before_ready && is_ready {
                 // Should not normally arrive (no Sync); leave Z for next Sync drain.
                 // Put frame back by not supporting unread — Sync path expects clean.
@@ -1192,6 +1216,52 @@ mod tests {
                 "err={msg}"
             );
         });
+    }
+
+    #[tokio::test]
+    async fn sqlt_3e3_ready_status_routes_idle_or_transaction_session() {
+        async fn session_with_ready(status: u8) -> (PgTcpSession, TcpStream) {
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let addr = listener.local_addr().unwrap();
+            let accept = tokio::spawn(async move { listener.accept().await.unwrap().0 });
+            let stream = TcpStream::connect(addr).await.unwrap();
+            let peer = accept.await.unwrap();
+            (
+                PgTcpSession {
+                    stream: PgBackendStream::Plain(stream),
+                    read_buf: BytesMut::from(&[b'Z', 0, 0, 0, 5, status][..]),
+                },
+                peer,
+            )
+        }
+
+        for status in [b'I', b'T', b'E'] {
+            let pool = Arc::new(PgTcpIdlePool::new(1).without_health_probe());
+            let txn = new_tcp_txn_slot();
+            let (session, _peer) = session_with_ready(status).await;
+            let mut stream = PgTcpWireStream {
+                session: Some(session),
+                return_to: SessionReturn::IdleOrTxn {
+                    pool: pool.clone(),
+                    key: "route-test".into(),
+                    txn: txn.clone(),
+                },
+                done: false,
+                stop_before_ready: false,
+                ready_status: None,
+            };
+
+            let packets = stream.poll_packets(8).await.unwrap().unwrap();
+            assert_eq!(packets[0], [b'Z', 0, 0, 0, 5, status]);
+            assert!(stream.poll_packets(8).await.unwrap().is_none());
+            if status == b'I' {
+                assert_eq!(pool.len(), 1);
+                assert!(txn.lock().is_none());
+            } else {
+                assert!(pool.is_empty());
+                assert!(txn.lock().is_some());
+            }
+        }
     }
 
     #[test]

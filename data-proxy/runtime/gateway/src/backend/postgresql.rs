@@ -358,9 +358,10 @@ impl PostgreSqlBackendConnector {
         let mut stream = session_tcp
             .simple_query_relay_into(
                 sql,
-                SessionReturn::Idle {
+                SessionReturn::IdleOrTxn {
                     pool: self.tcp_idle.clone(),
                     key,
+                    txn: self.tcp_txn.clone(),
                 },
             )
             .await?;
@@ -387,9 +388,10 @@ impl PostgreSqlBackendConnector {
         let stream = session_tcp
             .simple_query_relay_into(
                 sql,
-                SessionReturn::Idle {
+                SessionReturn::IdleOrTxn {
                     pool: self.tcp_idle.clone(),
                     key,
+                    txn: self.tcp_txn.clone(),
                 },
             )
             .await?;
@@ -401,8 +403,8 @@ impl PostgreSqlBackendConnector {
     /// A08: original client extended frames on backend TCP (not re-encoded).
     ///
     /// Takes `session.pg_client_extended_frames` (Parse/Bind/Execute raw messages).
-    /// - Unlimited Execute (max_rows none/0): append Sync, stream until Z.
-    /// - Paged Execute (max_rows > 0): no Sync; hold TCP for multi-Execute pages.
+    /// - Every Execute stops at CommandComplete / PortalSuspended / ErrorResponse.
+    /// - The backend session remains held until the client sends Sync.
     /// - Subsequent page with only Execute frames + hold open: relay Execute only.
     async fn execute_client_extended_frames_tcp_relay(
         &self,
@@ -416,7 +418,6 @@ impl PostgreSqlBackendConnector {
             ));
         }
         let frames = std::mem::take(&mut session.pg_client_extended_frames);
-        let paged = session.pg_execute_max_rows.is_some();
         let only_execute = frames.iter().all(|f| f.first() == Some(&b'E'));
 
         // Multi-Execute resume: held TCP + only Execute frame(s).
@@ -466,47 +467,18 @@ impl PostgreSqlBackendConnector {
             }
         };
 
-        if paged {
-            // Hold open for more Execute / client Sync.
-            let return_to = SessionReturn::Hold(self.tcp_ext_hold.clone());
-            match sess
-                .client_frames_relay_hold_into(&frames, return_to)
-                .await
-            {
-                Ok(stream) => {
-                    session.pg_ext_tcp_hold = true;
-                    Ok(ExecuteOutcome::WireRelay(WireRelay {
-                        stream: Box::new(stream),
-                    }))
-                }
-                Err(e) => {
-                    session.pg_client_extended_frames = frames;
-                    session.pg_ext_tcp_hold = false;
-                    Err(e)
-                }
+        let return_to = SessionReturn::Hold(self.tcp_ext_hold.clone());
+        match sess.client_frames_relay_hold_into(&frames, return_to).await {
+            Ok(stream) => {
+                session.pg_ext_tcp_hold = true;
+                Ok(ExecuteOutcome::WireRelay(WireRelay {
+                    stream: Box::new(stream),
+                }))
             }
-        } else {
-            // One-shot unit: Sync on backend.
-            let return_to = if in_txn {
-                SessionReturn::Txn(self.tcp_txn.clone())
-            } else {
-                let key = PgTcpIdlePool::pool_key(&endpoint, &database);
-                SessionReturn::Idle {
-                    pool: self.tcp_idle.clone(),
-                    key,
-                }
-            };
-            match sess.client_frames_relay_into(&frames, return_to).await {
-                Ok(stream) => {
-                    session.pg_ext_tcp_hold = false;
-                    Ok(ExecuteOutcome::WireRelay(WireRelay {
-                        stream: Box::new(stream),
-                    }))
-                }
-                Err(e) => {
-                    session.pg_client_extended_frames = frames;
-                    Err(e)
-                }
+            Err(e) => {
+                session.pg_client_extended_frames = frames;
+                session.pg_ext_tcp_hold = false;
+                Err(e)
             }
         }
     }
@@ -521,9 +493,9 @@ impl PostgreSqlBackendConnector {
         })?;
         session.pg_ext_tcp_hold = false;
         session.pg_client_extended_frames.clear();
-        // After Sync, return socket to idle pool when possible (unknown key → drop).
+        // Preserve named statements and explicit transactions across extended units.
         let stream = sess
-            .client_sync_relay_into(SessionReturn::Drop)
+            .client_sync_relay_into(SessionReturn::Txn(self.tcp_txn.clone()))
             .await?;
         Ok(ExecuteOutcome::WireRelay(WireRelay {
             stream: Box::new(stream),

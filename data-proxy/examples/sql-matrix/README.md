@@ -172,3 +172,20 @@ as the configured `sqlt` backend account. The runner compares MySQL error 1044 /
 `CURRENT_USER()`/login identity before and after each attempt. The dedicated
 `ddl-database-oracles.json` is deliberately excluded from the ordinary DDL oracle, and
 the default run performs 10 executions. Artifacts remain below the external cache root.
+
+The PostgreSQL extended-wire corpus contains eight canonical cases covering named
+statements and portals, parameter ordering and NULL, re-Bind, concurrent portals,
+`Execute max_rows` paging, binary results, error/Sync recovery, and `ReadyForQuery`
+transaction states. Run the PostgreSQL 16.8 direct and security-off gateway matrix with:
+
+```bash
+data-proxy/examples/sql-matrix/run-extended-corpus.sh
+```
+
+The runner uses a raw PostgreSQL v3 client and records backend tags and decoded protocol
+fields without a database-driver result abstraction. Every run performs eight
+`case x dialect` comparisons and 16 direct/gateway path executions. Normalized event
+streams, stderr, fixture and gateway logs, copied manifests/oracles, `results.jsonl`, and
+`summary.json` are written below
+`/Volumes/fushilu/.caches/data-nexus/sql-matrix/<run-id>/`; Docker Compose resources and
+the gateway process are removed when the runner exits.

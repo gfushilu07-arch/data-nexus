@@ -227,16 +227,43 @@ pub async fn write_wire_relay<W: ResponseWriter + ?Sized>(
 /// not see `Z` until Sync — strip those tags when `skip_ready_for_query` is set.
 /// Still not original client Parse/Bind frame relay.
 pub async fn write_wire_relay_opts<W: ResponseWriter + ?Sized>(
-    mut relay: WireRelay,
+    relay: WireRelay,
     writer: &mut W,
     skip_ready_for_query: bool,
 ) -> GatewayResult<u64> {
+    Ok(write_wire_relay_observed(relay, writer, skip_ready_for_query)
+        .await?
+        .bytes)
+}
+
+/// Terminal PostgreSQL state observed while draining a same-protocol relay.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct WireRelayObservation {
+    pub bytes: u64,
+    pub error_response: bool,
+    pub ready_status: Option<u8>,
+}
+
+/// Drain wire packets while retaining ErrorResponse and ReadyForQuery for the session FSM.
+pub async fn write_wire_relay_observed<W: ResponseWriter + ?Sized>(
+    mut relay: WireRelay,
+    writer: &mut W,
+    skip_ready_for_query: bool,
+) -> GatewayResult<WireRelayObservation> {
     let mut total = 0u64;
+    let mut observation = WireRelayObservation::default();
     loop {
         match relay.stream.poll_packets(32).await? {
             None => break,
             Some(batch) if batch.is_empty() => continue,
             Some(batch) => {
+                for packet in &batch {
+                    match packet.first() {
+                        Some(b'E') => observation.error_response = true,
+                        Some(b'Z') if packet.len() >= 6 => observation.ready_status = Some(packet[5]),
+                        _ => {}
+                    }
+                }
                 let batch = if skip_ready_for_query {
                     batch
                         .into_iter()
@@ -256,7 +283,8 @@ pub async fn write_wire_relay_opts<W: ResponseWriter + ?Sized>(
             }
         }
     }
-    Ok(total)
+    observation.bytes = total;
+    Ok(observation)
 }
 
 /// O01: stats from windowed encode (Secure path observability).
@@ -865,6 +893,40 @@ mod tests {
             .all(|p| !matches!(p.first(), Some(&b'Z' | &b'1' | &b'2'))));
         assert_eq!(writer.packets[0][0], b'T');
         assert_eq!(writer.packets[2][0], b'C');
+    }
+
+    #[tokio::test]
+    async fn sqlt_3e3_wire_relay_observes_error_and_ready_status() {
+        struct FakeWire {
+            batches: std::vec::IntoIter<Vec<Vec<u8>>>,
+        }
+
+        #[async_trait]
+        impl WireStream for FakeWire {
+            async fn poll_packets(
+                &mut self,
+                _max_packets: usize,
+            ) -> GatewayResult<Option<Vec<Vec<u8>>>> {
+                Ok(self.batches.next())
+            }
+        }
+
+        let relay = WireRelay {
+            stream: Box::new(FakeWire {
+                batches: vec![vec![
+                    vec![b'E', 0, 0, 0, 4],
+                    vec![b'Z', 0, 0, 0, 5, b'E'],
+                ]]
+                .into_iter(),
+            }),
+        };
+        let mut writer = CollectingWriter::new();
+        let observation = write_wire_relay_observed(relay, &mut writer, true).await.unwrap();
+        assert!(observation.error_response);
+        assert_eq!(observation.ready_status, Some(b'E'));
+        assert_eq!(observation.bytes, 5);
+        assert_eq!(writer.packets.len(), 1);
+        assert_eq!(writer.packets[0][0], b'E');
     }
 
     #[tokio::test]

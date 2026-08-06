@@ -17,7 +17,7 @@ use std::{sync::Arc, time::Instant};
 use endpoint::endpoint::Endpoint;
 use gateway_core::{
         write_resultset_windowed, write_resultset_windowed_with_obligations,
-        write_streaming_query_with_obligations_sample, write_wire_relay_opts, CollectingWriter,
+        write_streaming_query_with_obligations_sample, write_wire_relay_observed, CollectingWriter,
         map_response_types,
         prepare_cross_protocol_command, BackendConnector, CommandSummary, DialectParser,
         EndpointConfig, EndpointRef, EndpointRole, ExecuteMode, ExecuteOutcome,
@@ -866,7 +866,21 @@ impl CoreGatewayConnection {
                     // strip it so only Sync emits ReadyForQuery (not original Parse/Bind relay).
                     let skip_z = self.session.pg_extended_query
                         && command_type != "PG_BACKEND_SYNC";
-                    let wire_bytes = write_wire_relay_opts(relay, writer, skip_z).await?;
+                    let wire = write_wire_relay_observed(relay, writer, skip_z).await?;
+                    let wire_bytes = wire.bytes;
+                    if wire.error_response && self.session.pg_extended_query {
+                        self.session.pg_extended_error = true;
+                        if self.session.transaction_state == TransactionState::Active {
+                            self.session.transaction_state = TransactionState::Failed;
+                        }
+                    }
+                    if let Some(status) = wire.ready_status {
+                        self.session.transaction_state = match status {
+                            b'T' => TransactionState::Active,
+                            b'E' => TransactionState::Failed,
+                            _ => TransactionState::Idle,
+                        };
+                    }
                     // Honesty labels for WireRelay under passthrough:
                     // - simple Query → passthrough
                     // - QueryParams/Execute original client frames → passthrough_client

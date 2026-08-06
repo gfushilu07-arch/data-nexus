@@ -123,6 +123,9 @@ pub struct SessionState {
     /// before Sync). Result footers must not emit ReadyForQuery — only Sync does.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub pg_extended_query: bool,
+    /// PostgreSQL extended-query error state. Frontend messages are ignored until Sync.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub pg_extended_error: bool,
     /// A10: client Execute max_rows for current portal page (0 / None = unlimited).
     /// When set and the stream is truncated at this limit, PG frontend may emit
     /// PortalSuspended instead of CommandComplete.

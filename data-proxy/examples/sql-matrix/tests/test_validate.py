@@ -350,6 +350,34 @@ class ValidateSqlMatrixTest(unittest.TestCase):
         oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
         self.assert_has_error("SQLT-PRP-008.control_sql escapes matrix root")
 
+    def test_extended_oracle_must_cover_every_case(self) -> None:
+        oracle_path = self.root / "extended-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        del oracles["results"]["SQLT-PGX-008"]
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("extended-oracles.json cases must be")
+
+    def test_extended_oracle_rejects_unknown_field(self) -> None:
+        oracle_path = self.root / "extended-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["results"]["SQLT-PGX-001"]["unexpected"] = True
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-PGX-001 fields must be")
+
+    def test_extended_case_must_use_extended_frontend(self) -> None:
+        manifest = self.manifest()
+        case = next(value for value in manifest["cases"] if value["id"] == "SQLT-PGX-001")
+        case["frontends"] = ["pg_simple"]
+        self.write_manifest(manifest)
+        self.assert_has_error("SQLT-PGX-001 must use only pg_extended frontend and protocol")
+
+    def test_extended_ready_status_must_be_protocol_value(self) -> None:
+        oracle_path = self.root / "extended-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["results"]["SQLT-PGX-008"]["expected"]["ready"] = ["idle"]
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-PGX-008.expected.ready must contain only I, T, or E")
+
     def test_ddl_oracle_must_cover_every_declared_dialect(self) -> None:
         oracle_path = self.root / "ddl-oracles.json"
         oracles = json.loads(oracle_path.read_text(encoding="utf-8"))

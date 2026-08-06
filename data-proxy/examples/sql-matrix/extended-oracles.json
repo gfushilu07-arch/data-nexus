@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "results": {
+    "SQLT-PGX-001": {"sql_file": "extended/lifecycle.sql", "flow": "lifecycle", "parameters": ["10"], "expected": {"rows": [["101", "Ada"], ["102", "Lin"]], "ready": ["I"]}},
+    "SQLT-PGX-002": {"sql_file": "extended/parameter-order.sql", "flow": "parameters", "parameters": ["42", "second", null], "expected": {"rows": [["second", "42", "42", null]], "ready": ["I"]}},
+    "SQLT-PGX-003": {"sql_file": "extended/rebind.sql", "flow": "rebind", "parameters": [["7"], ["42"]], "expected": {"rows": [["7"], ["42"]], "ready": ["I", "I"]}},
+    "SQLT-PGX-004": {"sql_file": "extended/multiple-portals.sql", "flow": "multiple_portals", "parameters": [["10"], ["20"]], "expected": {"rows": [["101", "Ada"], ["102", "Lin"], ["201", "Grace"], ["202", "Edsger"]], "ready": ["I"]}},
+    "SQLT-PGX-005": {"sql_file": "extended/portal-paging.sql", "flow": "paging", "parameters": [], "expected": {"rows": [["101"], ["102"], ["201"], ["202"]], "page_end": ["PortalSuspended", "PortalSuspended", "PortalSuspended", "PortalSuspended", "CommandComplete"], "ready": ["I"]}},
+    "SQLT-PGX-006": {"sql_file": "extended/binary-description.sql", "flow": "binary_description", "parameters": ["101"], "expected": {"columns": ["customer_id", "tenant_id", "email", "display_name"], "type_oids": [20, 23, 1043, 1043], "format_codes": [1, 1, 1, 1], "rows": [["101", "10", "ada@example.test", "Ada"]], "ready": ["I"]}},
+    "SQLT-PGX-007": {"sql_file": "extended/sync-error-recovery.sql", "flow": "error_recovery", "parameters": [["0"], ["77"]], "expected": {"sqlstate": "22012", "rows": [["77"]], "ignored_value_absent": true, "ignored_messages_absent": true, "ready": ["I", "I"]}},
+    "SQLT-PGX-008": {"sql_file": "extended/transaction-status.sql", "flow": "transaction_status", "parameters": [["8"], ["0"]], "expected": {"sqlstate": "22012", "rows": [["8"]], "ready": ["T", "T", "E", "I"]}}
+  }
+}

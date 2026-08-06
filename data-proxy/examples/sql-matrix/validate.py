@@ -697,6 +697,99 @@ def _validate_prepared_oracles(root: Path, cases: list[Any], errors: list[str]) 
             errors.append(f"{label} must define control_sql")
 
 
+def _validate_extended_oracles(root: Path, cases: list[Any], errors: list[str]) -> None:
+    """Validate PostgreSQL extended-wire actions and exact protocol expectations."""
+    oracles = _load_json(root / "extended-oracles.json", errors)
+    if not isinstance(oracles, dict):
+        errors.append("extended-oracles.json must contain an object")
+        return
+    if oracles.get("schema_version") != 1:
+        errors.append("extended-oracles.json schema_version must be 1")
+    results = oracles.get("results")
+    if not isinstance(results, dict):
+        errors.append("extended-oracles.json results must be an object")
+        return
+
+    expected_cases: dict[str, dict[str, Any]] = {}
+    for case in cases:
+        if isinstance(case, dict) and case.get("capability") == "cursor.postgres_extended":
+            case_id = case.get("id")
+            if isinstance(case_id, str):
+                expected_cases[case_id] = case
+    if set(results) != set(expected_cases):
+        errors.append(
+            f"extended-oracles.json cases must be {sorted(expected_cases)}, got {sorted(results)}"
+        )
+
+    flows = {
+        "SQLT-PGX-001": "lifecycle",
+        "SQLT-PGX-002": "parameters",
+        "SQLT-PGX-003": "rebind",
+        "SQLT-PGX-004": "multiple_portals",
+        "SQLT-PGX-005": "paging",
+        "SQLT-PGX-006": "binary_description",
+        "SQLT-PGX-007": "error_recovery",
+        "SQLT-PGX-008": "transaction_status",
+    }
+    expected_fields = {
+        "lifecycle": {"rows", "ready"},
+        "parameters": {"rows", "ready"},
+        "rebind": {"rows", "ready"},
+        "multiple_portals": {"rows", "ready"},
+        "paging": {"rows", "page_end", "ready"},
+        "binary_description": {"columns", "type_oids", "format_codes", "rows", "ready"},
+        "error_recovery": {
+            "sqlstate", "rows", "ignored_value_absent", "ignored_messages_absent", "ready"
+        },
+        "transaction_status": {"sqlstate", "rows", "ready"},
+    }
+    for case_id, case in expected_cases.items():
+        label = f"extended-oracles.json results.{case_id}"
+        value = results.get(case_id)
+        if not isinstance(value, dict):
+            errors.append(f"{label} must be an object")
+            continue
+        if set(value) != {"sql_file", "flow", "parameters", "expected"}:
+            errors.append(f"{label} fields must be ['expected', 'flow', 'parameters', 'sql_file']")
+            continue
+        if value.get("sql_file") != case.get("sql_file"):
+            errors.append(f"{label}.sql_file must match manifest sql_file")
+        flow = value.get("flow")
+        if flow != flows.get(case_id):
+            errors.append(f"{label}.flow must be {flows.get(case_id)!r}")
+        parameters = value.get("parameters")
+        if not isinstance(parameters, list):
+            errors.append(f"{label}.parameters must be an array")
+        elif any(
+            item is not None and not isinstance(item, (str, list))
+            or isinstance(item, list) and any(v is not None and not isinstance(v, str) for v in item)
+            for item in parameters
+        ):
+            errors.append(f"{label}.parameters must contain strings, nulls, or string/null arrays")
+        expected = value.get("expected")
+        if not isinstance(expected, dict):
+            errors.append(f"{label}.expected must be an object")
+            continue
+        required = expected_fields.get(flow, set())
+        if set(expected) != required:
+            errors.append(f"{label}.expected fields must be {sorted(required)}")
+        rows = expected.get("rows")
+        if not isinstance(rows, list) or any(not isinstance(row, list) for row in rows):
+            errors.append(f"{label}.expected.rows must be an array of arrays")
+        ready = expected.get("ready")
+        if not isinstance(ready, list) or any(status not in {"I", "T", "E"} for status in ready):
+            errors.append(f"{label}.expected.ready must contain only I, T, or E")
+        if "sqlstate" in expected and re.fullmatch(r"[0-9A-Z]{5}", str(expected["sqlstate"])) is None:
+            errors.append(f"{label}.expected.sqlstate must be a five-character SQLSTATE")
+
+        if case.get("family") != "cursor":
+            errors.append(f"{case_id} must use cursor family")
+        if case.get("dialects") != ["postgres"] or case.get("backends") != ["postgres"]:
+            errors.append(f"{case_id} must declare only postgres dialect and backend")
+        if case.get("frontends") != ["pg_extended"] or case.get("protocols") != ["pg_extended"]:
+            errors.append(f"{case_id} must use only pg_extended frontend and protocol")
+
+
 def _validate_ddl_oracles(root: Path, cases: list[Any], errors: list[str]) -> None:
     """Validate exact catalog and stable error contracts for canonical DDL cases."""
     oracles = _load_json(root / "ddl-oracles.json", errors)
@@ -1133,6 +1226,7 @@ def validate_repository(root: Path) -> list[str]:
     _validate_dml_oracles(root, cases, errors)
     _validate_tcl_oracles(root, cases, errors)
     _validate_prepared_oracles(root, cases, errors)
+    _validate_extended_oracles(root, cases, errors)
     _validate_ddl_oracles(root, cases, errors)
     _validate_ddl_temp_oracles(root, cases, errors)
     _validate_ddl_database_oracles(root, cases, errors)

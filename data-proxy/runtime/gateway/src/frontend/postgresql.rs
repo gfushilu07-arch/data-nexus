@@ -156,7 +156,13 @@ impl FrontendProtocolAdapter for PostgreSqlFrontendProtocol {
         frame: &[u8],
         session: &mut SessionState,
     ) -> GatewayResult<Vec<GatewayCommand>> {
-        match decode_frontend_message(frame).map_err(postgresql_protocol_error)? {
+        let message = decode_frontend_message(frame).map_err(postgresql_protocol_error)?;
+        if session.pg_extended_error
+            && !matches!(message, FrontendMessage::Sync | FrontendMessage::Terminate)
+        {
+            return Ok(vec![]);
+        }
+        match message {
             FrontendMessage::Query(sql) => {
                 self.suppress_next_row_description = false;
                 session.pg_extended_query = false;
@@ -176,6 +182,7 @@ impl FrontendProtocolAdapter for PostgreSqlFrontendProtocol {
                 session.pg_portal_skip_rows = 0;
                 session.pg_drop_portal_hold = true;
                 session.pg_client_extended_frames.clear();
+                session.pg_extended_error = false;
                 // A08: multi-Execute client-frame TCP unit still open → flush backend Sync.
                 if session.pg_ext_tcp_hold {
                     session.pg_extended_query = true; // strip nothing critical; Z should pass
@@ -1713,6 +1720,29 @@ mod tests {
         let sync_cmds = protocol.decode(&encode_sync_message(), &mut session).unwrap();
         assert_eq!(sync_cmds.len(), 1);
         assert!(matches!(sync_cmds[0], GatewayCommand::ClientWire { .. }));
+    }
+
+    #[test]
+    fn sqlt_3e3_extended_error_ignores_messages_until_sync() {
+        let mut protocol = PostgreSqlFrontendProtocol::new("14.0".into());
+        let mut session = SessionState {
+            pg_extended_query: true,
+            pg_extended_error: true,
+            ..SessionState::default()
+        };
+
+        assert_eq!(
+            protocol.decode(&encode_query_message("select 999"), &mut session),
+            Ok(vec![])
+        );
+        let sync_cmds = protocol.decode(&encode_sync_message(), &mut session).unwrap();
+        assert_eq!(sync_cmds.len(), 1);
+        assert!(!session.pg_extended_error);
+        assert!(matches!(sync_cmds[0], GatewayCommand::ClientWire { .. }));
+        assert_eq!(
+            protocol.decode(&encode_query_message("select 1"), &mut session),
+            Ok(vec![GatewayCommand::Query { sql: "select 1".into() }])
+        );
     }
 
     #[test]
