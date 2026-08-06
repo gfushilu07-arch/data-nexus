@@ -167,6 +167,7 @@ def main() -> int:
     parser.add_argument("--oracle", type=Path)
     args = parser.parse_args()
     result = run_case(args, read_steps(args.sql))
+    print(json.dumps(result, sort_keys=True, separators=(",", ":")), flush=True)
     if args.oracle:
         oracle = json.loads(args.oracle.read_text(encoding="utf-8"))
         if "results" in oracle:
@@ -180,7 +181,6 @@ def main() -> int:
             if name == "fetch_backend_pid" and expected.get("rows") == [["$PID", "101"]]:
                 expected = {**expected, "rows": [[actual["rows"][0][0], "101"]]}
             compare_step(actual, expected)
-    print(json.dumps(result, sort_keys=True, separators=(",", ":")))
     return 0
 
 

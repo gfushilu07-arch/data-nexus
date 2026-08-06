@@ -1118,16 +1118,17 @@ impl PostgreSqlBackendConnector {
         }
         let pool_conn = self.txn_lease.lock().take();
         let Some(conn) = pool_conn else {
-            return Ok(GatewayResponse::Ok {
-                affected_rows: 0,
-                last_insert_id: None,
+            return Ok(GatewayResponse::CommandComplete {
+                tag: sql.to_string(),
             });
         };
         let response = Self::execute_on_conn(&conn, sql, ExecuteMode::Materialized).await;
         drop(conn);
         match response {
-            Ok(response @ GatewayResponse::Ok { .. })
-            | Ok(response @ GatewayResponse::ResultSet { .. }) => Ok(response),
+            Ok(GatewayResponse::Ok { .. }) => Ok(GatewayResponse::CommandComplete {
+                tag: sql.to_string(),
+            }),
+            Ok(response @ GatewayResponse::ResultSet { .. }) => Ok(response),
             Ok(GatewayResponse::Error { code, message }) => Err(GatewayError::Backend(format!(
                 "postgresql {}: {}",
                 code, message
@@ -1184,7 +1185,7 @@ impl BackendConnector for PostgreSqlBackendConnector {
             GatewayCommand::Begin => {
                 // Defer backend BEGIN until the first statement leases a connection.
                 session.transaction_state = TransactionState::Active;
-                Ok(GatewayResponse::Ok { affected_rows: 0, last_insert_id: None })
+                Ok(GatewayResponse::CommandComplete { tag: "BEGIN".into() })
             }
             GatewayCommand::Commit => {
                 let response = self.finish_transaction("COMMIT").await?;
@@ -3050,13 +3051,23 @@ mod tests {
 
         assert_eq!(
             connector.execute(GatewayCommand::Begin, &mut session).await,
-            Ok(GatewayResponse::Ok { affected_rows: 0, last_insert_id: None })
+            Ok(GatewayResponse::CommandComplete { tag: "BEGIN".into() })
         );
         assert_eq!(session.transaction_state, TransactionState::Active);
 
         assert_eq!(
             connector.execute(GatewayCommand::Commit, &mut session).await,
-            Ok(GatewayResponse::Ok { affected_rows: 0, last_insert_id: None })
+            Ok(GatewayResponse::CommandComplete { tag: "COMMIT".into() })
+        );
+        assert_eq!(session.transaction_state, TransactionState::Idle);
+
+        assert_eq!(
+            connector.execute(GatewayCommand::Begin, &mut session).await,
+            Ok(GatewayResponse::CommandComplete { tag: "BEGIN".into() })
+        );
+        assert_eq!(
+            connector.execute(GatewayCommand::Rollback, &mut session).await,
+            Ok(GatewayResponse::CommandComplete { tag: "ROLLBACK".into() })
         );
         assert_eq!(session.transaction_state, TransactionState::Idle);
 
