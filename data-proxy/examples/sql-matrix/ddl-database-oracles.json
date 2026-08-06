@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "catalog_query": "fixtures/mysql/oracle-ddl-database-catalog.sql",
+  "restricted_catalog_query": "fixtures/mysql/oracle-ddl-database-restricted-catalog.sql",
+  "identity_query": "fixtures/mysql/oracle-ddl-database-identity.sql",
+  "results": {
+    "SQLT-DDL-053": {
+      "mysql": {
+        "result": "error",
+        "setup": "fixtures/mysql/ddl-database-setup-create.sql",
+        "error": "mysql\t1044\t42000\n",
+        "root_state": "",
+        "restricted_state": "",
+        "identity": "sqlt@%\tsqlt\tsqlt\n",
+        "unchanged": true
+      }
+    },
+    "SQLT-DDL-054": {
+      "mysql": {
+        "result": "error",
+        "setup": "fixtures/mysql/ddl-database-setup-if-not-exists.sql",
+        "error": "mysql\t1044\t42000\n",
+        "root_state": "",
+        "restricted_state": "",
+        "identity": "sqlt@%\tsqlt\tsqlt\n",
+        "unchanged": true
+      }
+    },
+    "SQLT-DDL-055": {
+      "mysql": {
+        "result": "error",
+        "setup": "fixtures/mysql/ddl-database-setup-drop.sql",
+        "error": "mysql\t1044\t42000\n",
+        "root_state": "sqlt_ddl_boundary_drop\tutf8mb4\tutf8mb4_0900_ai_ci\n",
+        "restricted_state": "",
+        "identity": "sqlt@%\tsqlt\tsqlt\n",
+        "unchanged": true
+      }
+    },
+    "SQLT-DDL-056": {
+      "mysql": {
+        "result": "error",
+        "setup": "fixtures/mysql/ddl-database-setup-if-exists.sql",
+        "error": "mysql\t1044\t42000\n",
+        "root_state": "sqlt_ddl_boundary_if_exists\tutf8mb4\tutf8mb4_0900_ai_ci\n",
+        "restricted_state": "",
+        "identity": "sqlt@%\tsqlt\tsqlt\n",
+        "unchanged": true
+      }
+    },
+    "SQLT-DDL-057": {
+      "mysql": {
+        "result": "error",
+        "setup": "fixtures/mysql/ddl-database-setup-alter.sql",
+        "error": "mysql\t1044\t42000\n",
+        "root_state": "sqlt_ddl_boundary_alter\tutf8mb4\tutf8mb4_0900_ai_ci\n",
+        "restricted_state": "",
+        "identity": "sqlt@%\tsqlt\tsqlt\n",
+        "unchanged": true
+      }
+    }
+  }
+}

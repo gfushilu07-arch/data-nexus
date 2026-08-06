@@ -333,6 +333,48 @@ class ValidateSqlMatrixTest(unittest.TestCase):
         oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
         self.assert_has_error("SQLT-DDL-014.mysql fields must be")
 
+    def test_ddl_database_cases_are_excluded_from_ordinary_oracles(self) -> None:
+        oracle_path = self.root / "ddl-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["results"]["SQLT-DDL-053"] = {
+            "mysql": {"result": "success", "setup": None, "state": ""}
+        }
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("ddl-oracles.json cases must be")
+
+    def test_ddl_database_oracle_must_cover_all_boundary_cases(self) -> None:
+        oracle_path = self.root / "ddl-database-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        del oracles["results"]["SQLT-DDL-053"]
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("ddl-database-oracles.json cases must be")
+
+    def test_ddl_database_oracle_requires_exact_fields(self) -> None:
+        oracle_path = self.root / "ddl-database-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        del oracles["results"]["SQLT-DDL-053"]["mysql"]["identity"]
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-DDL-053.mysql fields must be")
+
+    def test_ddl_database_setup_must_stay_below_matrix_root(self) -> None:
+        oracle_path = self.root / "ddl-database-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["results"]["SQLT-DDL-053"]["mysql"]["setup"] = "../outside.sql"
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-DDL-053.mysql.setup escapes matrix root")
+
+    def test_ddl_database_case_must_be_mysql_only(self) -> None:
+        manifest = self.manifest()
+        case = next(item for item in manifest["cases"] if item["id"] == "SQLT-DDL-053")
+        case["dialects"] = ["mysql", "postgres"]
+        sql_path = self.root / "cases" / case["sql_file"]
+        sql = sql_path.read_text(encoding="utf-8").replace(
+            "-- Dialect: mysql", "-- Dialect: mysql, postgres"
+        )
+        sql_path.write_text(sql, encoding="utf-8")
+        self.write_manifest(manifest)
+        self.assert_has_error("SQLT-DDL-053 must be MySQL-only")
+
 
 if __name__ == "__main__":
     unittest.main()

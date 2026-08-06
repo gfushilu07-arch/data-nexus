@@ -157,3 +157,18 @@ while another client proves the temporary object is invisible. After the holder
 disconnects, a fresh client proves the object was reclaimed. Exact same-session output
 and stable missing-object errors come from `ddl-temp-oracles.json`. The default run
 performs four executions; `SQLT_DDL_TEMP_SOURCES` is a development filter only.
+
+MySQL database-level privilege boundaries use a separate restricted-account runner:
+
+```bash
+data-proxy/examples/sql-matrix/run-ddl-database-corpus.sh
+```
+
+`SQLT-DDL-053` through `SQLT-DDL-057` cover `CREATE DATABASE`, `CREATE DATABASE IF NOT
+EXISTS`, `DROP DATABASE`, `DROP DATABASE IF EXISTS`, and `ALTER DATABASE`. Root only
+prepares and observes target databases; each statement and gateway identity probe runs
+as the configured `sqlt` backend account. The runner compares MySQL error 1044 / SQLSTATE
+42000, root catalog charset/collation, restricted-account visible database names, and
+`CURRENT_USER()`/login identity before and after each attempt. The dedicated
+`ddl-database-oracles.json` is deliberately excluded from the ordinary DDL oracle, and
+the default run performs 10 executions. Artifacts remain below the external cache root.

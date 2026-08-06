@@ -515,7 +515,7 @@ def _validate_ddl_oracles(root: Path, cases: list[Any], errors: list[str]) -> No
         if (
             isinstance(case, dict)
             and case.get("family") == "ddl"
-            and case.get("capability") != "ddl.temporary_table"
+            and case.get("capability") not in {"ddl.temporary_table", "ddl.database_boundary"}
             and isinstance(case.get("id"), str)
         ):
             expected[case["id"]] = {
@@ -666,6 +666,85 @@ def _validate_ddl_temp_oracles(root: Path, cases: list[Any], errors: list[str]) 
             for field, output in value.items():
                 if not isinstance(output, str) or not output.endswith("\n"):
                     errors.append(f"{label}.{field} must be a newline-terminated string")
+
+
+def _validate_ddl_database_oracles(root: Path, cases: list[Any], errors: list[str]) -> None:
+    """Validate the restricted-account MySQL database privilege boundary contract."""
+    oracles = _load_json(root / "ddl-database-oracles.json", errors)
+    if not isinstance(oracles, dict):
+        errors.append("ddl-database-oracles.json must contain an object")
+        return
+    if oracles.get("schema_version") != 1:
+        errors.append("ddl-database-oracles.json schema_version must be 1")
+
+    expected = {
+        case["id"]: {dialect for dialect in case.get("dialects", []) if isinstance(dialect, str)}
+        for case in cases
+        if isinstance(case, dict)
+        and case.get("family") == "ddl"
+        and case.get("capability") == "ddl.database_boundary"
+        and isinstance(case.get("id"), str)
+    }
+    results = oracles.get("results")
+    if not isinstance(results, dict):
+        errors.append("ddl-database-oracles.json results must be an object")
+        return
+    if set(results) != set(expected):
+        errors.append(
+            f"ddl-database-oracles.json cases must be {sorted(expected)}, got {sorted(results)}"
+        )
+    for case_id, dialects in expected.items():
+        if dialects != {"mysql"}:
+            errors.append(f"{case_id} must be MySQL-only")
+
+    for field in ("catalog_query", "restricted_catalog_query", "identity_query"):
+        relative = oracles.get(field)
+        label = f"ddl-database-oracles.json {field}"
+        if not isinstance(relative, str) or not relative.endswith(".sql"):
+            errors.append(f"{label} must be an SQL path")
+            continue
+        path = root / PurePosixPath(relative)
+        try:
+            path.resolve().relative_to(root.resolve())
+        except ValueError:
+            errors.append(f"{label} escapes matrix root")
+        else:
+            if not path.is_file():
+                errors.append(f"{label} does not exist: {relative}")
+
+    fields = {"result", "setup", "error", "root_state", "restricted_state", "identity", "unchanged"}
+    for case_id, dialects in expected.items():
+        values = results.get(case_id)
+        if not isinstance(values, dict) or set(values) != dialects:
+            errors.append(
+                f"ddl-database-oracles.json results.{case_id} dialects must be {sorted(dialects)}"
+            )
+            continue
+        for dialect, value in values.items():
+            label = f"ddl-database-oracles.json results.{case_id}.{dialect}"
+            if not isinstance(value, dict) or set(value) != fields:
+                errors.append(f"{label} fields must be {sorted(fields)}")
+                continue
+            if value["result"] != "error":
+                errors.append(f"{label}.result must be error")
+            setup = value["setup"]
+            if not isinstance(setup, str) or not setup.endswith(".sql"):
+                errors.append(f"{label}.setup must be an SQL path")
+            else:
+                path = root / PurePosixPath(setup)
+                try:
+                    path.resolve().relative_to(root.resolve())
+                except ValueError:
+                    errors.append(f"{label}.setup escapes matrix root")
+                else:
+                    if not path.is_file():
+                        errors.append(f"{label}.setup does not exist: {setup}")
+            for field in ("error", "root_state", "restricted_state", "identity"):
+                output = value[field]
+                if not isinstance(output, str) or (output and not output.endswith("\n")):
+                    errors.append(f"{label}.{field} must be an empty or newline-terminated string")
+            if value["unchanged"] is not True:
+                errors.append(f"{label}.unchanged must be true")
 
 
 def _validate_string_array(
@@ -840,6 +919,7 @@ def validate_repository(root: Path) -> list[str]:
     _validate_dml_oracles(root, cases, errors)
     _validate_ddl_oracles(root, cases, errors)
     _validate_ddl_temp_oracles(root, cases, errors)
+    _validate_ddl_database_oracles(root, cases, errors)
     return errors
 
 
