@@ -13,6 +13,7 @@ mod audit_pipeline;
 #[cfg(feature = "security-cedar")]
 mod cedar_pdp;
 mod config;
+mod dangerous_sql;
 mod dialect;
 mod error;
 mod model;
@@ -58,6 +59,7 @@ pub use config::{
     AuthPolicyConfig, AuthUserConfig, EndpointConfig, EndpointRole, EndpointSslMode, GatewayConfig, ListenerConfig,
     PluginPolicyConfig, RoutePolicyConfig, ServiceConfig,
 };
+pub use dangerous_sql::{classify_dangerous_sql, UnsupportedSqlCapability};
 pub use object_set::{ColumnAclOutcome, ObjectAccess, ObjectSet, StarPolicy};
 pub use obligations::{
     apply_masks_to_rows, apply_obligations_to_response, apply_obligations_windowed,

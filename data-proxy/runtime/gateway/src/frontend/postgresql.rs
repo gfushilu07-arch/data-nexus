@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use gateway_core::{
-    Column as GatewayColumn, FrontendProtocolAdapter, GatewayCommand, GatewayError,
+    classify_dangerous_sql, Column as GatewayColumn, FrontendProtocolAdapter, GatewayCommand, GatewayError,
     GatewayResponse, GatewayResult, GatewayValue, ProtocolKind, SessionState, TransactionState,
 };
 use postgresql_protocol::{
@@ -201,6 +201,12 @@ impl FrontendProtocolAdapter for PostgreSqlFrontendProtocol {
                 param_types: _,
             } => {
                 session.pg_extended_query = true;
+                if let Some(capability) =
+                    classify_dangerous_sql(&query, ProtocolKind::PostgreSql)
+                {
+                    session.pg_extended_error = true;
+                    return Err(GatewayError::Unsupported(capability.as_str().into()));
+                }
                 // A08: retain original client frame for optional TCP relay under passthrough.
                 session.pg_client_extended_frames.push(frame.to_vec());
                 let nparams = count_pg_placeholders_frontend(&query);
@@ -1768,6 +1774,30 @@ mod tests {
             protocol.decode(&encode_query_message("select 1"), &mut session),
             Ok(vec![GatewayCommand::Query { sql: "select 1".into() }])
         );
+    }
+
+    #[test]
+    fn dangerous_parse_is_rejected_until_sync() {
+        let mut protocol = PostgreSqlFrontendProtocol::new("14.0".into());
+        let mut session = SessionState::default();
+        let mut body = Vec::new();
+        body.extend_from_slice(b"bad\0COPY t TO PROGRAM 'sentinel'\0");
+        body.extend_from_slice(&0i16.to_be_bytes());
+        let mut parse = vec![b'P'];
+        parse.extend_from_slice(&((body.len() + 4) as i32).to_be_bytes());
+        parse.extend_from_slice(&body);
+
+        assert_eq!(
+            protocol.decode(&parse, &mut session),
+            Err(GatewayError::Unsupported("postgres.copy_program".into()))
+        );
+        assert!(session.pg_extended_error);
+        assert!(protocol
+            .decode(&encode_query_message("select 1"), &mut session)
+            .unwrap()
+            .is_empty());
+        protocol.decode(&encode_sync_message(), &mut session).unwrap();
+        assert!(!session.pg_extended_error);
     }
 
     #[test]

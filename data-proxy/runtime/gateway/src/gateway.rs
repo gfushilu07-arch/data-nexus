@@ -559,9 +559,11 @@ fn postgresql_extended_error_packet(
     session: &mut SessionState,
     error: &GatewayError,
 ) -> Option<Vec<u8>> {
-    if !matches!(error, GatewayError::Protocol(_)) {
-        return None;
-    }
+    let sqlstate = match error {
+        GatewayError::Protocol(_) => "08P01",
+        GatewayError::Unsupported(_) => "0A000",
+        _ => return None,
+    };
     let extended_tag = matches!(
         frame.first(),
         Some(b'P' | b'B' | b'D' | b'E' | b'C' | b'H' | b'S')
@@ -575,7 +577,7 @@ fn postgresql_extended_error_packet(
     if session.transaction_state == TransactionState::Active {
         session.transaction_state = TransactionState::Failed;
     }
-    Some(encode_error_response("ERROR", "08P01", &error.to_string()))
+    Some(encode_error_response("ERROR", sqlstate, &error.to_string()))
 }
 
 async fn read_postgresql_frontend_frame<S>(stream: &mut S) -> GatewayResult<Option<Vec<u8>>>
@@ -832,6 +834,23 @@ mod tests {
         assert!(session.pg_extended_query);
         assert!(session.pg_extended_error);
         assert_eq!(session.transaction_state, TransactionState::Failed);
+    }
+
+    #[test]
+    fn sqlt_3f3_postgresql_unsupported_waits_for_sync() {
+        let mut session = SessionState {
+            pg_extended_query: true,
+            ..SessionState::default()
+        };
+        let packet = postgresql_extended_error_packet(
+            b"P\0\0\0\x04",
+            &mut session,
+            &GatewayError::Unsupported("postgres.copy_program".into()),
+        )
+        .expect("unsupported Parse must produce an ErrorResponse");
+
+        assert!(packet.windows(7).any(|field| field == b"C0A000\0"));
+        assert!(session.pg_extended_error);
     }
 
     #[test]

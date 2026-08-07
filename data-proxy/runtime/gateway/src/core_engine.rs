@@ -18,7 +18,7 @@ use endpoint::endpoint::Endpoint;
 use gateway_core::{
         write_resultset_windowed, write_resultset_windowed_with_obligations,
         write_streaming_query_with_obligations_sample, write_wire_relay_observed, CollectingWriter,
-        map_response_types,
+        classify_dangerous_sql, map_response_types,
         prepare_cross_protocol_command, BackendConnector, CommandSummary, DialectParser,
         EndpointConfig, EndpointRef, EndpointRole, ExecuteMode, ExecuteOutcome,
         FrontendProtocolAdapter, GatewayCommand, GatewayConfig, GatewayError, GatewayResponse,
@@ -361,7 +361,19 @@ impl CoreGatewayConnection {
     ) -> GatewayResult<()> {
         // Drop any deferred obligations from a previous command that failed mid-path.
         self.pending_encode_obligations = None;
-        let commands = self.frontend.decode(frame, &mut self.session)?;
+        let commands = match self.frontend.decode(frame, &mut self.session) {
+            Ok(commands) => commands,
+            Err(GatewayError::Unsupported(code)) => {
+                let Some(capability) = gateway_core::UnsupportedSqlCapability::from_code(&code)
+                else {
+                    return Err(GatewayError::Unsupported(code));
+                };
+                self.reject_unsupported_capability(capability, "QUERY", writer)
+                    .await?;
+                return Ok(());
+            }
+            Err(error) => return Err(error),
+        };
 
         for mut command in commands {
             let command_type = command_metric_type(&command);
@@ -375,6 +387,13 @@ impl CoreGatewayConnection {
                 security_rule_class = tracing::field::Empty,
                 execute_path = tracing::field::Empty,
             );
+
+            if let Some(capability) = dangerous_command_capability(&command, self.frontend.protocol()) {
+                command_span.record("outcome", "unsupported_operation");
+                self.reject_unsupported_capability(capability, command_type, writer)
+                    .await?;
+                continue;
+            }
 
             let route_plan = if let Some(route_policy) = &self.route_policy {
                 let plan = route_policy.plan_command(&command, &self.session)?;
@@ -1346,6 +1365,59 @@ impl CoreGatewayConnection {
         Ok(())
     }
 
+    async fn reject_unsupported_capability(
+        &mut self,
+        capability: gateway_core::UnsupportedSqlCapability,
+        command_type: &str,
+        writer: &mut dyn ResponseWriter,
+    ) -> GatewayResult<()> {
+        let capability = capability.as_str();
+        if self.frontend.protocol() == ProtocolKind::PostgreSql && self.session.pg_extended_query {
+            self.session.pg_extended_error = true;
+            if self.session.transaction_state == TransactionState::Active {
+                self.session.transaction_state = TransactionState::Failed;
+            }
+        }
+        info!(
+            target: gateway_core::AUDIT_TARGET,
+            action = gateway_core::AuditAction::Query.as_str(),
+            listener = %self.listener_name,
+            service = %self.service_name,
+            frontend_protocol = %protocol_metric_name(&self.frontend.protocol()),
+            backend_protocol = %protocol_metric_name(&self.backend.protocol()),
+            command_type,
+            decision = gateway_core::AuditDecision::Reject.as_str(),
+            capability,
+            "gateway rejected unsupported SQL capability"
+        );
+        gateway_core::try_audit(gateway_core::AuditEvent {
+            action: Some(gateway_core::AuditAction::Query.as_str().into()),
+            decision: Some(gateway_core::AuditDecision::Reject.as_str().into()),
+            subject_id: self.session.user.clone(),
+            db_user: self.session.user.clone(),
+            listener: Some(self.listener_name.clone()),
+            service: Some(self.service_name.clone()),
+            frontend_protocol: Some(protocol_metric_name(&self.frontend.protocol()).into()),
+            backend_protocol: Some(protocol_metric_name(&self.backend.protocol()).into()),
+            command_type: Some(command_type.into()),
+            database: self.session.database.clone(),
+            outcome: Some("unsupported_operation".into()),
+            code: Some("unsupported_operation".into()),
+            message: Some(capability.into()),
+            rule: Some(capability.into()),
+            audit_level: Some(self.default_audit_level.clone()),
+            ..gateway_core::AuditEvent::default()
+        });
+        self.encode_response_to_writer(
+            GatewayResponse::Error {
+                code: "0A000".into(),
+                message: format!("unsupported capability: {capability}"),
+            },
+            writer,
+        )
+        .await
+    }
+
     /// A10: process-local named cursor for simple-query DECLARE/FETCH/CLOSE.
     ///
     /// Opens SELECT via normal Streaming path and holds [`StreamingQuery`] in
@@ -1607,6 +1679,19 @@ impl CoreGatewayConnection {
             self.metrics.record_portal_resume("sql_cursor_session_end");
         }
         self.named_cursors.clear();
+    }
+}
+
+fn dangerous_command_capability(
+    command: &GatewayCommand,
+    dialect: ProtocolKind,
+) -> Option<gateway_core::UnsupportedSqlCapability> {
+    match command {
+        GatewayCommand::Query { sql }
+        | GatewayCommand::QueryParams { sql, .. }
+        | GatewayCommand::Prepare { sql }
+        | GatewayCommand::DescribeSql { sql } => classify_dangerous_sql(sql, dialect),
+        _ => None,
     }
 }
 
@@ -2559,7 +2644,7 @@ mod tests {
         mysql_const::{COM_INIT_DB, COM_PING, COM_QUERY, COM_QUIT},
         server::codec::ok_packet,
     };
-    use postgresql_protocol::encode_query_message;
+    use postgresql_protocol::{encode_query_message, encode_sync_message};
 
     use super::*;
 
@@ -2679,6 +2764,86 @@ mod tests {
         let packets = connection.handle_frame(&frame).await.unwrap();
         assert!(!packets.is_empty());
         assert_eq!(packets[0].first(), Some(&0xff));
+    }
+
+    #[tokio::test]
+    async fn dangerous_mysql_sql_is_rejected_before_backend_execute() {
+        let mut connection = CoreGatewayConnection::new(
+            Box::new(MySqlFrontendProtocol::new(
+                "app".into(),
+                "secret".into(),
+                "test".into(),
+                "8.0.36".into(),
+            )),
+            Arc::new(StaticBackendConnector {
+                protocol: ProtocolKind::MySql,
+                expected_command: GatewayCommand::Query { sql: "SELECT 1".into() },
+                response: GatewayResponse::Pong,
+            }),
+            SessionState::default(),
+        );
+        let mut frame = vec![COM_QUERY];
+        frame.extend_from_slice(b"SELECT 1 INTO OUTFILE '/sentinel'");
+        assert_eq!(connection.handle_frame(&frame).await.unwrap()[0].first(), Some(&0xff));
+
+        let mut recovery = vec![COM_QUERY];
+        recovery.extend_from_slice(b"SELECT 1");
+        assert_eq!(connection.handle_frame(&recovery).await.unwrap()[0].first(), Some(&0x00));
+    }
+
+    #[tokio::test]
+    async fn dangerous_postgresql_sql_is_rejected_before_backend_execute() {
+        let mut connection = postgresql_connection(GatewayResponse::Pong);
+        let packets = connection
+            .handle_frame(&encode_query_message("COPY t TO PROGRAM 'sentinel'"))
+            .await
+            .unwrap();
+        assert!(packets[0].windows(7).any(|field| field == b"C0A000\0"));
+
+        let recovery = connection
+            .handle_frame(&encode_query_message("select 1"))
+            .await
+            .unwrap();
+        assert!(recovery.iter().any(|packet| packet.first() == Some(&b'Z')));
+    }
+
+    #[tokio::test]
+    async fn dangerous_postgresql_parse_rejects_before_parse_complete_and_recovers_on_sync() {
+        let ready = vec![b'Z', 0, 0, 0, 5, b'I'];
+        let mut connection = CoreGatewayConnection::new(
+            Box::new(PostgreSqlFrontendProtocol::new("14.0".into())),
+            Arc::new(StaticBackendConnector {
+                protocol: ProtocolKind::PostgreSql,
+                expected_command: GatewayCommand::ClientWire {
+                    packets: vec![ready.clone()],
+                },
+                response: GatewayResponse::Wire {
+                    packets: vec![ready],
+                },
+            }),
+            SessionState::default(),
+        );
+        let mut body = Vec::new();
+        body.extend_from_slice(b"dangerous\0COPY t TO PROGRAM 'sentinel'\0");
+        body.extend_from_slice(&0i16.to_be_bytes());
+        let mut parse = vec![b'P'];
+        parse.extend_from_slice(&((body.len() + 4) as i32).to_be_bytes());
+        parse.extend_from_slice(&body);
+
+        let rejected = connection.handle_frame(&parse).await.unwrap();
+        assert!(rejected[0].windows(7).any(|field| field == b"C0A000\0"));
+        assert!(!rejected.iter().any(|packet| packet.first() == Some(&b'1')));
+        assert!(connection.session().pg_extended_error);
+
+        assert!(connection
+            .handle_frame(&encode_query_message("select 1"))
+            .await
+            .unwrap()
+            .is_empty());
+        let sync = connection.handle_frame(&encode_sync_message()).await.unwrap();
+        assert_eq!(sync.len(), 1);
+        assert_eq!(sync[0].first(), Some(&b'Z'));
+        assert!(!connection.session().pg_extended_error);
     }
 
     #[test]
