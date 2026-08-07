@@ -1414,6 +1414,196 @@ def _validate_boundary_oracles(root: Path, cases: list[Any], errors: list[str]) 
             errors.append(f"{case_id} @generate values must be {required_generation}")
 
 
+def _unsupported_sql_steps(path: Path, dialect: str, label: str, errors: list[str]) -> list[str]:
+    lines = path.read_text(encoding="utf-8").splitlines()[4:]
+    body = "\n".join(lines).strip()
+    marker = re.compile(r"^-- @step ([a-z][a-z0-9_]*) (mysql|postgres)$", re.MULTILINE)
+    matches = list(marker.finditer(body))
+    if not matches:
+        return ["main"]
+    if body[: matches[0].start()].strip():
+        errors.append(f"{label} must not contain SQL before the first @step")
+    names: list[str] = []
+    seen: set[tuple[str, str]] = set()
+    for index, match in enumerate(matches):
+        name, step_dialect = match.groups()
+        key = (name, step_dialect)
+        if key in seen:
+            errors.append(f"{label} repeats @step {name} for {step_dialect}")
+        seen.add(key)
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(body)
+        if not body[match.end() : end].strip():
+            errors.append(f"{label} @step {name} for {step_dialect} has no SQL")
+        if step_dialect == dialect:
+            names.append(name)
+    if not names:
+        errors.append(f"{label} has no @step for {dialect}")
+    return names
+
+
+def _validate_unsupported_oracles(root: Path, cases: list[Any], errors: list[str]) -> None:
+    """Validate SQLT-3F3 exact dangerous capability and vendor calibration contracts."""
+    oracles = _load_json(root / "unsupported-oracles.json", errors)
+    if not isinstance(oracles, dict):
+        errors.append("unsupported-oracles.json must contain an object")
+        return
+    if oracles.get("schema_version") != 1:
+        errors.append("unsupported-oracles.json schema_version must be 1")
+
+    probe_queries = oracles.get("probe_queries")
+    if not isinstance(probe_queries, dict) or set(probe_queries) != {"mysql", "postgres"}:
+        errors.append("unsupported-oracles.json probe_queries must define mysql and postgres")
+    else:
+        for dialect, relative in probe_queries.items():
+            label = f"unsupported-oracles.json probe_queries.{dialect}"
+            if not isinstance(relative, str) or not relative.endswith(".sql"):
+                errors.append(f"{label} must be an SQL path")
+                continue
+            path = root / PurePosixPath(relative)
+            try:
+                path.resolve().relative_to(root.resolve())
+            except ValueError:
+                errors.append(f"{label} escapes matrix root")
+            else:
+                if not path.is_file():
+                    errors.append(f"{label} does not exist: {relative}")
+
+    expected_ids = {f"SQLT-UNSUPPORTED-{index:03d}" for index in range(1, 10)}
+    unsupported_cases = {
+        case.get("id"): case
+        for case in cases
+        if isinstance(case, dict) and case.get("family") == "unsupported"
+    }
+    if set(unsupported_cases) != expected_ids:
+        errors.append(
+            "unsupported manifest cases must be "
+            f"{sorted(expected_ids)}, got {sorted(unsupported_cases)}"
+        )
+
+    results = oracles.get("results")
+    if not isinstance(results, dict):
+        errors.append("unsupported-oracles.json results must be an object")
+        return
+    if set(results) != expected_ids:
+        errors.append(
+            "unsupported-oracles.json cases must be "
+            f"{sorted(expected_ids)}, got {sorted(results)}"
+        )
+
+    allowed_capabilities = {
+        "postgres.copy_program",
+        "postgres.copy_file",
+        "postgres.do",
+        "stored_procedure.call",
+        "mysql.load_data",
+        "mysql.outfile",
+        "postgres.maintenance",
+        "sql.cross_dialect",
+        "sql.privileged_catalog_session",
+    }
+    forbidden_payloads = (
+        "/Users/", "/Volumes/", "/private/", "/tmp/", "/etc/",
+        "printf ", "bash ", "sh -c", "curl ", "wget ", "password", "secret",
+    )
+
+    for case_id in sorted(expected_ids):
+        case = unsupported_cases.get(case_id)
+        value = results.get(case_id)
+        if not isinstance(case, dict) or not isinstance(value, dict):
+            continue
+        label = f"unsupported-oracles.json results.{case_id}"
+        dialects = {item for item in case.get("dialects", []) if isinstance(item, str)}
+        expected_frontends = {
+            "mysql_text" if dialect == "mysql" else "pg_simple" for dialect in dialects
+        }
+        if set(case.get("frontends", [])) != expected_frontends:
+            errors.append(f"{case_id}.frontends must be {sorted(expected_frontends)}")
+        if set(case.get("protocols", [])) != expected_frontends:
+            errors.append(f"{case_id}.protocols must be {sorted(expected_frontends)}")
+        if set(case.get("backends", [])) != dialects:
+            errors.append(f"{case_id}.backends must match dialects")
+        if case.get("side_effect") != "none":
+            errors.append(f"{case_id}.side_effect must be none")
+        if case.get("transaction_mode") != "autocommit" or case.get("parameter_mode") != "none":
+            errors.append(f"{case_id} must use autocommit without parameters")
+        if case.get("expectations") != [{"policy": "security_off", "outcome": "unsupported"}]:
+            errors.append(f"{case_id}.expectations must contain only security_off unsupported")
+
+        flow = value.get("flow")
+        if not isinstance(flow, str) or not re.fullmatch(r"[a-z][a-z0-9_]*", flow):
+            errors.append(f"{label}.flow must be a stable lowercase identifier")
+        expected = value.get("expected")
+        if not isinstance(expected, dict) or set(expected) != dialects:
+            errors.append(f"{label}.expected dialects must be {sorted(dialects)}")
+            continue
+
+        sql_path = root / "cases" / PurePosixPath(str(case.get("sql_file", "")))
+        if sql_path.is_file():
+            sql_text = sql_path.read_text(encoding="utf-8")
+            lowered = sql_text.lower()
+            for forbidden in forbidden_payloads:
+                if forbidden.lower() in lowered:
+                    errors.append(f"{case_id} SQL contains forbidden sensitive payload {forbidden!r}")
+
+        for dialect, paths in expected.items():
+            path_label = f"{label}.expected.{dialect}"
+            if not isinstance(paths, dict) or set(paths) != {"direct", "gateway"}:
+                errors.append(f"{path_label} must define direct and gateway")
+                continue
+            step_names = _unsupported_sql_steps(sql_path, dialect, case_id, errors) if sql_path.is_file() else []
+            for path_name, steps in paths.items():
+                steps_label = f"{path_label}.{path_name}"
+                if not isinstance(steps, list) or not steps:
+                    errors.append(f"{steps_label} must be a non-empty exact step array")
+                    continue
+                if _contains_fuzzy_any(steps):
+                    errors.append(f"{steps_label} must not contain fuzzy any values")
+                if [step.get("name") for step in steps if isinstance(step, dict)] != step_names:
+                    errors.append(f"{steps_label} step names must be {step_names}")
+                for index, step in enumerate(steps):
+                    step_label = f"{steps_label}[{index}]"
+                    if not isinstance(step, dict):
+                        errors.append(f"{step_label} must be an object")
+                        continue
+                    required = {"name", "result", "error"}
+                    if dialect == "postgres":
+                        required.add("ready")
+                    if set(step) != required:
+                        errors.append(f"{step_label} fields must be {sorted(required)}")
+                    if step.get("result") != "error":
+                        errors.append(f"{step_label}.result must be error")
+                    error = step.get("error")
+                    error_fields = {"vendor", "code", "capability"}
+                    if dialect == "mysql":
+                        error_fields.add("sqlstate")
+                    if not isinstance(error, dict) or set(error) != error_fields:
+                        errors.append(f"{step_label}.error fields must be {sorted(error_fields)}")
+                        continue
+                    if error.get("vendor") != dialect:
+                        errors.append(f"{step_label}.error.vendor must be {dialect}")
+                    code = error.get("code")
+                    if dialect == "mysql":
+                        if not isinstance(code, int) or isinstance(code, bool) or code <= 0:
+                            errors.append(f"{step_label}.error.code must be a positive MySQL error number")
+                        if not isinstance(error.get("sqlstate"), str) or not re.fullmatch(r"[0-9A-Z]{5}", error["sqlstate"]):
+                            errors.append(f"{step_label}.error.sqlstate must be a five-character SQLSTATE")
+                    else:
+                        if not isinstance(code, str) or not re.fullmatch(r"[0-9A-Z]{5}", code):
+                            errors.append(f"{step_label}.error.code must be a five-character SQLSTATE")
+                        if step.get("ready") != ["I"]:
+                            errors.append(f"{step_label}.ready must be ['I']")
+                    capability = error.get("capability")
+                    if path_name == "direct" and capability is not None:
+                        errors.append(f"{step_label}.error.capability must be null for direct")
+                    if path_name == "gateway":
+                        if capability not in allowed_capabilities:
+                            errors.append(f"{step_label}.error.capability is not an allowed stable capability")
+                        if dialect == "mysql" and (code, error.get("sqlstate")) != (1105, "HY000"):
+                            errors.append(f"{step_label} gateway MySQL identity must be 1105/HY000")
+                        if dialect == "postgres" and code != "0A000":
+                            errors.append(f"{step_label} gateway PostgreSQL identity must be 0A000")
+
+
 def _contains_fuzzy_any(value: Any) -> bool:
     if value == "any":
         return True
@@ -1600,6 +1790,7 @@ def validate_repository(root: Path) -> list[str]:
     _validate_cursor_oracles(root, cases, errors)
     _validate_invalid_oracles(root, cases, errors)
     _validate_boundary_oracles(root, cases, errors)
+    _validate_unsupported_oracles(root, cases, errors)
     _validate_ddl_oracles(root, cases, errors)
     _validate_ddl_temp_oracles(root, cases, errors)
     _validate_ddl_database_oracles(root, cases, errors)

@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "probe_queries": {
+    "mysql": "fixtures/mysql/oracle-unsupported-state.sql",
+    "postgres": "fixtures/postgres/oracle-unsupported-state.sql"
+  },
+  "results": {
+    "SQLT-UNSUPPORTED-001": {
+      "flow": "copy_program",
+      "expected": {"postgres": {
+        "direct": [{"name": "main", "result": "error", "error": {"vendor": "postgres", "code": "42501", "capability": null}, "ready": ["I"]}],
+        "gateway": [{"name": "main", "result": "error", "error": {"vendor": "postgres", "code": "0A000", "capability": "postgres.copy_program"}, "ready": ["I"]}]
+      }}
+    },
+    "SQLT-UNSUPPORTED-002": {
+      "flow": "copy_file",
+      "expected": {"postgres": {
+        "direct": [{"name": "main", "result": "error", "error": {"vendor": "postgres", "code": "42501", "capability": null}, "ready": ["I"]}],
+        "gateway": [{"name": "main", "result": "error", "error": {"vendor": "postgres", "code": "0A000", "capability": "postgres.copy_file"}, "ready": ["I"]}]
+      }}
+    },
+    "SQLT-UNSUPPORTED-003": {
+      "flow": "anonymous_code",
+      "expected": {"postgres": {
+        "direct": [{"name": "main", "result": "error", "error": {"vendor": "postgres", "code": "P0001", "capability": null}, "ready": ["I"]}],
+        "gateway": [{"name": "main", "result": "error", "error": {"vendor": "postgres", "code": "0A000", "capability": "postgres.do"}, "ready": ["I"]}]
+      }}
+    },
+    "SQLT-UNSUPPORTED-004": {
+      "flow": "procedure_call",
+      "expected": {
+        "mysql": {
+          "direct": [{"name": "call", "result": "error", "error": {"vendor": "mysql", "code": 1305, "sqlstate": "42000", "capability": null}}],
+          "gateway": [{"name": "call", "result": "error", "error": {"vendor": "mysql", "code": 1105, "sqlstate": "HY000", "capability": "stored_procedure.call"}}]
+        },
+        "postgres": {
+          "direct": [{"name": "call", "result": "error", "error": {"vendor": "postgres", "code": "42883", "capability": null}, "ready": ["I"]}],
+          "gateway": [{"name": "call", "result": "error", "error": {"vendor": "postgres", "code": "0A000", "capability": "stored_procedure.call"}, "ready": ["I"]}]
+        }
+      }
+    },
+    "SQLT-UNSUPPORTED-005": {
+      "flow": "load_data",
+      "expected": {"mysql": {
+        "direct": [{"name": "main", "result": "error", "error": {"vendor": "mysql", "code": 1045, "sqlstate": "28000", "capability": null}}],
+        "gateway": [{"name": "main", "result": "error", "error": {"vendor": "mysql", "code": 1105, "sqlstate": "HY000", "capability": "mysql.load_data"}}]
+      }}
+    },
+    "SQLT-UNSUPPORTED-006": {
+      "flow": "outfile",
+      "expected": {"mysql": {
+        "direct": [
+          {"name": "outfile", "result": "error", "error": {"vendor": "mysql", "code": 1227, "sqlstate": "42000", "capability": null}},
+          {"name": "dumpfile", "result": "error", "error": {"vendor": "mysql", "code": 1227, "sqlstate": "42000", "capability": null}}
+        ],
+        "gateway": [
+          {"name": "outfile", "result": "error", "error": {"vendor": "mysql", "code": 1105, "sqlstate": "HY000", "capability": "mysql.outfile"}},
+          {"name": "dumpfile", "result": "error", "error": {"vendor": "mysql", "code": 1105, "sqlstate": "HY000", "capability": "mysql.outfile"}}
+        ]
+      }}
+    },
+    "SQLT-UNSUPPORTED-007": {
+      "flow": "maintenance",
+      "expected": {"postgres": {
+        "direct": [
+          {"name": "vacuum", "result": "error", "error": {"vendor": "postgres", "code": "42P01", "capability": null}, "ready": ["I"]},
+          {"name": "analyze", "result": "error", "error": {"vendor": "postgres", "code": "42P01", "capability": null}, "ready": ["I"]}
+        ],
+        "gateway": [
+          {"name": "vacuum", "result": "error", "error": {"vendor": "postgres", "code": "0A000", "capability": "postgres.maintenance"}, "ready": ["I"]},
+          {"name": "analyze", "result": "error", "error": {"vendor": "postgres", "code": "0A000", "capability": "postgres.maintenance"}, "ready": ["I"]}
+        ]
+      }}
+    },
+    "SQLT-UNSUPPORTED-008": {
+      "flow": "cross_dialect",
+      "expected": {
+        "mysql": {
+          "direct": [{"name": "postgres_cast", "result": "error", "error": {"vendor": "mysql", "code": 1064, "sqlstate": "42000", "capability": null}}],
+          "gateway": [{"name": "postgres_cast", "result": "error", "error": {"vendor": "mysql", "code": 1105, "sqlstate": "HY000", "capability": "sql.cross_dialect"}}]
+        },
+        "postgres": {
+          "direct": [{"name": "mysql_identifier", "result": "error", "error": {"vendor": "postgres", "code": "42601", "capability": null}, "ready": ["I"]}],
+          "gateway": [{"name": "mysql_identifier", "result": "error", "error": {"vendor": "postgres", "code": "0A000", "capability": "sql.cross_dialect"}, "ready": ["I"]}]
+        }
+      }
+    },
+    "SQLT-UNSUPPORTED-009": {
+      "flow": "privileged_catalog_session",
+      "expected": {
+        "mysql": {
+          "direct": [
+            {"name": "global_setting", "result": "error", "error": {"vendor": "mysql", "code": 1227, "sqlstate": "42000", "capability": null}},
+            {"name": "privileged_catalog", "result": "error", "error": {"vendor": "mysql", "code": 1142, "sqlstate": "42000", "capability": null}}
+          ],
+          "gateway": [
+            {"name": "global_setting", "result": "error", "error": {"vendor": "mysql", "code": 1105, "sqlstate": "HY000", "capability": "sql.privileged_catalog_session"}},
+            {"name": "privileged_catalog", "result": "error", "error": {"vendor": "mysql", "code": 1105, "sqlstate": "HY000", "capability": "sql.privileged_catalog_session"}}
+          ]
+        },
+        "postgres": {
+          "direct": [
+            {"name": "system_setting", "result": "error", "error": {"vendor": "postgres", "code": "42501", "capability": null}, "ready": ["I"]},
+            {"name": "session_role", "result": "error", "error": {"vendor": "postgres", "code": "22023", "capability": null}, "ready": ["I"]},
+            {"name": "privileged_catalog", "result": "error", "error": {"vendor": "postgres", "code": "42501", "capability": null}, "ready": ["I"]}
+          ],
+          "gateway": [
+            {"name": "system_setting", "result": "error", "error": {"vendor": "postgres", "code": "0A000", "capability": "sql.privileged_catalog_session"}, "ready": ["I"]},
+            {"name": "session_role", "result": "error", "error": {"vendor": "postgres", "code": "0A000", "capability": "sql.privileged_catalog_session"}, "ready": ["I"]},
+            {"name": "privileged_catalog", "result": "error", "error": {"vendor": "postgres", "code": "0A000", "capability": "sql.privileged_catalog_session"}, "ready": ["I"]}
+          ]
+        }
+      }
+    }
+  }
+}

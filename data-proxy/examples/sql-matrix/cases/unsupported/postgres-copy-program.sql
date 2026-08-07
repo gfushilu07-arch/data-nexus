@@ -3,4 +3,4 @@
 -- Expected: The gateway reports unsupported without invoking a shell command.
 -- Dialect: postgres
 
-COPY sqlt_customers TO PROGRAM 'printf sqlt-must-not-run';
+COPY sqlt_customers TO PROGRAM 'sqlt-unreachable-sentinel';

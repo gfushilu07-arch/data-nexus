@@ -4345,19 +4345,84 @@
       "family": "unsupported",
       "capability": "unsupported.copy_program",
       "dialects": ["postgres"],
-      "frontends": ["pg_simple", "pg_extended", "http_portal"],
+      "frontends": ["pg_simple"],
       "backends": ["postgres"],
-      "protocols": ["pg_simple", "pg_extended", "http"],
+      "protocols": ["pg_simple"],
       "statement_mode": "single",
       "transaction_mode": "autocommit",
       "parameter_mode": "none",
       "expectations": [
-        {"policy": "security_off", "outcome": "unsupported"},
-        {"policy": "allow", "outcome": "unsupported"},
-        {"policy": "deny", "outcome": "unsupported"}
+        {"policy": "security_off", "outcome": "unsupported"}
       ],
       "side_effect": "none",
       "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-UNSUPPORTED-002", "sql_file": "unsupported/postgres-copy-file.sql", "family": "unsupported",
+      "capability": "unsupported.copy_file", "dialects": ["postgres"], "frontends": ["pg_simple"],
+      "backends": ["postgres"], "protocols": ["pg_simple"], "statement_mode": "single",
+      "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "unsupported"}],
+      "side_effect": "none", "profiles": ["pr", "nightly", "release"]
+    },
+    {
+      "id": "SQLT-UNSUPPORTED-003", "sql_file": "unsupported/postgres-do.sql", "family": "unsupported",
+      "capability": "unsupported.anonymous_code", "dialects": ["postgres"], "frontends": ["pg_simple"],
+      "backends": ["postgres"], "protocols": ["pg_simple"], "statement_mode": "single",
+      "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "unsupported"}],
+      "side_effect": "none", "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-UNSUPPORTED-004", "sql_file": "unsupported/call.sql", "family": "unsupported",
+      "capability": "unsupported.procedure_call", "dialects": ["mysql", "postgres"],
+      "frontends": ["mysql_text", "pg_simple"], "backends": ["mysql", "postgres"],
+      "protocols": ["mysql_text", "pg_simple"], "statement_mode": "script",
+      "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "unsupported"}],
+      "side_effect": "none", "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-UNSUPPORTED-005", "sql_file": "unsupported/mysql-load-data.sql", "family": "unsupported",
+      "capability": "unsupported.load_data", "dialects": ["mysql"], "frontends": ["mysql_text"],
+      "backends": ["mysql"], "protocols": ["mysql_text"], "statement_mode": "single",
+      "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "unsupported"}],
+      "side_effect": "none", "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-UNSUPPORTED-006", "sql_file": "unsupported/mysql-outfile.sql", "family": "unsupported",
+      "capability": "unsupported.outfile", "dialects": ["mysql"], "frontends": ["mysql_text"],
+      "backends": ["mysql"], "protocols": ["mysql_text"], "statement_mode": "script",
+      "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "unsupported"}],
+      "side_effect": "none", "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-UNSUPPORTED-007", "sql_file": "unsupported/postgres-maintenance.sql", "family": "unsupported",
+      "capability": "unsupported.maintenance", "dialects": ["postgres"], "frontends": ["pg_simple"],
+      "backends": ["postgres"], "protocols": ["pg_simple"], "statement_mode": "script",
+      "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "unsupported"}],
+      "side_effect": "none", "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-UNSUPPORTED-008", "sql_file": "unsupported/cross-dialect.sql", "family": "unsupported",
+      "capability": "unsupported.cross_dialect", "dialects": ["mysql", "postgres"],
+      "frontends": ["mysql_text", "pg_simple"], "backends": ["mysql", "postgres"],
+      "protocols": ["mysql_text", "pg_simple"], "statement_mode": "script",
+      "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "unsupported"}],
+      "side_effect": "none", "profiles": ["nightly", "release"]
+    },
+    {
+      "id": "SQLT-UNSUPPORTED-009", "sql_file": "unsupported/privileged-catalog-session.sql", "family": "unsupported",
+      "capability": "unsupported.privileged_catalog_session", "dialects": ["mysql", "postgres"],
+      "frontends": ["mysql_text", "pg_simple"], "backends": ["mysql", "postgres"],
+      "protocols": ["mysql_text", "pg_simple"], "statement_mode": "script",
+      "transaction_mode": "autocommit", "parameter_mode": "none",
+      "expectations": [{"policy": "security_off", "outcome": "unsupported"}],
+      "side_effect": "none", "profiles": ["nightly", "release"]
     },
     {
       "id": "SQLT-INVALID-001",

@@ -1,0 +1,8 @@
+# SQLT-3F3 override: keep the PostgreSQL bootstrap owner separate from the
+# restricted sqlt login used by direct and gateway dangerous-SQL attempts.
+services:
+  postgres:
+    environment:
+      POSTGRES_USER: sqlt_admin
+      POSTGRES_PASSWORD: sqlt-admin-password
+      POSTGRES_DB: sqlt

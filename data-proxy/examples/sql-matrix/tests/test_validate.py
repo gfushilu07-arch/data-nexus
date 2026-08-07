@@ -324,6 +324,59 @@ class ValidateSqlMatrixTest(unittest.TestCase):
         oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
         self.assert_has_error("boundary-oracles.json probe_queries.postgres escapes matrix root")
 
+    def test_unsupported_manifest_must_cover_001_through_009(self) -> None:
+        manifest = self.manifest()
+        manifest["cases"] = [
+            case for case in manifest["cases"] if case["id"] != "SQLT-UNSUPPORTED-009"
+        ]
+        self.write_manifest(manifest)
+        self.assert_has_error("unsupported manifest cases must be")
+
+    def test_unsupported_oracle_must_cover_every_declared_dialect(self) -> None:
+        oracle_path = self.root / "unsupported-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        del oracles["results"]["SQLT-UNSUPPORTED-004"]["expected"]["postgres"]
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("SQLT-UNSUPPORTED-004.expected dialects must be")
+
+    def test_unsupported_oracle_rejects_fuzzy_error_identity(self) -> None:
+        oracle_path = self.root / "unsupported-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["results"]["SQLT-UNSUPPORTED-006"]["expected"]["mysql"]["direct"][0]["error"]["sqlstate"] = "any"
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("must not contain fuzzy any values")
+
+    def test_unsupported_gateway_requires_allowed_capability(self) -> None:
+        oracle_path = self.root / "unsupported-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["results"]["SQLT-UNSUPPORTED-005"]["expected"]["mysql"]["gateway"][0]["error"]["capability"] = "mysql.raw_sql"
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("is not an allowed stable capability")
+
+    def test_unsupported_oracle_step_names_must_match_sql(self) -> None:
+        oracle_path = self.root / "unsupported-oracles.json"
+        oracles = json.loads(oracle_path.read_text(encoding="utf-8"))
+        oracles["results"]["SQLT-UNSUPPORTED-007"]["expected"]["postgres"]["gateway"][1]["name"] = "vacuum_again"
+        oracle_path.write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8")
+        self.assert_has_error("step names must be ['vacuum', 'analyze']")
+
+    def test_unsupported_sql_rejects_host_path_payload(self) -> None:
+        sql_path = self.root / "cases" / "unsupported" / "postgres-copy-file.sql"
+        sql = sql_path.read_text(encoding="utf-8").replace(
+            "/sqlt-unreachable-sentinel", "/Users/operator/private-data"
+        )
+        sql_path.write_text(sql, encoding="utf-8")
+        self.assert_has_error("contains forbidden sensitive payload '/Users/'")
+
+    def test_unsupported_manifest_cannot_claim_unverified_policy(self) -> None:
+        manifest = self.manifest()
+        case = next(
+            item for item in manifest["cases"] if item["id"] == "SQLT-UNSUPPORTED-002"
+        )
+        case["expectations"].append({"policy": "allow", "outcome": "unsupported"})
+        self.write_manifest(manifest)
+        self.assert_has_error("expectations must contain only security_off unsupported")
+
     def test_dml_tranches_have_contiguous_case_ids(self) -> None:
         manifest = self.manifest()
         dml_cases = [case for case in manifest["cases"] if case["family"] == "dml"]
