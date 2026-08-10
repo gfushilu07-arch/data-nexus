@@ -118,6 +118,13 @@ class ProtocolMatrixTest(unittest.TestCase):
         with self.assertRaisesRegex(MATRIX.MatrixError, "is not passed"):
             self.aggregate()
 
+    def test_child_passed_count_must_match_results(self) -> None:
+        value = json.loads(self.summaries["prepared"].read_text(encoding="utf-8"))
+        value["passed"] -= 1
+        self.summaries["prepared"].write_text(json.dumps(value), encoding="utf-8")
+        with self.assertRaisesRegex(MATRIX.MatrixError, "passed count does not match"):
+            self.aggregate()
+
     def test_unknown_case_is_rejected(self) -> None:
         value = json.loads(self.summaries["prepared"].read_text(encoding="utf-8"))
         value["results"][0]["case_id"] = "SQLT-PRP-999"
@@ -125,17 +132,34 @@ class ProtocolMatrixTest(unittest.TestCase):
         with self.assertRaisesRegex(MATRIX.MatrixError, "unknown case"):
             self.aggregate()
 
+    def test_case_outside_suite_selector_is_rejected(self) -> None:
+        value = json.loads(self.summaries["prepared"].read_text(encoding="utf-8"))
+        value["results"][0]["case_id"] = "SQLT-DML-003"
+        value["results"][0]["dialect"] = "mysql"
+        self.summaries["prepared"].write_text(json.dumps(value), encoding="utf-8")
+        with self.assertRaisesRegex(MATRIX.MatrixError, "outside selector ownership"):
+            self.aggregate()
+
+    def test_formal_case_dialect_selection_must_be_exact(self) -> None:
+        value = json.loads(self.summaries["prepared"].read_text(encoding="utf-8"))
+        value["results"].pop()
+        value["passed"] -= 1
+        self.summaries["prepared"].write_text(json.dumps(value), encoding="utf-8")
+        with self.assertRaisesRegex(MATRIX.MatrixError, "selection mismatch"):
+            self.aggregate()
+
     def test_duplicate_explicit_path_is_rejected(self) -> None:
         value = json.loads(self.summaries["ddl"].read_text(encoding="utf-8"))
         value["results"].append(copy.deepcopy(value["results"][0]))
+        value["passed"] += 1
         self.summaries["ddl"].write_text(json.dumps(value), encoding="utf-8")
         with self.assertRaisesRegex(MATRIX.MatrixError, "duplicate path"):
             self.aggregate()
 
     def test_manifest_lane_drift_is_rejected(self) -> None:
         case = next(case for case in self.manifest["cases"] if case["id"] == "SQLT-PRP-001")
-        case["frontends"] = ["mysql_text"]
-        with self.assertRaisesRegex(MATRIX.MatrixError, "frontend is not declared"):
+        case["backends"] = ["postgres"]
+        with self.assertRaisesRegex(MATRIX.MatrixError, "backend is not declared"):
             self.aggregate()
 
     def test_unknown_summary_suite_is_rejected(self) -> None:

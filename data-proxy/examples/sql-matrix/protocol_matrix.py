@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import shlex
 from collections import Counter
@@ -25,12 +26,12 @@ SUMMARY_SCHEMAS = {
     "explicit_paths",
 }
 SUITE_CONTRACTS = {
-    "prepared": ("run-prepared-corpus.sh", "SQLT_PREPARED_RUN_ID", "SQLT_PREPARED_CASE_FROM", "SQLT_PREPARED_CASE_TO", "case_double"),
-    "extended": ("run-extended-corpus.sh", "SQLT_EXTENDED_RUN_ID", "SQLT_EXTENDED_CASE_FROM", "SQLT_EXTENDED_CASE_TO", "case_double"),
-    "cursor": ("run-cursor-corpus.sh", "SQLT_CURSOR_RUN_ID", "SQLT_CURSOR_CASE_FROM", "SQLT_CURSOR_CASE_TO", "cursor_variants"),
-    "tcl": ("run-tcl-corpus.sh", "SQLT_TCL_RUN_ID", "SQLT_TCL_CASE_FROM", "SQLT_TCL_CASE_TO", "dialect_case_double"),
-    "dml": ("run-dml-corpus.sh", "SQLT_DML_RUN_ID", "SQLT_DML_CASE_FROM", "SQLT_DML_CASE_TO", "dialect_case_double"),
-    "ddl": ("run-ddl-corpus.sh", "SQLT_DDL_RUN_ID", "SQLT_DDL_CASE_FROM", "SQLT_DDL_CASE_TO", "explicit_paths"),
+    "prepared": ("run-prepared-corpus.sh", "select_prepared_cases.py", "prepared-oracles.json", "SQLT-PRP-001", "SQLT-PRP-008", "case_double"),
+    "extended": ("run-extended-corpus.sh", "select_extended_cases.py", "extended-oracles.json", "SQLT-PGX-001", "SQLT-PGX-008", "case_double"),
+    "cursor": ("run-cursor-corpus.sh", "select_cursor_cases.py", "cursor-oracles.json", "SQLT-CURSOR-001", "SQLT-CURSOR-008", "cursor_variants"),
+    "tcl": ("run-tcl-corpus.sh", "select_tcl_cases.py", "tcl-oracles.json", "SQLT-TCL-001", "SQLT-TCL-011", "dialect_case_double"),
+    "dml": ("run-dml-corpus.sh", "select_dml_cases.py", "dml-oracles.json", "SQLT-DML-003", "SQLT-DML-043", "dialect_case_double"),
+    "ddl": ("run-ddl-corpus.sh", "select_ddl_cases.py", "ddl-oracles.json", "SQLT-DDL-001", "SQLT-DDL-052", "explicit_paths"),
 }
 
 
@@ -83,17 +84,36 @@ def validate_spec(spec: Any, manifest: Any, root: Path | None = None) -> list[st
         if name not in SUITES:
             continue
         contract = SUITE_CONTRACTS[name]
-        runner = suite.get("runner")
-        if runner != contract[0]:
-            errors.append(f"suite {name} runner must be {contract[0]}")
-        elif root is not None and not (root / runner).is_file():
-            errors.append(f"suite {name} runner does not exist: {runner}")
-        for offset, field in enumerate(("run_id_env", "case_from_env", "case_to_env"), start=1):
-            value = suite.get(field)
-            if value != contract[offset]:
+        for offset, field in enumerate(
+            ("runner", "selector", "oracles", "case_from", "case_to")
+        ):
+            if suite.get(field) != contract[offset]:
                 errors.append(f"suite {name} {field} must be {contract[offset]}")
-        if suite.get("summary_schema") != contract[4]:
-            errors.append(f"suite {name} summary_schema must be {contract[4]}")
+            elif root is not None and field in {"runner", "selector", "oracles"}:
+                if not (root / contract[offset]).is_file():
+                    errors.append(f"suite {name} {field} does not exist: {contract[offset]}")
+        upper_name = name.upper()
+        env_contracts = {
+            "run_id_env": f"SQLT_{upper_name}_RUN_ID",
+            "case_from_env": f"SQLT_{upper_name}_CASE_FROM",
+            "case_to_env": f"SQLT_{upper_name}_CASE_TO",
+        }
+        for field, expected in env_contracts.items():
+            if suite.get(field) != expected:
+                errors.append(f"suite {name} {field} must be {expected}")
+        if suite.get("summary_schema") != contract[5]:
+            errors.append(f"suite {name} summary_schema must be {contract[5]}")
+        expected_case_dialects = suite.get("expected_case_dialects")
+        if not isinstance(expected_case_dialects, int) or expected_case_dialects <= 0:
+            errors.append(f"suite {name} expected_case_dialects must be positive")
+        coverage_tags = suite.get("coverage_tags")
+        if (
+            not isinstance(coverage_tags, list)
+            or not coverage_tags
+            or any(not isinstance(tag, str) or not tag for tag in coverage_tags)
+            or len(coverage_tags) != len(set(coverage_tags))
+        ):
+            errors.append(f"suite {name} coverage_tags must be unique non-empty strings")
         suite_lanes = _object(suite.get("lane_paths"), f"suite {name} lane_paths", errors)
         for lane_name, count in suite_lanes.items():
             if lane_name not in LANES:
@@ -103,15 +123,74 @@ def validate_spec(spec: Any, manifest: Any, root: Path | None = None) -> list[st
             else:
                 lane_totals[lane_name] += count
         variants = suite.get("variants", {})
-        if not isinstance(variants, dict) or any(
+        variants_valid = isinstance(variants, dict) and not any(
             not isinstance(case_id, str)
             or not isinstance(items, list)
             or not items
-            or len(items) != len(set(items))
             or any(not isinstance(item, str) or not item for item in items)
-            for case_id, items in (variants.items() if isinstance(variants, dict) else [])
-        ):
+            or len(items) != len(set(items))
+            for case_id, items in variants.items()
+        )
+        if not variants_valid:
             errors.append(f"suite {name} variants must map case IDs to unique strings")
+        if (
+            root is not None
+            and variants_valid
+            and set(suite_lanes) <= set(lanes)
+            and all(isinstance(lanes.get(lane_name), dict) for lane_name in suite_lanes)
+            and all(
+                suite.get(field) == contract[offset]
+                for offset, field in enumerate(
+                    ("runner", "selector", "oracles", "case_from", "case_to")
+                )
+            )
+        ):
+            try:
+                selection = _selection_pairs(suite, manifest, root)
+            except MatrixError as exc:
+                errors.append(f"suite {name} selection failed: {exc}")
+            else:
+                if len(selection) != expected_case_dialects:
+                    errors.append(
+                        f"suite {name} expected_case_dialects must match "
+                        f"selector count {len(selection)}"
+                    )
+                selected_ids = {case_id for case_id, _ in selection}
+                if not set(variants) <= selected_ids:
+                    errors.append(f"suite {name} variants reference unselected cases")
+                selected_lane_paths: Counter[str] = Counter()
+                manifest_cases = {
+                    case.get("id"): case
+                    for case in manifest.get("cases", [])
+                    if isinstance(case, dict)
+                }
+                for case_id, dialect in selection:
+                    try:
+                        lane_name, lane = _lane_for(suite, dialect, lanes)
+                    except MatrixError as exc:
+                        errors.append(str(exc))
+                        continue
+                    case = manifest_cases.get(case_id, {})
+                    for field, manifest_field in (
+                        ("frontend", "frontends"),
+                        ("backend", "backends"),
+                        ("protocol", "protocols"),
+                    ):
+                        if lane.get(field) not in case.get(manifest_field, []):
+                            errors.append(
+                                f"{case_id}: lane {lane_name} {field} is not "
+                                "declared by manifest"
+                            )
+                    variant_count = len(variants.get(case_id, ["default"]))
+                    multiplier = 2 * (
+                        variant_count if suite.get("summary_schema") == "cursor_variants" else 1
+                    )
+                    selected_lane_paths[lane_name] += multiplier
+                if selected_lane_paths != Counter(suite_lanes):
+                    errors.append(
+                        f"suite {name} lane_paths do not match selector paths: "
+                        f"{dict(selected_lane_paths)}"
+                    )
 
     expected_paths = spec.get("expected_paths")
     if expected_paths != sum(lane_totals.values()):
@@ -133,6 +212,46 @@ def _load(path: Path) -> Any:
         raise MatrixError(f"cannot read {path}: {exc}") from exc
 
 
+def _selection_pairs(
+    suite: dict[str, Any], manifest: dict[str, Any], root: Path
+) -> list[tuple[str, str]]:
+    selector_path = root / suite["selector"]
+    module_spec = importlib.util.spec_from_file_location(
+        f"protocol_matrix_{suite['name']}_selector", selector_path
+    )
+    if not module_spec or not module_spec.loader:
+        raise MatrixError(f"cannot load selector {selector_path}")
+    selector = importlib.util.module_from_spec(module_spec)
+    try:
+        module_spec.loader.exec_module(selector)
+    except (ImportError, OSError, SyntaxError) as exc:
+        raise MatrixError(f"cannot load selector {selector_path}: {exc}") from exc
+    if not callable(getattr(selector, "select_cases", None)):
+        raise MatrixError(f"selector {selector_path.name} has no select_cases function")
+    oracles = _load(root / suite["oracles"])
+    try:
+        rows = list(
+            selector.select_cases(
+                manifest, oracles, suite["case_from"], suite["case_to"]
+            )
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        raise MatrixError(f"selector {selector_path.name} failed: {exc}") from exc
+    pairs: list[tuple[str, str]] = []
+    for row in rows:
+        if (
+            not isinstance(row, tuple)
+            or len(row) < 2
+            or not isinstance(row[0], str)
+            or not isinstance(row[1], str)
+        ):
+            raise MatrixError(f"selector {selector_path.name} returned an invalid row")
+        pairs.append((row[0], row[1]))
+    if len(pairs) != len(set(pairs)):
+        raise MatrixError(f"selector {selector_path.name} returned duplicate case/dialects")
+    return pairs
+
+
 def _dialect(result: dict[str, Any], case: dict[str, Any]) -> str:
     dialect = result.get("dialect")
     if dialect is None and len(case.get("dialects", [])) == 1:
@@ -143,7 +262,11 @@ def _dialect(result: dict[str, Any], case: dict[str, Any]) -> str:
 
 
 def _lane_for(suite: dict[str, Any], dialect: str, lanes: dict[str, Any]) -> tuple[str, dict[str, Any]]:
-    matches = [name for name in suite["lane_paths"] if lanes[name]["backend"] == dialect]
+    matches = [
+        name
+        for name in suite["lane_paths"]
+        if isinstance(lanes.get(name), dict) and lanes[name].get("backend") == dialect
+    ]
     if len(matches) != 1:
         raise MatrixError(f"suite {suite['name']} dialect {dialect} must resolve to exactly one lane")
     return matches[0], lanes[matches[0]]
@@ -192,21 +315,32 @@ def aggregate(
     path_keys: set[tuple[str, str, str, str, str]] = set()
     for suite_name, summary_path in summaries.items():
         suite = suite_specs[suite_name]
+        selected_pairs = Counter(_selection_pairs(suite, manifest, root))
+        child_pairs: Counter[tuple[str, str]] = Counter()
         summary = _load(summary_path)
         if not isinstance(summary, dict) or not isinstance(summary.get("results"), list):
             raise MatrixError(f"suite {suite_name} summary must contain results")
+        child_results = summary["results"]
         if summary.get("failed") != 0:
             raise MatrixError(f"suite {suite_name} summary reports failed executions")
-        for child in summary["results"]:
+        if summary.get("passed") != len(child_results):
+            raise MatrixError(f"suite {suite_name} passed count does not match results")
+        for child in child_results:
             if not isinstance(child, dict):
                 raise MatrixError(f"suite {suite_name} has a non-object result")
             case_id = child.get("case_id")
-            if case_id not in cases:
+            if not isinstance(case_id, str) or case_id not in cases:
                 raise MatrixError(f"suite {suite_name} references unknown case {case_id!r}")
             if child.get("status") != "passed":
                 raise MatrixError(f"suite {suite_name} case {case_id} is not passed")
             case = cases[case_id]
             dialect = _dialect(child, case)
+            if (case_id, dialect) not in selected_pairs:
+                raise MatrixError(
+                    f"suite {suite_name} case/dialect is outside selector ownership: "
+                    f"{case_id}/{dialect}"
+                )
+            child_pairs[(case_id, dialect)] += 1
             lane_name, lane = _lane_for(suite, dialect, spec["lanes"])
             for field, manifest_field in (("frontend", "frontends"), ("backend", "backends"), ("protocol", "protocols")):
                 if lane[field] not in case.get(manifest_field, []):
@@ -244,6 +378,17 @@ def aggregate(
                 })
                 suite_counts[suite_name] += 1
                 lane_counts[lane_name] += 1
+        if acceptance_complete:
+            expected_child_pairs = selected_pairs.copy()
+            if suite["summary_schema"] == "explicit_paths":
+                expected_child_pairs = Counter(
+                    {pair: count * 2 for pair, count in selected_pairs.items()}
+                )
+            if child_pairs != expected_child_pairs:
+                raise MatrixError(
+                    f"suite {suite_name} case/dialect selection mismatch: "
+                    f"{dict(child_pairs)}"
+                )
 
     expected_suite_paths = {name: sum(suite["lane_paths"].values()) for name, suite in suite_specs.items()}
     expected_lane_paths = {name: lane["expected_paths"] for name, lane in spec["lanes"].items()}

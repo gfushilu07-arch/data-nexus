@@ -40,14 +40,16 @@ command -v docker >/dev/null 2>&1 || { echo "missing docker" >&2; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo "missing python3" >&2; exit 1; }
 python3 "$ROOT/validate.py" >"$RUN_DIR/logs/validate.log" 2>&1
 
-docker ps --no-trunc --format '{{.ID}}\t{{.Names}}' | sort >"$RUN_DIR/audit/containers.before.tsv"
+docker ps -a --no-trunc --format '{{.ID}}\t{{.Names}}' | sort >"$RUN_DIR/audit/containers.before.tsv"
 docker network ls --no-trunc --format '{{.ID}}\t{{.Name}}' | sort >"$RUN_DIR/audit/networks.before.tsv"
 docker volume ls --format '{{.Name}}' | sort >"$RUN_DIR/audit/volumes.before.tsv"
 pgrep -f 'target/.*/proxy daemon|target/.*/proxy --.*daemon' 2>/dev/null | sort -n >"$RUN_DIR/audit/gateway.before.tsv" || :
 
 run_suite() {
-  local suite="$1" runner="$2" child_id="$3" summary="$CACHE_ROOT/$child_id/summary.json"
-  local upper="${suite^^}" env_args=()
+  local suite="$1" runner="$2" child_id="$3"
+  local summary="$CACHE_ROOT/$child_id/summary.json"
+  local upper env_args=()
+  upper="$(printf '%s' "$suite" | tr '[:lower:]' '[:upper:]')"
   echo "==> SQLT-4A suite: $suite"
   env_args+=("SQLT_${upper}_RUN_ID=$child_id")
   if ((FILTERED)) && [[ -n "$CASE_FROM" ]]; then
@@ -76,7 +78,7 @@ run_suite() {
 [[ -n "$SUITE_FILTER" && "$SUITE_FILTER" != dml ]] || run_suite dml run-dml-corpus.sh "$RUN_ID-dml"
 [[ -n "$SUITE_FILTER" && "$SUITE_FILTER" != ddl ]] || run_suite ddl run-ddl-corpus.sh "$RUN_ID-ddl"
 
-docker ps --no-trunc --format '{{.ID}}\t{{.Names}}' | sort >"$RUN_DIR/audit/containers.after.tsv"
+docker ps -a --no-trunc --format '{{.ID}}\t{{.Names}}' | sort >"$RUN_DIR/audit/containers.after.tsv"
 docker network ls --no-trunc --format '{{.ID}}\t{{.Name}}' | sort >"$RUN_DIR/audit/networks.after.tsv"
 docker volume ls --format '{{.Name}}' | sort >"$RUN_DIR/audit/volumes.after.tsv"
 pgrep -f 'target/.*/proxy daemon|target/.*/proxy --.*daemon' 2>/dev/null | sort -n >"$RUN_DIR/audit/gateway.after.tsv" || :

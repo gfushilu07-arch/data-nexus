@@ -47,6 +47,9 @@ command -v curl >/dev/null 2>&1 || { echo "missing required command: curl" >&2; 
   exit 1
 }
 python3 "$ROOT/validate.py"
+python3 "$ROOT/select_ddl_cases.py" "$ROOT/manifest.json" \
+  "$ROOT/ddl-oracles.json" "$CASE_FROM" "$CASE_TO" >"$RUN_DIR/selection.tsv"
+[[ -s "$RUN_DIR/selection.tsv" ]] || { echo "DDL case selection is empty" >&2; exit 1; }
 
 echo "==> starting fixed-version SQLT-3D Docker backends"
 "${COMPOSE[@]}" up -d >"$RUN_DIR/logs/compose-up.log" 2>&1
@@ -315,10 +318,7 @@ PY
     write_result "$case_id" "$dialect" "$path" "$status" "$execution" "$expected_result" \
       "$before" "$after" "$actual_error" "$before_data" "$after_data"
   done
-done < <(
-  python3 "$ROOT/select_ddl_cases.py" \
-    "$ROOT/manifest.json" "$ROOT/ddl-oracles.json" "$CASE_FROM" "$CASE_TO"
-)
+done <"$RUN_DIR/selection.tsv"
 
 python3 - "$RESULTS" "$RUN_DIR/summary.json" "$case_count" "$pass_count" "$fail_count" <<'PY'
 import json

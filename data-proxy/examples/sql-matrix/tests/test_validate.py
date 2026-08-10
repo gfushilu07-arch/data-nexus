@@ -80,6 +80,24 @@ class ValidateSqlMatrixTest(unittest.TestCase):
         self.write_protocol_matrix(value)
         self.assert_has_error("summary_schema must be cursor_variants")
 
+    def test_protocol_matrix_selector_count_is_fixed(self) -> None:
+        value = self.protocol_matrix()
+        value["suites"][0]["expected_case_dialects"] = 7
+        self.write_protocol_matrix(value)
+        self.assert_has_error("expected_case_dialects must match selector count 8")
+
+    def test_protocol_matrix_coverage_tags_are_required(self) -> None:
+        value = self.protocol_matrix()
+        value["suites"][0]["coverage_tags"] = []
+        self.write_protocol_matrix(value)
+        self.assert_has_error("coverage_tags must be unique non-empty strings")
+
+    def test_protocol_matrix_selector_contract_is_fixed(self) -> None:
+        value = self.protocol_matrix()
+        value["suites"][0]["selector"] = "select_cursor_cases.py"
+        self.write_protocol_matrix(value)
+        self.assert_has_error("selector must be select_prepared_cases.py")
+
     def test_cursor_backend_action_is_declared_in_sql(self) -> None:
         sql_path = self.root / "cases" / "cursor" / "postgres-backend-disconnect.sql"
         text = sql_path.read_text(encoding="utf-8")
