@@ -15,6 +15,8 @@ PROJECT_ROOT="$(cd "$ROOT/../.." && pwd)"
 CACHE_ROOT="${DATA_NEXUS_SQL_MATRIX_CACHE:-/Volumes/fushilu/.caches/data-nexus/sql-matrix}"
 RUN_ID="${SQLT_TCL_RUN_ID:-tcl-$(date -u +%Y%m%dT%H%M%SZ)}"
 RUN_DIR="$CACHE_ROOT/$RUN_ID"
+CASE_FROM="${SQLT_TCL_CASE_FROM:-SQLT-TCL-001}"
+CASE_TO="${SQLT_TCL_CASE_TO:-SQLT-TCL-011}"
 COMPOSE_PROJECT="sqlt3etcl-${RUN_ID//[^a-zA-Z0-9]/}"
 COMPOSE=(docker compose -p "$COMPOSE_PROJECT" -f "$ROOT/fixtures/docker-compose.yml")
 RESULTS="$RUN_DIR/results.jsonl"
@@ -45,6 +47,9 @@ command -v curl >/dev/null 2>&1 || { echo "missing required command: curl" >&2; 
   exit 1
 }
 python3 "$ROOT/validate.py"
+python3 "$ROOT/select_tcl_cases.py" "$ROOT/manifest.json" \
+  "$ROOT/tcl-oracles.json" "$CASE_FROM" "$CASE_TO" >"$RUN_DIR/selection.tsv"
+[[ -s "$RUN_DIR/selection.tsv" ]] || { echo "TCL case selection is empty" >&2; exit 1; }
 
 echo "==> starting fixed-version SQLT-3E1 Docker backends"
 "${COMPOSE[@]}" up -d >"$RUN_DIR/logs/compose-up.log" 2>&1
@@ -252,7 +257,7 @@ PY
   else
     fail_count=$((fail_count + 1))
   fi
-done < <(python3 "$ROOT/select_tcl_cases.py" "$ROOT/manifest.json" "$ROOT/tcl-oracles.json")
+done <"$RUN_DIR/selection.tsv"
 
 python3 - "$RESULTS" "$RUN_DIR/summary.json" "$case_count" "$pass_count" "$fail_count" <<'PY'
 import json

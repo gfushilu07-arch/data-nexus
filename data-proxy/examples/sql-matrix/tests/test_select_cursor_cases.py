@@ -28,6 +28,10 @@ class SelectCursorCasesTest(unittest.TestCase):
         case["frontends"] = ["pg_extended"]
         self.assertNotIn("SQLT-CURSOR-001", [row[0] for row in SELECTOR.select_cases(self.manifest, self.oracles)])
 
+    def test_case_range_is_inclusive(self) -> None:
+        rows = list(SELECTOR.select_cases(self.manifest, self.oracles, "SQLT-CURSOR-007", "SQLT-CURSOR-007"))
+        self.assertEqual([row[0] for row in rows], ["SQLT-CURSOR-007"])
+
 
 if __name__ == "__main__":
     unittest.main()

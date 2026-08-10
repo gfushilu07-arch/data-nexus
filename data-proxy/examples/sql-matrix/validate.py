@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import importlib.util
 import re
 import sys
 from pathlib import Path, PurePosixPath
@@ -1794,6 +1795,18 @@ def validate_repository(root: Path) -> list[str]:
     _validate_ddl_oracles(root, cases, errors)
     _validate_ddl_temp_oracles(root, cases, errors)
     _validate_ddl_database_oracles(root, cases, errors)
+    matrix_path = root / "protocol-matrix.json"
+    if matrix_path.is_file():
+        matrix_module_spec = importlib.util.spec_from_file_location(
+            "sql_matrix_protocol_matrix", root / "protocol_matrix.py"
+        )
+        if matrix_module_spec and matrix_module_spec.loader:
+            matrix_module = importlib.util.module_from_spec(matrix_module_spec)
+            matrix_module_spec.loader.exec_module(matrix_module)
+            matrix = _load_json(matrix_path, errors)
+            errors.extend(matrix_module.validate_spec(matrix, manifest, root))
+        else:
+            errors.append("cannot load protocol_matrix.py")
     return errors
 
 

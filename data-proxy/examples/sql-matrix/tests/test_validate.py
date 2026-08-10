@@ -33,6 +33,14 @@ class ValidateSqlMatrixTest(unittest.TestCase):
             json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
         )
 
+    def protocol_matrix(self) -> dict:
+        return json.loads((self.root / "protocol-matrix.json").read_text(encoding="utf-8"))
+
+    def write_protocol_matrix(self, value: dict) -> None:
+        (self.root / "protocol-matrix.json").write_text(
+            json.dumps(value, indent=2) + "\n", encoding="utf-8"
+        )
+
     def errors(self) -> list[str]:
         return VALIDATE.validate_repository(self.root)
 
@@ -45,6 +53,32 @@ class ValidateSqlMatrixTest(unittest.TestCase):
 
     def test_repository_fixture_is_valid(self) -> None:
         self.assertEqual(self.errors(), [])
+
+    def test_protocol_matrix_lane_totals_must_close(self) -> None:
+        value = self.protocol_matrix()
+        value["lanes"]["mysql_text_to_mysql"]["expected_paths"] += 1
+        self.write_protocol_matrix(value)
+        self.assert_has_error("lane mysql_text_to_mysql expected_paths does not match suite totals")
+
+    def test_protocol_matrix_rejects_unknown_lane(self) -> None:
+        value = self.protocol_matrix()
+        value["suites"][0]["lane_paths"] = {"unknown": 16}
+        self.write_protocol_matrix(value)
+        self.assert_has_error("references unknown lane unknown")
+
+    def test_protocol_matrix_runner_and_env_are_fixed(self) -> None:
+        value = self.protocol_matrix()
+        value["suites"][0]["runner"] = "run-other.sh"
+        value["suites"][0]["case_from_env"] = "SQLT_OTHER_FROM"
+        self.write_protocol_matrix(value)
+        self.assert_has_error("runner must be run-prepared-corpus.sh")
+        self.assert_has_error("case_from_env must be SQLT_PREPARED_CASE_FROM")
+
+    def test_protocol_matrix_summary_schema_is_fixed(self) -> None:
+        value = self.protocol_matrix()
+        value["suites"][2]["summary_schema"] = "case_double"
+        self.write_protocol_matrix(value)
+        self.assert_has_error("summary_schema must be cursor_variants")
 
     def test_cursor_backend_action_is_declared_in_sql(self) -> None:
         sql_path = self.root / "cases" / "cursor" / "postgres-backend-disconnect.sql"

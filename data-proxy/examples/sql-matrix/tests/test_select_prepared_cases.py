@@ -37,6 +37,10 @@ class SelectPreparedCasesTest(unittest.TestCase):
         rows = list(SELECTOR.select_cases(self.manifest, self.oracles))
         self.assertNotIn("SQLT-PRP-001", [row[0] for row in rows])
 
+    def test_case_range_is_inclusive(self) -> None:
+        rows = list(SELECTOR.select_cases(self.manifest, self.oracles, "SQLT-PRP-004", "SQLT-PRP-004"))
+        self.assertEqual([row[0] for row in rows], ["SQLT-PRP-004"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -10,6 +10,8 @@ PROJECT_ROOT="$(cd "$ROOT/../.." && pwd)"
 CACHE_ROOT="${DATA_NEXUS_SQL_MATRIX_CACHE:-/Volumes/fushilu/.caches/data-nexus/sql-matrix}"
 RUN_ID="${SQLT_PREPARED_RUN_ID:-prepared-$(date -u +%Y%m%dT%H%M%SZ)}"
 RUN_DIR="$CACHE_ROOT/$RUN_ID"
+CASE_FROM="${SQLT_PREPARED_CASE_FROM:-SQLT-PRP-001}"
+CASE_TO="${SQLT_PREPARED_CASE_TO:-SQLT-PRP-008}"
 COMPOSE_PROJECT="sqlt3eprep-${RUN_ID//[^a-zA-Z0-9]/}"
 COMPOSE=(docker compose -p "$COMPOSE_PROJECT" -f "$ROOT/fixtures/docker-compose.yml")
 RESULTS="$RUN_DIR/results.jsonl"
@@ -34,6 +36,9 @@ command -v curl >/dev/null 2>&1 || { echo "missing curl" >&2; exit 1; }
 command -v rustup >/dev/null 2>&1 || { echo "missing rustup" >&2; exit 1; }
 [[ "$(rustup run "$RUSTUP_TOOLCHAIN" rustc --version)" == rustc\ 1.94.1\ * ]] || { echo "SQLT-3E2 requires rustc 1.94.1" >&2; exit 1; }
 python3 "$ROOT/validate.py"
+python3 "$ROOT/select_prepared_cases.py" "$ROOT/manifest.json" \
+  "$ROOT/prepared-oracles.json" "$CASE_FROM" "$CASE_TO" >"$RUN_DIR/selection.tsv"
+[[ -s "$RUN_DIR/selection.tsv" ]] || { echo "prepared case selection is empty" >&2; exit 1; }
 
 docker build --pull=false -t "$CLIENT_IMAGE" -f - . >"$RUN_DIR/logs/client-image-build.log" 2>&1 <<'DOCKERFILE'
 FROM python:3.12-slim-bookworm
@@ -144,7 +149,7 @@ PY
   done
   printf '{"case_id":"%s","status":"%s"}\n' "$case_id" "$status" >>"$RESULTS"
   if [[ "$status" == passed ]]; then pass_count=$((pass_count + 1)); else fail_count=$((fail_count + 1)); fi
-done < <(python3 "$ROOT/select_prepared_cases.py" "$ROOT/manifest.json" "$ROOT/prepared-oracles.json")
+done <"$RUN_DIR/selection.tsv"
 
 python3 - "$RESULTS" "$RUN_DIR/summary.json" "$case_count" "$pass_count" "$fail_count" <<'PY'
 import json, sys

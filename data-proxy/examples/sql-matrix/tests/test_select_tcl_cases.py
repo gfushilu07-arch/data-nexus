@@ -35,6 +35,10 @@ class SelectTclCasesTest(unittest.TestCase):
         self.assertNotIn("SQLT-DML-003", [row[0] for row in rows])
         self.assertNotIn(("SQLT-TCL-008", "postgres", "tcl/serializable-transaction.sql"), rows)
 
+    def test_case_range_is_inclusive(self) -> None:
+        rows = list(SELECTOR.select_cases(self.manifest, self.oracles, "SQLT-TCL-008", "SQLT-TCL-008"))
+        self.assertEqual(rows, [("SQLT-TCL-008", "mysql", "tcl/serializable-transaction.sql")])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -28,6 +28,10 @@ class SelectExtendedCasesTest(unittest.TestCase):
         case["frontends"] = ["pg_simple"]
         self.assertNotIn("SQLT-PGX-001", [row[0] for row in SELECTOR.select_cases(self.manifest, self.oracles)])
 
+    def test_case_range_is_inclusive(self) -> None:
+        rows = list(SELECTOR.select_cases(self.manifest, self.oracles, "SQLT-PGX-003", "SQLT-PGX-003"))
+        self.assertEqual([row[0] for row in rows], ["SQLT-PGX-003"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "matrix_id": "SQLT-4A",
+  "policy": "security_off",
+  "expected_suites": 6,
+  "expected_paths": 376,
+  "lanes": {
+    "mysql_text_to_mysql": {"frontend": "mysql_text", "backend": "mysql", "protocol": "mysql_text", "expected_paths": 148},
+    "mysql_binary_to_mysql": {"frontend": "mysql_binary", "backend": "mysql", "protocol": "mysql_binary", "expected_paths": 16},
+    "pg_simple_to_postgres": {"frontend": "pg_simple", "backend": "postgres", "protocol": "pg_simple", "expected_paths": 196},
+    "pg_extended_to_postgres": {"frontend": "pg_extended", "backend": "postgres", "protocol": "pg_extended", "expected_paths": 16}
+  },
+  "suites": [
+    {"name": "prepared", "runner": "run-prepared-corpus.sh", "run_id_env": "SQLT_PREPARED_RUN_ID", "case_from_env": "SQLT_PREPARED_CASE_FROM", "case_to_env": "SQLT_PREPARED_CASE_TO", "summary_schema": "case_double", "lane_paths": {"mysql_binary_to_mysql": 16}},
+    {"name": "extended", "runner": "run-extended-corpus.sh", "run_id_env": "SQLT_EXTENDED_RUN_ID", "case_from_env": "SQLT_EXTENDED_CASE_FROM", "case_to_env": "SQLT_EXTENDED_CASE_TO", "summary_schema": "case_double", "lane_paths": {"pg_extended_to_postgres": 16}},
+    {"name": "cursor", "runner": "run-cursor-corpus.sh", "run_id_env": "SQLT_CURSOR_RUN_ID", "case_from_env": "SQLT_CURSOR_CASE_FROM", "case_to_env": "SQLT_CURSOR_CASE_TO", "summary_schema": "cursor_variants", "variants": {"SQLT-CURSOR-007": ["terminate", "eof"]}, "lane_paths": {"pg_simple_to_postgres": 18}},
+    {"name": "tcl", "runner": "run-tcl-corpus.sh", "run_id_env": "SQLT_TCL_RUN_ID", "case_from_env": "SQLT_TCL_CASE_FROM", "case_to_env": "SQLT_TCL_CASE_TO", "summary_schema": "dialect_case_double", "lane_paths": {"mysql_text_to_mysql": 20, "pg_simple_to_postgres": 20}},
+    {"name": "dml", "runner": "run-dml-corpus.sh", "run_id_env": "SQLT_DML_RUN_ID", "case_from_env": "SQLT_DML_CASE_FROM", "case_to_env": "SQLT_DML_CASE_TO", "summary_schema": "dialect_case_double", "lane_paths": {"mysql_text_to_mysql": 60, "pg_simple_to_postgres": 68}},
+    {"name": "ddl", "runner": "run-ddl-corpus.sh", "run_id_env": "SQLT_DDL_RUN_ID", "case_from_env": "SQLT_DDL_CASE_FROM", "case_to_env": "SQLT_DDL_CASE_TO", "summary_schema": "explicit_paths", "lane_paths": {"mysql_text_to_mysql": 68, "pg_simple_to_postgres": 90}}
+  ]
+}
