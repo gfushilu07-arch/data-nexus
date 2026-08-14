@@ -207,6 +207,7 @@ examples/        smoke + gateway config 样例
 | SQLT-3F1 | 12 条确定性 SQL 错误、精确 vendor error identity、零副作用 probe 与 invalid Docker runner，direct/security-off gateway 44/44 | `7f599b7` |
 | SQLT-3F2 | 8 条协议/词法/固定资源边界、真实 binary/extended wire、精确 recovery 与零副作用 oracle，direct/security-off gateway 24/24 | `1481a1b` |
 | SQLT-3F3 | 危险 SQL capability scanner、backend execute 前置拒绝、9 条 unsupported corpus、受限角色 direct 校准、gateway 24/24 与 17/17 低基数审计闭合 | `de7037e`、`6c64a14`、`857f551` |
+| SQLT-4A | 同协议四入口统一矩阵、六套 runner 聚合、376/376 path、精确 Docker/gateway 残留审计与 Bash 3.2 正式聚合 | `7aef4a0`、`9116a27`、`64db19f`、`0642cc6`、`67b7c8d` |
 
 ---
 
