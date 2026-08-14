@@ -16,6 +16,7 @@ COMPOSE_PROJECT="sqlt3eprep-${RUN_ID//[^a-zA-Z0-9]/}"
 COMPOSE=(docker compose -p "$COMPOSE_PROJECT" -f "$ROOT/fixtures/docker-compose.yml")
 RESULTS="$RUN_DIR/results.jsonl"
 GATEWAY_PID=""
+RUN_LABEL=(--label "data-nexus.sql-matrix.run-id=$RUN_ID")
 CLIENT_IMAGE="${SQLT_PREPARED_CLIENT_IMAGE:-sqlt-prepared-client:9.4.0}"
 
 mkdir -p "$RUN_DIR/logs" "$RUN_DIR/results" "$RUN_DIR/normalized-output"
@@ -60,6 +61,7 @@ else
   echo "reusing cached gateway binary: $GATEWAY_BIN" | tee "$RUN_DIR/logs/cargo-build.log"
 fi
 "$GATEWAY_BIN" daemon -c "$ROOT/fixtures/gateway-config.toml" >"$RUN_DIR/logs/gateway.log" 2>&1 & GATEWAY_PID=$!
+printf '%s\n' "$GATEWAY_PID" >"$RUN_DIR/gateway.pid"
 for _ in $(seq 1 90); do
   curl -fsS http://127.0.0.1:28082/admin/listeners >"$RUN_DIR/logs/listeners.json" 2>/dev/null && break
   if [[ -n "$GATEWAY_PID" ]] && ! kill -0 "$GATEWAY_PID" 2>/dev/null; then
@@ -89,7 +91,7 @@ run_client() {
   if [[ -n "$control_rel" ]]; then
     client_args+=(--control-sql "/matrix/$control_rel" --control-port 23306)
   fi
-  docker run --rm --add-host=host.docker.internal:host-gateway \
+  docker run --rm "${RUN_LABEL[@]}" --add-host=host.docker.internal:host-gateway \
     -v "$ROOT:/matrix:ro" -v "$RUN_DIR:/run:ro" \
     "$CLIENT_IMAGE" python /matrix/prepared_client.py "${client_args[@]}" \
     >"$output" 2>"${output%.json}.err"

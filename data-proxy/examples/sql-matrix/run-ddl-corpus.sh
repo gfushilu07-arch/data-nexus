@@ -23,6 +23,7 @@ RESULTS="$RUN_DIR/results.jsonl"
 GATEWAY_CONFIG="$ROOT/fixtures/gateway-config.toml"
 GATEWAY_LOG="$RUN_DIR/logs/gateway.log"
 GATEWAY_PID=""
+RUN_LABEL=(--label "data-nexus.sql-matrix.run-id=$RUN_ID")
 
 mkdir -p "$RUN_DIR/logs" "$RUN_DIR/normalized-output" "$RUN_DIR/results"
 : >"$RESULTS"
@@ -73,6 +74,7 @@ fi
 [[ -x "$GATEWAY_BIN" ]] || { echo "gateway binary not found: $GATEWAY_BIN" >&2; exit 1; }
 "$GATEWAY_BIN" daemon -c "$GATEWAY_CONFIG" >"$GATEWAY_LOG" 2>&1 &
 GATEWAY_PID=$!
+printf '%s\n' "$GATEWAY_PID" >"$RUN_DIR/gateway.pid"
 for _ in $(seq 1 90); do
   if curl -fsS http://127.0.0.1:28082/admin/listeners >"$RUN_DIR/logs/listeners.json" 2>/dev/null; then
     break
@@ -96,13 +98,13 @@ run_postgres_direct() {
 }
 
 run_mysql_gateway() {
-  docker run --rm -i --add-host=host.docker.internal:host-gateway mysql:8.0.42 \
+  docker run --rm "${RUN_LABEL[@]}" -i --add-host=host.docker.internal:host-gateway mysql:8.0.42 \
     mysql --batch --raw --skip-column-names --default-character-set=utf8mb4 \
     --ssl-mode=DISABLED -h host.docker.internal -P 29088 -uroot -proot <"$1"
 }
 
 run_postgres_gateway() {
-  docker run --rm -i --add-host=host.docker.internal:host-gateway postgres:16.8 \
+  docker run --rm "${RUN_LABEL[@]}" -i --add-host=host.docker.internal:host-gateway postgres:16.8 \
     env PGPASSWORD=root psql -X -q -v ON_ERROR_STOP=1 -v VERBOSITY=verbose \
     -P null=NULL -A -t -F $'\t' -h host.docker.internal -p 29089 -U root -d sqlt <"$1"
 }

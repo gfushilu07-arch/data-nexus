@@ -39,16 +39,27 @@ cp "$ROOT/protocol-matrix.json" "$ROOT/manifest.json" "$RUN_DIR/"
 command -v docker >/dev/null 2>&1 || { echo "missing docker" >&2; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo "missing python3" >&2; exit 1; }
 python3 "$ROOT/validate.py" >"$RUN_DIR/logs/validate.log" 2>&1
+python3 "$ROOT/protocol_resource_audit.py" projects --run-id "$RUN_ID" --suite "$SUITE_FILTER" \
+  >"$RUN_DIR/audit/projects.tsv"
+: >"$RUN_DIR/audit/gateway.pids.tsv"
+: >"$RUN_DIR/audit/gateway.residual.tsv"
 
-docker ps -a --no-trunc --format '{{.ID}}\t{{.Names}}' | sort >"$RUN_DIR/audit/containers.before.tsv"
-docker network ls --no-trunc --format '{{.ID}}\t{{.Name}}' | sort >"$RUN_DIR/audit/networks.before.tsv"
-docker volume ls --format '{{.Name}}' | sort >"$RUN_DIR/audit/volumes.before.tsv"
+docker ps -a --no-trunc \
+  --format '{{.ID}}\t{{.Names}}\t{{.Label "com.docker.compose.project"}}\t{{.Label "data-nexus.sql-matrix.run-id"}}' \
+  | sort >"$RUN_DIR/audit/containers.before.tsv"
+docker network ls --no-trunc \
+  --format '{{.ID}}\t{{.Name}}\t{{.Label "com.docker.compose.project"}}' \
+  | sort >"$RUN_DIR/audit/networks.before.tsv"
+docker volume ls --format '{{.Name}}\t{{.Label "com.docker.compose.project"}}' \
+  | sort >"$RUN_DIR/audit/volumes.before.tsv"
 pgrep -f 'target/.*/proxy daemon|target/.*/proxy --.*daemon' 2>/dev/null | sort -n >"$RUN_DIR/audit/gateway.before.tsv" || :
 
 run_suite() {
   local suite="$1" runner="$2" child_id="$3"
   local summary="$CACHE_ROOT/$child_id/summary.json"
-  local upper env_args=()
+  local pid_file="$CACHE_ROOT/$child_id/gateway.pid"
+  local gateway_pid gateway_command upper
+  local env_args=()
   upper="$(printf '%s' "$suite" | tr '[:lower:]' '[:upper:]')"
   echo "==> SQLT-4A suite: $suite"
   env_args+=("SQLT_${upper}_RUN_ID=$child_id")
@@ -68,6 +79,22 @@ run_suite() {
     FAILED_SUITES+=("$suite")
   fi
   [[ -s "$summary" ]] || FAILED_SUITES+=("$suite(summary-missing)")
+  if [[ -s "$pid_file" ]]; then
+    gateway_pid="$(sed -n '1p' "$pid_file")"
+    if [[ "$gateway_pid" =~ ^[0-9]+$ ]]; then
+      printf '%s\t%s\t%s\n' "$suite" "$child_id" "$gateway_pid" >>"$RUN_DIR/audit/gateway.pids.tsv"
+      gateway_command="$(ps -p "$gateway_pid" -o command= 2>/dev/null || :)"
+      if kill -0 "$gateway_pid" 2>/dev/null && [[ "$gateway_command" == *"/proxy daemon"* ]]; then
+        printf '%s\t%s\t%s\t%s\n' "$suite" "$child_id" "$gateway_pid" "$gateway_command" \
+          >>"$RUN_DIR/audit/gateway.residual.tsv"
+        FAILED_SUITES+=("$suite(gateway-residual)")
+      fi
+    else
+      FAILED_SUITES+=("$suite(gateway-pid-invalid)")
+    fi
+  else
+    FAILED_SUITES+=("$suite(gateway-pid-missing)")
+  fi
   SUMMARY_ARGS+=(--summary "${suite}=${summary}")
 }
 
@@ -78,17 +105,26 @@ run_suite() {
 [[ -n "$SUITE_FILTER" && "$SUITE_FILTER" != dml ]] || run_suite dml run-dml-corpus.sh "$RUN_ID-dml"
 [[ -n "$SUITE_FILTER" && "$SUITE_FILTER" != ddl ]] || run_suite ddl run-ddl-corpus.sh "$RUN_ID-ddl"
 
-docker ps -a --no-trunc --format '{{.ID}}\t{{.Names}}' | sort >"$RUN_DIR/audit/containers.after.tsv"
-docker network ls --no-trunc --format '{{.ID}}\t{{.Name}}' | sort >"$RUN_DIR/audit/networks.after.tsv"
-docker volume ls --format '{{.Name}}' | sort >"$RUN_DIR/audit/volumes.after.tsv"
+docker ps -a --no-trunc \
+  --format '{{.ID}}\t{{.Names}}\t{{.Label "com.docker.compose.project"}}\t{{.Label "data-nexus.sql-matrix.run-id"}}' \
+  | sort >"$RUN_DIR/audit/containers.after.tsv"
+docker network ls --no-trunc \
+  --format '{{.ID}}\t{{.Name}}\t{{.Label "com.docker.compose.project"}}' \
+  | sort >"$RUN_DIR/audit/networks.after.tsv"
+docker volume ls --format '{{.Name}}\t{{.Label "com.docker.compose.project"}}' \
+  | sort >"$RUN_DIR/audit/volumes.after.tsv"
 pgrep -f 'target/.*/proxy daemon|target/.*/proxy --.*daemon' 2>/dev/null | sort -n >"$RUN_DIR/audit/gateway.after.tsv" || :
 
-for resource in containers networks volumes gateway; do
-  if ! comm -13 "$RUN_DIR/audit/${resource}.before.tsv" "$RUN_DIR/audit/${resource}.after.tsv" >"$RUN_DIR/audit/${resource}.residual.tsv"; then
-    FAILED_SUITES+=("${resource}(snapshot)")
-  fi
+for resource in containers networks volumes; do
+  comm -13 "$RUN_DIR/audit/${resource}.before.tsv" "$RUN_DIR/audit/${resource}.after.tsv" \
+    >"$RUN_DIR/audit/${resource}.concurrent.tsv"
+  python3 "$ROOT/protocol_resource_audit.py" filter --run-id "$RUN_ID" --suite "$SUITE_FILTER" \
+    --resource "$resource" --input "$RUN_DIR/audit/${resource}.after.tsv" \
+    >"$RUN_DIR/audit/${resource}.residual.tsv"
   [[ ! -s "$RUN_DIR/audit/${resource}.residual.tsv" ]] || FAILED_SUITES+=("${resource}(residual)")
 done
+comm -13 "$RUN_DIR/audit/gateway.before.tsv" "$RUN_DIR/audit/gateway.after.tsv" \
+  >"$RUN_DIR/audit/gateway.concurrent.tsv"
 
 if ((${#FAILED_SUITES[@]})); then
   printf 'SQLT-4A child failures or resource residue: %s\n' "${FAILED_SUITES[*]}" >&2

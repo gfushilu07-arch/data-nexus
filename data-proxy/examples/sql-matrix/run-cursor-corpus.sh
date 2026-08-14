@@ -18,6 +18,7 @@ COMPOSE=(docker compose -p "$COMPOSE_PROJECT" -f "$ROOT/fixtures/docker-compose.
 RESULTS="$RUN_DIR/results.jsonl"
 FIXTURE_LOG="$RUN_DIR/logs/fixture.log"
 GATEWAY_PID=""
+RUN_LABEL=(--label "data-nexus.sql-matrix.run-id=$RUN_ID")
 
 mkdir -p "$RUN_DIR/logs" "$RUN_DIR/results" "$RUN_DIR/normalized-output"
 : >"$RESULTS"
@@ -54,6 +55,7 @@ else
   echo "reusing cached gateway binary: $GATEWAY_BIN" | tee "$RUN_DIR/logs/cargo-build.log"
 fi
 "$GATEWAY_BIN" daemon -c "$ROOT/fixtures/gateway-config.toml" >"$RUN_DIR/logs/gateway.log" 2>&1 & GATEWAY_PID=$!
+printf '%s\n' "$GATEWAY_PID" >"$RUN_DIR/gateway.pid"
 for _ in $(seq 1 90); do
   curl -fsS http://127.0.0.1:28082/admin/listeners >"$RUN_DIR/logs/listeners.json" 2>/dev/null && break
   kill -0 "$GATEWAY_PID" 2>/dev/null || { echo "gateway exited early" >&2; exit 1; }
@@ -80,7 +82,7 @@ run_client() {
   if [[ "$case_id" == SQLT-CURSOR-007 ]]; then
     args+=(--disconnect-after fetch_before_disconnect --disconnect-mode "$mode")
   fi
-  docker run --rm --add-host=host.docker.internal:host-gateway \
+  docker run --rm "${RUN_LABEL[@]}" --add-host=host.docker.internal:host-gateway \
     -v "$ROOT:/matrix:ro" -v "$RUN_DIR:/run:ro" python:3.12-slim-bookworm \
     python /matrix/cursor_client.py "${args[@]}" >"$output" 2>"${output%.json}.err"
 }
