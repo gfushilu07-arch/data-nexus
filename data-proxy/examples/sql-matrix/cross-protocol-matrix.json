@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "matrix_id": "SQLT-4B1",
+  "policy": "security_off",
+  "expected_cases": 12,
+  "expected_paths": 24,
+  "directions": {
+    "mysql_text_to_postgres": {
+      "frontend": "mysql_text",
+      "frontend_dialect": "mysql",
+      "backend": "postgres",
+      "backend_dialect": "postgres",
+      "protocol": "mysql_text",
+      "listener": "sqlt-mysql-to-postgres",
+      "port": 29100
+    },
+    "pg_simple_to_mysql": {
+      "frontend": "pg_simple",
+      "frontend_dialect": "postgres",
+      "backend": "mysql",
+      "backend_dialect": "mysql",
+      "protocol": "pg_simple",
+      "listener": "sqlt-postgres-to-mysql",
+      "port": 29101
+    }
+  },
+  "cases": [
+    {
+      "id": "SQLT-DQL-001",
+      "source_case_id": "SQLT-DQL-001",
+      "sql": {
+        "mysql_text_to_postgres": "dql/select-join-aggregate.sql",
+        "pg_simple_to_mysql": "dql/select-join-aggregate.sql"
+      },
+      "rewrite_tags": []
+    },
+    {
+      "id": "SQLT-DQL-004",
+      "source_case_id": "SQLT-DQL-004",
+      "sql": {
+        "mysql_text_to_postgres": "dql/select-constant.sql",
+        "pg_simple_to_mysql": "dql/select-constant.sql"
+      },
+      "rewrite_tags": []
+    },
+    {
+      "id": "SQLT-DQL-006",
+      "source_case_id": "SQLT-DQL-006",
+      "sql": {
+        "mysql_text_to_postgres": "dql/select-null-boolean.sql",
+        "pg_simple_to_mysql": "dql/select-null-boolean.sql"
+      },
+      "rewrite_tags": ["null_boolean_type_map"]
+    },
+    {
+      "id": "SQLT-DQL-007",
+      "source_case_id": "SQLT-DQL-007",
+      "sql": {
+        "mysql_text_to_postgres": "dql/select-arithmetic-expression.sql",
+        "pg_simple_to_mysql": "dql/select-arithmetic-expression.sql"
+      },
+      "rewrite_tags": ["decimal_type_map"]
+    },
+    {
+      "id": "SQLT-DQL-009",
+      "source_case_id": "SQLT-DQL-009",
+      "sql": {
+        "mysql_text_to_postgres": "dql/where-comparison.sql",
+        "pg_simple_to_mysql": "dql/where-comparison.sql"
+      },
+      "rewrite_tags": []
+    },
+    {
+      "id": "SQLT-DQL-010",
+      "source_case_id": "SQLT-DQL-010",
+      "sql": {
+        "mysql_text_to_postgres": "dql/where-in.sql",
+        "pg_simple_to_mysql": "dql/where-in.sql"
+      },
+      "rewrite_tags": []
+    },
+    {
+      "id": "SQLT-DQL-011",
+      "source_case_id": "SQLT-DQL-011",
+      "sql": {
+        "mysql_text_to_postgres": "dql/where-between.sql",
+        "pg_simple_to_mysql": "dql/where-between.sql"
+      },
+      "rewrite_tags": []
+    },
+    {
+      "id": "SQLT-DQL-016",
+      "source_case_id": "SQLT-DQL-016",
+      "sql": {
+        "mysql_text_to_postgres": "dql/aggregate-count.sql",
+        "pg_simple_to_mysql": "dql/aggregate-count.sql"
+      },
+      "rewrite_tags": ["aggregate_type_map"]
+    },
+    {
+      "id": "SQLT-DQL-018",
+      "source_case_id": "SQLT-DQL-018",
+      "sql": {
+        "mysql_text_to_postgres": "dql/aggregate-group-by.sql",
+        "pg_simple_to_mysql": "dql/aggregate-group-by.sql"
+      },
+      "rewrite_tags": ["aggregate_type_map"]
+    },
+    {
+      "id": "SQLT-XDQL-001",
+      "source_case_id": "SQLT-DQL-005",
+      "sql": {
+        "mysql_text_to_postgres": "cross/mysql-identifier-quote.sql",
+        "pg_simple_to_mysql": "cross/postgres-identifier-quote.sql"
+      },
+      "rewrite_tags": ["identifier_quote"]
+    },
+    {
+      "id": "SQLT-XDQL-002",
+      "source_case_id": "SQLT-DQL-054",
+      "sql": {
+        "mysql_text_to_postgres": "cross/mysql-ifnull.sql",
+        "pg_simple_to_mysql": "cross/postgres-coalesce.sql"
+      },
+      "rewrite_tags": ["null_fallback"]
+    },
+    {
+      "id": "SQLT-XDQL-003",
+      "source_case_id": "SQLT-DQL-024",
+      "sql": {
+        "mysql_text_to_postgres": "cross/mysql-limit-offset.sql",
+        "pg_simple_to_mysql": "cross/postgres-limit-offset.sql"
+      },
+      "rewrite_tags": ["limit_offset"]
+    }
+  ]
+}

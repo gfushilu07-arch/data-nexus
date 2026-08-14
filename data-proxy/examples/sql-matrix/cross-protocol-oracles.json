@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "matrix_id": "SQLT-4B1",
+  "results": {
+    "SQLT-DQL-001": {
+      "source_oracle_case": "SQLT-DQL-001",
+      "columns": ["tenant_id", "customer_id", "order_count", "total_amount"],
+      "frontend_types": {
+        "mysql_text_to_postgres": ["LONG", "LONGLONG", "LONGLONG", "NEWDECIMAL"],
+        "pg_simple_to_mysql": ["int4", "int8", "int8", "numeric"]
+      }
+    },
+    "SQLT-DQL-004": {
+      "source_oracle_case": "SQLT-DQL-004",
+      "columns": ["one_value"],
+      "frontend_types": {
+        "mysql_text_to_postgres": ["LONG"],
+        "pg_simple_to_mysql": ["int4"]
+      }
+    },
+    "SQLT-DQL-006": {
+      "source_oracle_case": "SQLT-DQL-006",
+      "columns": ["missing_value", "enabled"],
+      "frontend_types": {
+        "mysql_text_to_postgres": ["VAR_STRING", "TINY"],
+        "pg_simple_to_mysql": ["text", "int4"]
+      }
+    },
+    "SQLT-DQL-007": {
+      "source_oracle_case": "SQLT-DQL-007",
+      "columns": ["order_id", "total_amount", "doubled_amount"],
+      "frontend_types": {
+        "mysql_text_to_postgres": ["LONGLONG", "NEWDECIMAL", "NEWDECIMAL"],
+        "pg_simple_to_mysql": ["int8", "numeric", "numeric"]
+      }
+    },
+    "SQLT-DQL-009": {
+      "source_oracle_case": "SQLT-DQL-009",
+      "columns": ["order_id", "total_amount"],
+      "frontend_types": {
+        "mysql_text_to_postgres": ["LONGLONG", "NEWDECIMAL"],
+        "pg_simple_to_mysql": ["int8", "numeric"]
+      }
+    },
+    "SQLT-DQL-010": {
+      "source_oracle_case": "SQLT-DQL-010",
+      "columns": ["order_id", "status"],
+      "frontend_types": {
+        "mysql_text_to_postgres": ["LONGLONG", "VAR_STRING"],
+        "pg_simple_to_mysql": ["int8", "text"]
+      }
+    },
+    "SQLT-DQL-011": {
+      "source_oracle_case": "SQLT-DQL-011",
+      "columns": ["order_id", "total_amount"],
+      "frontend_types": {
+        "mysql_text_to_postgres": ["LONGLONG", "NEWDECIMAL"],
+        "pg_simple_to_mysql": ["int8", "numeric"]
+      }
+    },
+    "SQLT-DQL-016": {
+      "source_oracle_case": "SQLT-DQL-016",
+      "columns": ["order_count"],
+      "frontend_types": {
+        "mysql_text_to_postgres": ["LONGLONG"],
+        "pg_simple_to_mysql": ["int8"]
+      }
+    },
+    "SQLT-DQL-018": {
+      "source_oracle_case": "SQLT-DQL-018",
+      "columns": ["status", "order_count", "amount_sum"],
+      "frontend_types": {
+        "mysql_text_to_postgres": ["VAR_STRING", "LONGLONG", "NEWDECIMAL"],
+        "pg_simple_to_mysql": ["text", "int8", "numeric"]
+      }
+    },
+    "SQLT-XDQL-001": {
+      "source_oracle_case": "SQLT-DQL-005",
+      "columns": ["id", "name"],
+      "frontend_types": {
+        "mysql_text_to_postgres": ["LONGLONG", "VAR_STRING"],
+        "pg_simple_to_mysql": ["int8", "text"]
+      }
+    },
+    "SQLT-XDQL-002": {
+      "source_oracle_case": "SQLT-DQL-054",
+      "columns": ["customer_id", "email_state", "normalized_email"],
+      "frontend_types": {
+        "mysql_text_to_postgres": ["LONGLONG", "VAR_STRING", "VAR_STRING"],
+        "pg_simple_to_mysql": ["int8", "text", "text"]
+      }
+    },
+    "SQLT-XDQL-003": {
+      "source_oracle_case": "SQLT-DQL-024",
+      "columns": ["order_id"],
+      "frontend_types": {
+        "mysql_text_to_postgres": ["LONGLONG"],
+        "pg_simple_to_mysql": ["int8"]
+      }
+    }
+  }
+}
