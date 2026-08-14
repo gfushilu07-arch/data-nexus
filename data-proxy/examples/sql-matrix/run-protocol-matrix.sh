@@ -131,11 +131,15 @@ if ((${#FAILED_SUITES[@]})); then
   exit 1
 fi
 
-AGGREGATE_FILTER=()
-((FILTERED)) && AGGREGATE_FILTER+=(--filtered)
-python3 "$ROOT/protocol_matrix.py" "$ROOT/protocol-matrix.json" "$ROOT/manifest.json" "$ROOT" \
-  "$RUN_DIR/summary.json" --run-id "$RUN_ID" "${AGGREGATE_FILTER[@]}" "${SUMMARY_ARGS[@]}" \
-  >"$RUN_DIR/logs/aggregate.log" 2>&1
+if ((FILTERED)); then
+  python3 "$ROOT/protocol_matrix.py" "$ROOT/protocol-matrix.json" "$ROOT/manifest.json" "$ROOT" \
+    "$RUN_DIR/summary.json" --run-id "$RUN_ID" --filtered "${SUMMARY_ARGS[@]}" \
+    >"$RUN_DIR/logs/aggregate.log" 2>&1
+else
+  python3 "$ROOT/protocol_matrix.py" "$ROOT/protocol-matrix.json" "$ROOT/manifest.json" "$ROOT" \
+    "$RUN_DIR/summary.json" --run-id "$RUN_ID" "${SUMMARY_ARGS[@]}" \
+    >"$RUN_DIR/logs/aggregate.log" 2>&1
+fi
 python3 - "$RUN_DIR/summary.json" <<'PY'
 import json, sys
 from pathlib import Path
