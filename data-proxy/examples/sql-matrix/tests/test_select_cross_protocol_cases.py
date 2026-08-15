@@ -47,11 +47,17 @@ class SelectCrossProtocolCasesTest(unittest.TestCase):
         self.assertEqual(selected[0]["sql_file"], "cross/mysql-identifier-quote.sql")
         self.assertEqual(selected[0]["rewrite_tags"], ["identifier_quote"])
 
-    def test_rows_use_target_backend_oracle(self) -> None:
+    def test_rows_distinguish_gateway_wire_from_backend_control(self) -> None:
         selected = self.select(case_from="SQLT-DQL-006", case_to="SQLT-DQL-006")
-        rows = {record["direction"]: record["rows_text"] for record in selected}
-        self.assertEqual(rows["mysql_text_to_postgres"], "NULL\tt\n")
-        self.assertEqual(rows["pg_simple_to_mysql"], "NULL\t1\n")
+        records = {record["direction"]: record for record in selected}
+        self.assertEqual(records["mysql_text_to_postgres"]["rows_text"], "NULL\tt\n")
+        self.assertEqual(
+            records["mysql_text_to_postgres"]["backend_rows_text"], "NULL\tt\n"
+        )
+        self.assertEqual(records["pg_simple_to_mysql"]["rows_text"], "NULL\t1\n")
+        self.assertEqual(
+            records["pg_simple_to_mysql"]["backend_rows_text"], "NULL\t1\n"
+        )
 
     def test_source_case_must_be_bidialect_dql(self) -> None:
         broken = copy.deepcopy(self.spec)

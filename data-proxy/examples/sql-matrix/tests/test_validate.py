@@ -41,6 +41,16 @@ class ValidateSqlMatrixTest(unittest.TestCase):
             json.dumps(value, indent=2) + "\n", encoding="utf-8"
         )
 
+    def cross_protocol_matrix(self) -> dict:
+        return json.loads(
+            (self.root / "cross-protocol-matrix.json").read_text(encoding="utf-8")
+        )
+
+    def write_cross_protocol_matrix(self, value: dict) -> None:
+        (self.root / "cross-protocol-matrix.json").write_text(
+            json.dumps(value, indent=2) + "\n", encoding="utf-8"
+        )
+
     def errors(self) -> list[str]:
         return VALIDATE.validate_repository(self.root)
 
@@ -229,6 +239,18 @@ class ValidateSqlMatrixTest(unittest.TestCase):
         extra = self.root / "cases" / "dql" / "not-registered.sql"
         extra.write_text("-- intentionally not registered\nSELECT 1;\n", encoding="utf-8")
         self.assert_has_error("unreferenced SQL file")
+
+    def test_cross_protocol_matrix_rejects_missing_direction(self) -> None:
+        value = self.cross_protocol_matrix()
+        del value["cases"][0]["sql"]["pg_simple_to_mysql"]
+        self.write_cross_protocol_matrix(value)
+        self.assert_has_error("SQL paths must cover both directions")
+
+    def test_cross_protocol_matrix_rejects_unsafe_sql_path(self) -> None:
+        value = self.cross_protocol_matrix()
+        value["cases"][0]["sql"]["mysql_text_to_postgres"] = "../outside.sql"
+        self.write_cross_protocol_matrix(value)
+        self.assert_has_error("unsafe SQL path")
 
     def test_skip_requires_reason_issue_and_expiry(self) -> None:
         manifest = self.manifest()

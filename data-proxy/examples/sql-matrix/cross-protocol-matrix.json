@@ -11,6 +11,8 @@
       "backend": "postgres",
       "backend_dialect": "postgres",
       "protocol": "mysql_text",
+      "backend_control_protocol": "pg_simple",
+      "backend_control_port": 25432,
       "listener": "sqlt-mysql-to-postgres",
       "port": 29100
     },
@@ -20,6 +22,8 @@
       "backend": "mysql",
       "backend_dialect": "mysql",
       "protocol": "pg_simple",
+      "backend_control_protocol": "mysql_text",
+      "backend_control_port": 23306,
       "listener": "sqlt-postgres-to-mysql",
       "port": 29101
     }

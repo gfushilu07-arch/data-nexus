@@ -17,6 +17,8 @@ EXPECTED_DIRECTIONS = {
         "backend": "postgres",
         "backend_dialect": "postgres",
         "protocol": "mysql_text",
+        "backend_control_protocol": "pg_simple",
+        "backend_control_port": 25432,
     },
     "pg_simple_to_mysql": {
         "frontend": "pg_simple",
@@ -24,6 +26,8 @@ EXPECTED_DIRECTIONS = {
         "backend": "mysql",
         "backend_dialect": "mysql",
         "protocol": "pg_simple",
+        "backend_control_protocol": "mysql_text",
+        "backend_control_port": 23306,
     },
 }
 
@@ -130,10 +134,13 @@ def select_paths(
             raise SelectionError(f"{case_id}: source oracle is not closed")
         columns = oracle.get("columns")
         frontend_types = oracle.get("frontend_types")
+        rows_text = oracle.get("rows_text")
         if not isinstance(columns, list) or not columns or any(not isinstance(v, str) or not v for v in columns):
             raise SelectionError(f"{case_id}: columns are invalid")
         if not isinstance(frontend_types, dict) or set(frontend_types) != set(directions):
             raise SelectionError(f"{case_id}: frontend_types must cover both directions")
+        if not isinstance(rows_text, dict) or set(rows_text) != set(directions):
+            raise SelectionError(f"{case_id}: rows_text must cover both directions")
 
         sql = case.get("sql")
         if not isinstance(sql, dict) or set(sql) != set(directions):
@@ -150,9 +157,22 @@ def select_paths(
             if not isinstance(types, list) or len(types) != len(columns):
                 raise SelectionError(f"{case_id}: frontend type count does not match columns")
             backend_dialect = direction["backend_dialect"]
-            rows = source_results[source_case_id].get(backend_dialect)
-            if not isinstance(rows, str):
+            backend_rows = source_results[source_case_id].get(backend_dialect)
+            gateway_rows = rows_text[direction_name]
+            if not isinstance(backend_rows, str):
                 raise SelectionError(f"{case_id}: missing {backend_dialect} row oracle")
+            if not isinstance(gateway_rows, str):
+                raise SelectionError(f"{case_id}: missing {direction_name} gateway row oracle")
+            backend_sql_direction = next(
+                name for name, candidate in directions.items()
+                if candidate["frontend_dialect"] == backend_dialect
+            )
+            backend_path = _safe_sql_path(root, sql[backend_sql_direction])
+            _validate_header(
+                backend_path,
+                case_id if case_id.startswith("SQLT-XDQL-") else source_case_id,
+                backend_dialect,
+            )
             selected.append({
                 "case_id": case_id,
                 "source_case_id": source_case_id,
@@ -164,10 +184,14 @@ def select_paths(
                 "protocol": direction["protocol"],
                 "listener": direction["listener"],
                 "port": direction["port"],
+                "backend_control_protocol": direction["backend_control_protocol"],
+                "backend_control_port": direction["backend_control_port"],
                 "sql_file": sql[direction_name],
+                "backend_sql_file": sql[backend_sql_direction],
                 "columns": columns,
                 "frontend_types": types,
-                "rows_text": rows,
+                "rows_text": gateway_rows,
+                "backend_rows_text": backend_rows,
                 "rewrite_tags": tags,
             })
 

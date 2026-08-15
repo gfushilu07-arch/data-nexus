@@ -1,0 +1,91 @@
+# SQLT-4B1 security-off dual-direction cross-protocol gateway.
+version = "2"
+
+[admin]
+host = "127.0.0.1"
+port = 28083
+log_level = "INFO"
+
+[security]
+enabled = false
+fail_closed = false
+
+[security.streaming]
+window_rows = 2
+passthrough = false
+
+[[listeners]]
+name = "sqlt-mysql-to-postgres"
+listen_addr = "127.0.0.1:29100"
+protocol = "mysql"
+service = "sqlt-postgres-via-mysql"
+auth_policy = "sqlt-users"
+
+[[listeners]]
+name = "sqlt-postgres-to-mysql"
+listen_addr = "127.0.0.1:29101"
+protocol = "postgresql"
+service = "sqlt-mysql-via-postgres"
+auth_policy = "sqlt-users"
+
+[[services]]
+name = "sqlt-postgres-via-mysql"
+backend_protocol = "postgresql"
+endpoints = ["sqlt-postgres-primary"]
+route_policy = "sqlt-postgres-route"
+translation_policy = "sqlt-mysql-to-postgres"
+plugin_policies = []
+
+[[services]]
+name = "sqlt-mysql-via-postgres"
+backend_protocol = "mysql"
+endpoints = ["sqlt-mysql-primary"]
+route_policy = "sqlt-mysql-route"
+translation_policy = "sqlt-postgres-to-mysql"
+plugin_policies = []
+
+[[endpoints]]
+name = "sqlt-postgres-primary"
+protocol = "postgresql"
+address = "127.0.0.1:25432"
+database = "sqlt"
+username = "sqlt"
+password = "sqlt"
+weight = 1
+
+[[endpoints]]
+name = "sqlt-mysql-primary"
+protocol = "mysql"
+address = "127.0.0.1:23306"
+database = "sqlt"
+username = "sqlt"
+password = "sqlt"
+weight = 1
+
+[[route_policies]]
+name = "sqlt-postgres-route"
+kind = "simple_load_balance"
+
+[[route_policies]]
+name = "sqlt-mysql-route"
+kind = "simple_load_balance"
+
+[[auth_policies]]
+name = "sqlt-users"
+kind = "static"
+username = "root"
+password = "root"
+
+[[translation_policies]]
+name = "sqlt-mysql-to-postgres"
+enabled = true
+frontend_protocol = "mysql"
+backend_protocol = "postgresql"
+allowed_statements = ["select"]
+
+[[translation_policies]]
+name = "sqlt-postgres-to-mysql"
+enabled = true
+frontend_protocol = "postgresql"
+backend_protocol = "mysql"
+allowed_statements = ["select"]
