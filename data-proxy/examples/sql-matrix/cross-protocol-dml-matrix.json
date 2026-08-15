@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "matrix_id": "SQLT-4B2",
+  "policy": "security_off",
+  "expected_cases": 8,
+  "expected_paths": 16,
+  "directions": {
+    "mysql_text_to_postgres": {
+      "frontend": "mysql_text",
+      "frontend_dialect": "mysql",
+      "backend": "postgres",
+      "backend_dialect": "postgres",
+      "protocol": "mysql_text",
+      "backend_control_protocol": "pg_simple",
+      "backend_control_port": 25432,
+      "listener": "sqlt-mysql-to-postgres-dml",
+      "port": 29110,
+      "state_query": "fixtures/postgres/oracle-cross-dml-state.sql"
+    },
+    "pg_simple_to_mysql": {
+      "frontend": "pg_simple",
+      "frontend_dialect": "postgres",
+      "backend": "mysql",
+      "backend_dialect": "mysql",
+      "protocol": "pg_simple",
+      "backend_control_protocol": "mysql_text",
+      "backend_control_port": 23306,
+      "listener": "sqlt-postgres-to-mysql-dml",
+      "port": 29111,
+      "state_query": "fixtures/mysql/oracle-cross-dml-state.sql"
+    }
+  },
+  "cases": [
+    {
+      "id": "SQLT-XDML-001",
+      "name": "autocommit_insert",
+      "sql": {
+        "mysql_text_to_postgres": "cross-dml/mysql-autocommit-insert.sql",
+        "pg_simple_to_mysql": "cross-dml/postgres-autocommit-insert.sql"
+      }
+    },
+    {
+      "id": "SQLT-XDML-002",
+      "name": "update_single",
+      "sql": {
+        "mysql_text_to_postgres": "cross-dml/mysql-update-single.sql",
+        "pg_simple_to_mysql": "cross-dml/postgres-update-single.sql"
+      }
+    },
+    {
+      "id": "SQLT-XDML-003",
+      "name": "delete_single",
+      "sql": {
+        "mysql_text_to_postgres": "cross-dml/mysql-delete-single.sql",
+        "pg_simple_to_mysql": "cross-dml/postgres-delete-single.sql"
+      }
+    },
+    {
+      "id": "SQLT-XDML-004",
+      "name": "delete_zero",
+      "sql": {
+        "mysql_text_to_postgres": "cross-dml/mysql-delete-zero.sql",
+        "pg_simple_to_mysql": "cross-dml/postgres-delete-zero.sql"
+      }
+    },
+    {
+      "id": "SQLT-XDML-005",
+      "name": "constraint_recovery",
+      "sql": {
+        "mysql_text_to_postgres": "cross-dml/mysql-constraint-recovery.sql",
+        "pg_simple_to_mysql": "cross-dml/postgres-constraint-recovery.sql"
+      }
+    },
+    {
+      "id": "SQLT-XDML-006",
+      "name": "transaction_commit",
+      "sql": {
+        "mysql_text_to_postgres": "cross-dml/mysql-transaction-commit.sql",
+        "pg_simple_to_mysql": "cross-dml/postgres-transaction-commit.sql"
+      }
+    },
+    {
+      "id": "SQLT-XDML-007",
+      "name": "transaction_rollback",
+      "sql": {
+        "mysql_text_to_postgres": "cross-dml/mysql-transaction-rollback.sql",
+        "pg_simple_to_mysql": "cross-dml/postgres-transaction-rollback.sql"
+      }
+    },
+    {
+      "id": "SQLT-XDML-008",
+      "name": "transaction_error_restart",
+      "sql": {
+        "mysql_text_to_postgres": "cross-dml/mysql-transaction-error-restart.sql",
+        "pg_simple_to_mysql": "cross-dml/postgres-transaction-error-restart.sql"
+      }
+    }
+  ]
+}

@@ -51,6 +51,16 @@ class ValidateSqlMatrixTest(unittest.TestCase):
             json.dumps(value, indent=2) + "\n", encoding="utf-8"
         )
 
+    def cross_protocol_dml_oracles(self) -> dict:
+        return json.loads(
+            (self.root / "cross-protocol-dml-oracles.json").read_text(encoding="utf-8")
+        )
+
+    def write_cross_protocol_dml_oracles(self, value: dict) -> None:
+        (self.root / "cross-protocol-dml-oracles.json").write_text(
+            json.dumps(value, indent=2) + "\n", encoding="utf-8"
+        )
+
     def errors(self) -> list[str]:
         return VALIDATE.validate_repository(self.root)
 
@@ -63,6 +73,12 @@ class ValidateSqlMatrixTest(unittest.TestCase):
 
     def test_repository_fixture_is_valid(self) -> None:
         self.assertEqual(self.errors(), [])
+
+    def test_cross_protocol_dml_oracle_case_set_is_closed(self) -> None:
+        value = self.cross_protocol_dml_oracles()
+        value["results"].pop("SQLT-XDML-008")
+        self.write_cross_protocol_dml_oracles(value)
+        self.assert_has_error("cross-protocol DML spec and oracle cases do not match")
 
     def test_protocol_matrix_lane_totals_must_close(self) -> None:
         value = self.protocol_matrix()

@@ -1,0 +1,179 @@
+{
+  "schema_version": 1,
+  "matrix_id": "SQLT-4B2",
+  "state_profiles": {
+    "baseline": [
+      ["target", "4001", "alpha", "10.00", "new"],
+      ["target", "4002", "beta", "20.00", "new"],
+      ["target", "4003", "gamma", "30.00", "ready"],
+      ["target", "4004", "delta", "NULL", "ready"],
+      ["target", "4005", "epsilon", "50.00", "archived"]
+    ],
+    "insert_9301": [
+      ["mutation", "9301", "cross insert", "10.50", "new"],
+      ["target", "4001", "alpha", "10.00", "new"],
+      ["target", "4002", "beta", "20.00", "new"],
+      ["target", "4003", "gamma", "30.00", "ready"],
+      ["target", "4004", "delta", "NULL", "ready"],
+      ["target", "4005", "epsilon", "50.00", "archived"]
+    ],
+    "updated_4001": [
+      ["target", "4001", "alpha-updated", "12.34", "done"],
+      ["target", "4002", "beta", "20.00", "new"],
+      ["target", "4003", "gamma", "30.00", "ready"],
+      ["target", "4004", "delta", "NULL", "ready"],
+      ["target", "4005", "epsilon", "50.00", "archived"]
+    ],
+    "deleted_4001": [
+      ["target", "4002", "beta", "20.00", "new"],
+      ["target", "4003", "gamma", "30.00", "ready"],
+      ["target", "4004", "delta", "NULL", "ready"],
+      ["target", "4005", "epsilon", "50.00", "archived"]
+    ],
+    "constraint_9305": [
+      ["mutation", "9305", "constraint seed", "50.00", "new"],
+      ["target", "4001", "alpha", "10.00", "new"],
+      ["target", "4002", "beta", "20.00", "new"],
+      ["target", "4003", "gamma", "30.00", "ready"],
+      ["target", "4004", "delta", "NULL", "ready"],
+      ["target", "4005", "epsilon", "50.00", "archived"]
+    ],
+    "committed_9306": [
+      ["mutation", "9306", "committed mutation", "60.00", "new"],
+      ["target", "4001", "alpha", "10.00", "new"],
+      ["target", "4002", "beta", "20.00", "new"],
+      ["target", "4003", "gamma", "30.00", "ready"],
+      ["target", "4004", "delta", "NULL", "ready"],
+      ["target", "4005", "epsilon", "50.00", "archived"]
+    ],
+    "restarted_9309": [
+      ["mutation", "9309", "restarted transaction", "90.00", "new"],
+      ["target", "4001", "alpha", "10.00", "new"],
+      ["target", "4002", "beta", "20.00", "new"],
+      ["target", "4003", "gamma", "30.00", "ready"],
+      ["target", "4004", "delta", "NULL", "ready"],
+      ["target", "4005", "epsilon", "50.00", "archived"]
+    ]
+  },
+  "wire_profiles": {
+    "gateway": {
+      "mysql_text_to_postgres": {
+        "ok_i": {"command_tag": null, "error_code": null, "sqlstate": null, "transaction_status": "I"},
+        "ok_t": {"command_tag": null, "error_code": null, "sqlstate": null, "transaction_status": "T"},
+        "rows_i": {"command_tag": null, "error_code": null, "sqlstate": null, "transaction_status": "I"},
+        "error_i": {"command_tag": null, "error_code": "1105", "sqlstate": "HY000", "transaction_status": "I"},
+        "error_t": {"command_tag": null, "error_code": "1105", "sqlstate": "HY000", "transaction_status": "T"}
+      },
+      "pg_simple_to_mysql": {
+        "ok_i": {"command_tag": "OK 1", "error_code": null, "sqlstate": null, "transaction_status": "I"},
+        "ok_zero_i": {"command_tag": "OK 0", "error_code": null, "sqlstate": null, "transaction_status": "I"},
+        "ok_t": {"command_tag": "OK 1", "error_code": null, "sqlstate": null, "transaction_status": "T"},
+        "control_t": {"command_tag": "OK 0", "error_code": null, "sqlstate": null, "transaction_status": "T"},
+        "control_i": {"command_tag": "OK 0", "error_code": null, "sqlstate": null, "transaction_status": "I"},
+        "rows_i": {"command_tag": "SELECT 1", "error_code": null, "sqlstate": null, "transaction_status": "I"},
+        "error_i": {"command_tag": null, "error_code": null, "sqlstate": "XX000", "transaction_status": "I"},
+        "error_e": {"command_tag": null, "error_code": null, "sqlstate": "XX000", "transaction_status": "E"}
+      }
+    },
+    "backend_control": {
+      "mysql_text_to_postgres": {
+        "insert_i": {"command_tag": "INSERT 0 1", "error_code": null, "sqlstate": null, "transaction_status": "I"},
+        "insert_t": {"command_tag": "INSERT 0 1", "error_code": null, "sqlstate": null, "transaction_status": "T"},
+        "update_i": {"command_tag": "UPDATE 1", "error_code": null, "sqlstate": null, "transaction_status": "I"},
+        "delete_i": {"command_tag": "DELETE 1", "error_code": null, "sqlstate": null, "transaction_status": "I"},
+        "delete_zero_i": {"command_tag": "DELETE 0", "error_code": null, "sqlstate": null, "transaction_status": "I"},
+        "control_t": {"command_tag": "BEGIN", "error_code": null, "sqlstate": null, "transaction_status": "T"},
+        "commit_i": {"command_tag": "COMMIT", "error_code": null, "sqlstate": null, "transaction_status": "I"},
+        "rollback_i": {"command_tag": "ROLLBACK", "error_code": null, "sqlstate": null, "transaction_status": "I"},
+        "rows_i": {"command_tag": "SELECT 1", "error_code": null, "sqlstate": null, "transaction_status": "I"},
+        "error_i": {"command_tag": null, "error_code": null, "sqlstate": "23505", "transaction_status": "I"},
+        "error_e": {"command_tag": null, "error_code": null, "sqlstate": "23505", "transaction_status": "E"}
+      },
+      "pg_simple_to_mysql": {
+        "ok_i": {"command_tag": null, "error_code": null, "sqlstate": null, "transaction_status": "I"},
+        "ok_t": {"command_tag": null, "error_code": null, "sqlstate": null, "transaction_status": "T"},
+        "rows_i": {"command_tag": null, "error_code": null, "sqlstate": null, "transaction_status": "I"},
+        "error_i": {"command_tag": null, "error_code": "1062", "sqlstate": "23000", "transaction_status": "I"},
+        "error_t": {"command_tag": null, "error_code": "1062", "sqlstate": "23000", "transaction_status": "T"}
+      }
+    }
+  },
+  "results": {
+    "SQLT-XDML-001": {
+      "before_state": "baseline",
+      "after_state": "insert_9301",
+      "steps": [
+        {"name": "insert", "expected_error": false, "kind": "ok", "affected_rows": 1, "rows": [], "gateway": {"mysql_text_to_postgres": "ok_i", "pg_simple_to_mysql": "ok_i"}, "backend_control": {"mysql_text_to_postgres": "insert_i", "pg_simple_to_mysql": "ok_i"}},
+        {"name": "verify", "expected_error": false, "kind": "rows", "affected_rows": null, "rows": [["9301", "cross insert", "10.50", "new"]], "gateway": {"mysql_text_to_postgres": "rows_i", "pg_simple_to_mysql": "rows_i"}, "backend_control": {"mysql_text_to_postgres": "rows_i", "pg_simple_to_mysql": "rows_i"}}
+      ]
+    },
+    "SQLT-XDML-002": {
+      "before_state": "baseline",
+      "after_state": "updated_4001",
+      "steps": [
+        {"name": "update", "expected_error": false, "kind": "ok", "affected_rows": 1, "rows": [], "gateway": {"mysql_text_to_postgres": "ok_i", "pg_simple_to_mysql": "ok_i"}, "backend_control": {"mysql_text_to_postgres": "update_i", "pg_simple_to_mysql": "ok_i"}},
+        {"name": "verify", "expected_error": false, "kind": "rows", "affected_rows": null, "rows": [["4001", "alpha-updated", "12.34", "done"]], "gateway": {"mysql_text_to_postgres": "rows_i", "pg_simple_to_mysql": "rows_i"}, "backend_control": {"mysql_text_to_postgres": "rows_i", "pg_simple_to_mysql": "rows_i"}}
+      ]
+    },
+    "SQLT-XDML-003": {
+      "before_state": "baseline",
+      "after_state": "deleted_4001",
+      "steps": [
+        {"name": "delete", "expected_error": false, "kind": "ok", "affected_rows": 1, "rows": [], "gateway": {"mysql_text_to_postgres": "ok_i", "pg_simple_to_mysql": "ok_i"}, "backend_control": {"mysql_text_to_postgres": "delete_i", "pg_simple_to_mysql": "ok_i"}},
+        {"name": "verify", "expected_error": false, "kind": "rows", "affected_rows": null, "rows": [["0"]], "gateway": {"mysql_text_to_postgres": "rows_i", "pg_simple_to_mysql": "rows_i"}, "backend_control": {"mysql_text_to_postgres": "rows_i", "pg_simple_to_mysql": "rows_i"}}
+      ]
+    },
+    "SQLT-XDML-004": {
+      "before_state": "baseline",
+      "after_state": "baseline",
+      "steps": [
+        {"name": "delete", "expected_error": false, "kind": "ok", "affected_rows": 0, "rows": [], "gateway": {"mysql_text_to_postgres": "ok_i", "pg_simple_to_mysql": "ok_zero_i"}, "backend_control": {"mysql_text_to_postgres": "delete_zero_i", "pg_simple_to_mysql": "ok_i"}},
+        {"name": "verify", "expected_error": false, "kind": "rows", "affected_rows": null, "rows": [["5"]], "gateway": {"mysql_text_to_postgres": "rows_i", "pg_simple_to_mysql": "rows_i"}, "backend_control": {"mysql_text_to_postgres": "rows_i", "pg_simple_to_mysql": "rows_i"}}
+      ]
+    },
+    "SQLT-XDML-005": {
+      "before_state": "baseline",
+      "after_state": "constraint_9305",
+      "steps": [
+        {"name": "seed", "expected_error": false, "kind": "ok", "affected_rows": 1, "rows": [], "gateway": {"mysql_text_to_postgres": "ok_i", "pg_simple_to_mysql": "ok_i"}, "backend_control": {"mysql_text_to_postgres": "insert_i", "pg_simple_to_mysql": "ok_i"}},
+        {"name": "duplicate", "expected_error": true, "kind": "error", "affected_rows": null, "rows": [], "gateway": {"mysql_text_to_postgres": "error_i", "pg_simple_to_mysql": "error_i"}, "backend_control": {"mysql_text_to_postgres": "error_i", "pg_simple_to_mysql": "error_i"}},
+        {"name": "recover", "expected_error": false, "kind": "rows", "affected_rows": null, "rows": [["42"]], "gateway": {"mysql_text_to_postgres": "rows_i", "pg_simple_to_mysql": "rows_i"}, "backend_control": {"mysql_text_to_postgres": "rows_i", "pg_simple_to_mysql": "rows_i"}},
+        {"name": "verify", "expected_error": false, "kind": "rows", "affected_rows": null, "rows": [["9305", "constraint seed", "50.00", "new"]], "gateway": {"mysql_text_to_postgres": "rows_i", "pg_simple_to_mysql": "rows_i"}, "backend_control": {"mysql_text_to_postgres": "rows_i", "pg_simple_to_mysql": "rows_i"}}
+      ]
+    },
+    "SQLT-XDML-006": {
+      "before_state": "baseline",
+      "after_state": "committed_9306",
+      "steps": [
+        {"name": "begin", "expected_error": false, "kind": "ok", "affected_rows": 0, "rows": [], "gateway": {"mysql_text_to_postgres": "ok_t", "pg_simple_to_mysql": "control_t"}, "backend_control": {"mysql_text_to_postgres": "control_t", "pg_simple_to_mysql": "ok_t"}},
+        {"name": "insert", "expected_error": false, "kind": "ok", "affected_rows": 1, "rows": [], "gateway": {"mysql_text_to_postgres": "ok_t", "pg_simple_to_mysql": "ok_t"}, "backend_control": {"mysql_text_to_postgres": "insert_t", "pg_simple_to_mysql": "ok_t"}},
+        {"name": "commit", "expected_error": false, "kind": "ok", "affected_rows": 0, "rows": [], "gateway": {"mysql_text_to_postgres": "ok_i", "pg_simple_to_mysql": "control_i"}, "backend_control": {"mysql_text_to_postgres": "commit_i", "pg_simple_to_mysql": "ok_i"}},
+        {"name": "verify", "expected_error": false, "kind": "rows", "affected_rows": null, "rows": [["9306", "committed mutation", "60.00", "new"]], "gateway": {"mysql_text_to_postgres": "rows_i", "pg_simple_to_mysql": "rows_i"}, "backend_control": {"mysql_text_to_postgres": "rows_i", "pg_simple_to_mysql": "rows_i"}}
+      ]
+    },
+    "SQLT-XDML-007": {
+      "before_state": "baseline",
+      "after_state": "baseline",
+      "steps": [
+        {"name": "begin", "expected_error": false, "kind": "ok", "affected_rows": 0, "rows": [], "gateway": {"mysql_text_to_postgres": "ok_t", "pg_simple_to_mysql": "control_t"}, "backend_control": {"mysql_text_to_postgres": "control_t", "pg_simple_to_mysql": "ok_t"}},
+        {"name": "insert", "expected_error": false, "kind": "ok", "affected_rows": 1, "rows": [], "gateway": {"mysql_text_to_postgres": "ok_t", "pg_simple_to_mysql": "ok_t"}, "backend_control": {"mysql_text_to_postgres": "insert_t", "pg_simple_to_mysql": "ok_t"}},
+        {"name": "rollback", "expected_error": false, "kind": "ok", "affected_rows": 0, "rows": [], "gateway": {"mysql_text_to_postgres": "ok_i", "pg_simple_to_mysql": "control_i"}, "backend_control": {"mysql_text_to_postgres": "rollback_i", "pg_simple_to_mysql": "ok_i"}},
+        {"name": "verify", "expected_error": false, "kind": "rows", "affected_rows": null, "rows": [["0"]], "gateway": {"mysql_text_to_postgres": "rows_i", "pg_simple_to_mysql": "rows_i"}, "backend_control": {"mysql_text_to_postgres": "rows_i", "pg_simple_to_mysql": "rows_i"}}
+      ]
+    },
+    "SQLT-XDML-008": {
+      "before_state": "baseline",
+      "after_state": "restarted_9309",
+      "steps": [
+        {"name": "begin_failed", "expected_error": false, "kind": "ok", "affected_rows": 0, "rows": [], "gateway": {"mysql_text_to_postgres": "ok_t", "pg_simple_to_mysql": "control_t"}, "backend_control": {"mysql_text_to_postgres": "control_t", "pg_simple_to_mysql": "ok_t"}},
+        {"name": "seed_failed", "expected_error": false, "kind": "ok", "affected_rows": 1, "rows": [], "gateway": {"mysql_text_to_postgres": "ok_t", "pg_simple_to_mysql": "ok_t"}, "backend_control": {"mysql_text_to_postgres": "insert_t", "pg_simple_to_mysql": "ok_t"}},
+        {"name": "duplicate", "expected_error": true, "kind": "error", "affected_rows": null, "rows": [], "gateway": {"mysql_text_to_postgres": "error_t", "pg_simple_to_mysql": "error_e"}, "backend_control": {"mysql_text_to_postgres": "error_e", "pg_simple_to_mysql": "error_t"}},
+        {"name": "rollback_failed", "expected_error": false, "kind": "ok", "affected_rows": 0, "rows": [], "gateway": {"mysql_text_to_postgres": "ok_i", "pg_simple_to_mysql": "control_i"}, "backend_control": {"mysql_text_to_postgres": "rollback_i", "pg_simple_to_mysql": "ok_i"}},
+        {"name": "begin_restart", "expected_error": false, "kind": "ok", "affected_rows": 0, "rows": [], "gateway": {"mysql_text_to_postgres": "ok_t", "pg_simple_to_mysql": "control_t"}, "backend_control": {"mysql_text_to_postgres": "control_t", "pg_simple_to_mysql": "ok_t"}},
+        {"name": "insert_restart", "expected_error": false, "kind": "ok", "affected_rows": 1, "rows": [], "gateway": {"mysql_text_to_postgres": "ok_t", "pg_simple_to_mysql": "ok_t"}, "backend_control": {"mysql_text_to_postgres": "insert_t", "pg_simple_to_mysql": "ok_t"}},
+        {"name": "commit_restart", "expected_error": false, "kind": "ok", "affected_rows": 0, "rows": [], "gateway": {"mysql_text_to_postgres": "ok_i", "pg_simple_to_mysql": "control_i"}, "backend_control": {"mysql_text_to_postgres": "commit_i", "pg_simple_to_mysql": "ok_i"}},
+        {"name": "verify", "expected_error": false, "kind": "rows", "affected_rows": null, "rows": [["9309", "restarted transaction", "90.00", "new"]], "gateway": {"mysql_text_to_postgres": "rows_i", "pg_simple_to_mysql": "rows_i"}, "backend_control": {"mysql_text_to_postgres": "rows_i", "pg_simple_to_mysql": "rows_i"}}
+      ]
+    }
+  }
+}

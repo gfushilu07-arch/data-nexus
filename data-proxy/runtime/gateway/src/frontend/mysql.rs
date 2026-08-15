@@ -164,12 +164,13 @@ impl FrontendProtocolAdapter for MySqlFrontendProtocol {
             return Ok(vec![]);
         }
         match response {
-            GatewayResponse::Ok { .. }
-            | GatewayResponse::CommandComplete { .. }
-            | GatewayResponse::Pong
-            | GatewayResponse::Bye => {
-                Ok(vec![ok_packet()[4..].to_vec()])
+            GatewayResponse::Ok { affected_rows, last_insert_id } => {
+                Ok(vec![ok_response_payload(affected_rows, last_insert_id, session)])
             }
+            GatewayResponse::CommandComplete { .. } | GatewayResponse::Pong => {
+                Ok(vec![ok_response_payload(0, None, session)])
+            }
+            GatewayResponse::Bye => Ok(vec![ok_packet()[4..].to_vec()]),
             GatewayResponse::Error { code, message } => {
                 let code = code.parse::<u16>().unwrap_or(1105);
                 Ok(vec![make_err_packet(MySQLError::new(code, b"HY000".to_vec(), message))[4..]
@@ -230,12 +231,32 @@ impl FrontendProtocolAdapter for MySqlFrontendProtocol {
     }
 }
 
+fn ok_response_payload(
+    affected_rows: u64,
+    last_insert_id: Option<u64>,
+    session: &SessionState,
+) -> Vec<u8> {
+    let mut packet = BytesMut::with_capacity(16);
+    packet.put_u8(0x00);
+    packet.put_lenc_int(affected_rows, true);
+    packet.put_lenc_int(last_insert_id.unwrap_or(0), true);
+    let in_transaction = !matches!(session.transaction_state, TransactionState::Idle);
+    packet.put_u16_le(2 | u16::from(in_transaction));
+    packet.put_u16_le(0);
+    packet.to_vec()
+}
+
 fn decode_query_command(
     payload: &[u8],
     session: &mut SessionState,
 ) -> GatewayResult<GatewayCommand> {
     let sql = decode_text_payload(payload)?;
-    let normalized = sql.trim().to_ascii_lowercase();
+    let trimmed = sql.trim();
+    let normalized = trimmed
+        .strip_suffix(';')
+        .unwrap_or(trimmed)
+        .trim_end()
+        .to_ascii_lowercase();
     match normalized.as_str() {
         "begin" | "start transaction" => {
             session.transaction_state = TransactionState::Active;
@@ -1339,14 +1360,32 @@ mod tests {
     }
 
     #[test]
-    fn decodes_transaction_shortcuts() {
+    fn decodes_transaction_shortcuts_with_optional_semicolon() {
         let mut adapter = adapter();
         let mut session = SessionState::default();
 
-        let commands = adapter.decode(&[COM_QUERY, b'b', b'e', b'g', b'i', b'n'], &mut session);
+        let commands = adapter.decode(
+            &[COM_QUERY, b'b', b'e', b'g', b'i', b'n', b';'],
+            &mut session,
+        );
 
         assert_eq!(commands, Ok(vec![GatewayCommand::Begin]));
         assert_eq!(session.transaction_state, TransactionState::Active);
+
+        let commands = adapter.decode(
+            &[COM_QUERY, b'c', b'o', b'm', b'm', b'i', b't', b';'],
+            &mut session,
+        );
+        assert_eq!(commands, Ok(vec![GatewayCommand::Commit]));
+        assert_eq!(session.transaction_state, TransactionState::Idle);
+
+        session.transaction_state = TransactionState::Active;
+        let commands = adapter.decode(
+            &[COM_QUERY, b'r', b'o', b'l', b'l', b'b', b'a', b'c', b'k', b';'],
+            &mut session,
+        );
+        assert_eq!(commands, Ok(vec![GatewayCommand::Rollback]));
+        assert_eq!(session.transaction_state, TransactionState::Idle);
     }
 
     #[test]
@@ -1392,8 +1431,33 @@ mod tests {
         let session = SessionState::default();
 
         assert_eq!(
+            adapter.encode(
+                GatewayResponse::Ok {
+                    affected_rows: 3,
+                    last_insert_id: Some(9),
+                },
+                &session,
+            ),
+            Ok(vec![vec![0x00, 0x03, 0x09, 0x02, 0x00, 0x00, 0x00]])
+        );
+        let active = SessionState {
+            transaction_state: TransactionState::Active,
+            ..SessionState::default()
+        };
+        assert_eq!(
+            adapter.encode(
+                GatewayResponse::CommandComplete { tag: "BEGIN".into() },
+                &active,
+            ),
+            Ok(vec![vec![0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00]])
+        );
+        assert_eq!(
             adapter.encode(GatewayResponse::Pong, &session),
             Ok(vec![ok_packet()[4..].to_vec()])
+        );
+        assert_eq!(
+            adapter.encode(GatewayResponse::Pong, &active),
+            Ok(vec![vec![0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00]])
         );
 
         let error = adapter.encode(

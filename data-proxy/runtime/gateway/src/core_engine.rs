@@ -1235,6 +1235,13 @@ impl CoreGatewayConnection {
                 },
             };
 
+            if matches!(response, GatewayResponse::Error { .. })
+                && self.frontend.protocol() == ProtocolKind::PostgreSql
+                && self.session.transaction_state == TransactionState::Active
+            {
+                self.session.transaction_state = TransactionState::Failed;
+            }
+
             let wire_bytes = match &response {
                 GatewayResponse::Wire { packets } => {
                     packets.iter().map(|p| p.len() as u64).sum::<u64>()
@@ -3044,6 +3051,23 @@ mod tests {
         assert_eq!(packets[1].first(), Some(&b'D'));
         assert_eq!(packets[2].first(), Some(&b'C'));
         assert_eq!(packets[3].first(), Some(&b'Z'));
+    }
+
+    #[tokio::test]
+    async fn postgresql_error_marks_active_transaction_failed() {
+        let mut connection = postgresql_connection(GatewayResponse::Error {
+            code: "gateway_error".into(),
+            message: "duplicate key".into(),
+        });
+        connection.session.transaction_state = TransactionState::Active;
+
+        let packets = connection.handle_frame(&encode_query_message("select 1")).await.unwrap();
+
+        assert_eq!(connection.session().transaction_state, TransactionState::Failed);
+        assert_eq!(packets.len(), 2);
+        assert_eq!(packets[0].first(), Some(&b'E'));
+        assert_eq!(packets[1].first(), Some(&b'Z'));
+        assert_eq!(packets[1].last(), Some(&b'E'));
     }
 
     #[tokio::test]
