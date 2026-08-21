@@ -41,11 +41,9 @@ fn add_ca_pem_file(
     ca_path: &str,
 ) -> Result<(), ProtocolError> {
     let path = Path::new(ca_path);
-    let bytes = fs::read(path).map_err(|e| {
-        ProtocolError::InvalidPacket {
-            method: format!("ssl_ca_file read '{}': {e}", path.display()),
-            data: vec![],
-        }
+    let bytes = fs::read(path).map_err(|e| ProtocolError::InvalidPacket {
+        method: format!("ssl_ca_file read '{}': {e}", path.display()),
+        data: vec![],
     })?;
     if bytes.is_empty() {
         return Err(ProtocolError::InvalidPacket {
@@ -56,12 +54,11 @@ fn add_ca_pem_file(
     let pem = String::from_utf8_lossy(&bytes);
     let mut loaded = 0usize;
     for chunk in split_pem_certs(&pem) {
-        let cert = Certificate::from_pem(chunk.as_bytes()).map_err(|e| {
-            ProtocolError::InvalidPacket {
+        let cert =
+            Certificate::from_pem(chunk.as_bytes()).map_err(|e| ProtocolError::InvalidPacket {
                 method: format!("ssl_ca_file invalid PEM: {e}"),
                 data: vec![],
-            }
-        })?;
+            })?;
         builder.add_root_certificate(cert);
         loaded += 1;
     }
@@ -123,18 +120,13 @@ mod tests {
         };
         let err = opts.build_connector().unwrap_err();
         let msg = err.to_string();
-        assert!(
-            msg.contains("ssl_ca_file") || msg.contains("read"),
-            "{msg}"
-        );
+        assert!(msg.contains("ssl_ca_file") || msg.contains("read"), "{msg}");
     }
 
     #[test]
     fn a08_build_connector_empty_ca_file_errors() {
-        let dir = std::env::temp_dir().join(format!(
-            "dn-mysql-a08-empty-ca-{}",
-            std::process::id()
-        ));
+        let dir =
+            std::env::temp_dir().join(format!("dn-mysql-a08-empty-ca-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         let ca_path = dir.join("empty.pem");

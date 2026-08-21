@@ -14,10 +14,8 @@ pub trait DialectParser: Send + Sync {
     fn leading_keyword(&self, sql: &str) -> Option<String> {
         let sql = sql.trim_start();
         let upper = sql.to_ascii_uppercase();
-        let token = upper
-            .split_whitespace()
-            .next()
-            .map(|token| token.trim_end_matches(';').to_owned())?;
+        let token =
+            upper.split_whitespace().next().map(|token| token.trim_end_matches(';').to_owned())?;
         if token.is_empty() {
             None
         } else {
@@ -56,8 +54,7 @@ impl DialectParser for HeuristicDialectParser {
     fn is_read_only(&self, sql: &str) -> bool {
         let sql = sql.trim_start();
         let upper = sql.to_ascii_uppercase();
-        let first_token =
-            upper.split_whitespace().next().unwrap_or_default().trim_end_matches(';');
+        let first_token = upper.split_whitespace().next().unwrap_or_default().trim_end_matches(';');
 
         let read_keywords = match self.dialect {
             ProtocolKind::MySql => {
@@ -67,10 +64,7 @@ impl DialectParser for HeuristicDialectParser {
                 )
             }
             ProtocolKind::PostgreSql => {
-                matches!(
-                    first_token,
-                    "SELECT" | "SHOW" | "EXPLAIN" | "WITH" | "VALUES" | "TABLE"
-                )
+                matches!(first_token, "SELECT" | "SHOW" | "EXPLAIN" | "WITH" | "VALUES" | "TABLE")
             }
         };
 

@@ -16,16 +16,15 @@ use std::{sync::Arc, time::Instant};
 
 use endpoint::endpoint::Endpoint;
 use gateway_core::{
-        write_resultset_windowed, write_resultset_windowed_with_obligations,
-        write_streaming_query_with_obligations_sample, write_wire_relay_observed, CollectingWriter,
-        classify_dangerous_sql, map_response_types,
-        prepare_cross_protocol_command, BackendConnector, CommandSummary, DialectParser,
-        EndpointConfig, EndpointRef, EndpointRole, ExecuteMode, ExecuteOutcome,
-        FrontendProtocolAdapter, GatewayCommand, GatewayConfig, GatewayError, GatewayResponse,
-        GatewayResult, ListenerConfig, Obligations, PluginContext, PluginDecision, ProtocolKind,
-        ResponseWriter, RoutePlan, ServiceConfig, SessionState, StreamingSampleOpts, TransactionState,
-        TranslationPolicyConfig,
-    };
+    classify_dangerous_sql, map_response_types, prepare_cross_protocol_command,
+    write_resultset_windowed, write_resultset_windowed_with_obligations,
+    write_streaming_query_with_obligations_sample, write_wire_relay_observed, BackendConnector,
+    CollectingWriter, CommandSummary, DialectParser, EndpointConfig, EndpointRef, EndpointRole,
+    ExecuteMode, ExecuteOutcome, FrontendProtocolAdapter, GatewayCommand, GatewayConfig,
+    GatewayError, GatewayResponse, GatewayResult, ListenerConfig, Obligations, PluginContext,
+    PluginDecision, ProtocolKind, ResponseWriter, RoutePlan, ServiceConfig, SessionState,
+    StreamingSampleOpts, TransactionState, TranslationPolicyConfig,
+};
 use loadbalance::balance::{AlgorithmName, Balance, BalanceType, LoadBalance};
 use parking_lot::Mutex;
 use plugin::build_phase::PluginPhase;
@@ -197,10 +196,8 @@ impl CoreGatewayConnection {
         // If result obligations exist, sample from a masked copy (do not mutate response).
         let masked;
         let rows_ref: &Vec<Vec<gateway_core::GatewayValue>> = if pending.has_result_obligations() {
-            let mut tmp = GatewayResponse::ResultSet {
-                columns: columns.clone(),
-                rows: rows.clone(),
-            };
+            let mut tmp =
+                GatewayResponse::ResultSet { columns: columns.clone(), rows: rows.clone() };
             tmp = gateway_core::apply_obligations_to_response(tmp, pending);
             if let GatewayResponse::ResultSet { rows: r, .. } = tmp {
                 masked = r;
@@ -233,19 +230,16 @@ impl CoreGatewayConnection {
                 // A2: same-protocol Streaming also window-encodes.
                 // A06/A07: result obligations force windowed encode with per-window mask.
                 let cross = self.translation_policy.is_some();
-                let has_obl = deferred_obl
-                    .as_ref()
-                    .map(|o| o.has_result_obligations())
-                    .unwrap_or(false);
+                let has_obl =
+                    deferred_obl.as_ref().map(|o| o.has_result_obligations()).unwrap_or(false);
                 let window = self
                     .stream_mode
                     .window_rows()
                     .or(if cross || has_obl { Some(256) } else { None })
                     .unwrap_or(usize::MAX)
                     .max(1);
-                let use_windowed = cross
-                    || has_obl
-                    || matches!(self.stream_mode, ExecuteMode::Streaming { .. });
+                let use_windowed =
+                    cross || has_obl || matches!(self.stream_mode, ExecuteMode::Streaming { .. });
                 if use_windowed {
                     let stats = write_resultset_windowed_with_obligations(
                         self.frontend.as_mut(),
@@ -258,11 +252,7 @@ impl CoreGatewayConnection {
                     )
                     .await?;
                     // O01: windowed Complete path (labels: listener/service/protocols/type/endpoint).
-                    let ep = self
-                        .session
-                        .backend_endpoint
-                        .as_deref()
-                        .unwrap_or("n/a");
+                    let ep = self.session.backend_endpoint.as_deref().unwrap_or("n/a");
                     let labels = [
                         self.listener_name.as_str(),
                         self.service_name.as_str(),
@@ -347,11 +337,7 @@ impl CoreGatewayConnection {
             frontend_protocol = %protocol_metric_name(&self.frontend.protocol()),
             backend_protocol = %protocol_metric_name(&self.backend.protocol()),
         );
-        async {
-            self.handle_frame_inner(frame, writer).await
-        }
-        .instrument(frame_span)
-        .await
+        async { self.handle_frame_inner(frame, writer).await }.instrument(frame_span).await
     }
 
     async fn handle_frame_inner(
@@ -368,8 +354,7 @@ impl CoreGatewayConnection {
                 else {
                     return Err(GatewayError::Unsupported(code));
                 };
-                self.reject_unsupported_capability(capability, "QUERY", writer)
-                    .await?;
+                self.reject_unsupported_capability(capability, "QUERY", writer).await?;
                 return Ok(());
             }
             Err(error) => return Err(error),
@@ -388,10 +373,11 @@ impl CoreGatewayConnection {
                 execute_path = tracing::field::Empty,
             );
 
-            if let Some(capability) = dangerous_command_capability(&command, self.frontend.protocol()) {
+            if let Some(capability) =
+                dangerous_command_capability(&command, self.frontend.protocol())
+            {
                 command_span.record("outcome", "unsupported_operation");
-                self.reject_unsupported_capability(capability, command_type, writer)
-                    .await?;
+                self.reject_unsupported_capability(capability, command_type, writer).await?;
                 continue;
             }
 
@@ -439,10 +425,8 @@ impl CoreGatewayConnection {
             let mut concurrency_rule_idx = None;
             // A10: non-WITH-HOLD process-local cursors drop at txn end (honest).
             // Quit drops all process-local cursors (WITH HOLD included — session ends).
-            let drop_non_hold_cursors_after = matches!(
-                command,
-                GatewayCommand::Commit | GatewayCommand::Rollback
-            );
+            let drop_non_hold_cursors_after =
+                matches!(command, GatewayCommand::Commit | GatewayCommand::Rollback);
             let drop_all_cursors_after = matches!(command, GatewayCommand::Quit);
             if let Some(plugins) = self.plugins.as_mut() {
                 let ctx = PluginContext {
@@ -565,11 +549,7 @@ impl CoreGatewayConnection {
                         sql,
                         self.frontend.protocol().as_str(),
                     );
-                    let tables = set
-                        .objects
-                        .iter()
-                        .map(|o| o.table.clone())
-                        .collect::<Vec<_>>();
+                    let tables = set.objects.iter().map(|o| o.table.clone()).collect::<Vec<_>>();
                     (Some(sql.clone()), tables)
                 }
                 _ => (None, Vec::new()),
@@ -675,7 +655,9 @@ impl CoreGatewayConnection {
                             message: Some(message.clone()),
                             rule: Some(rule.clone()),
                             audit_level: Some(self.default_audit_level.clone()),
-                            sql_fingerprint: audit_sql.as_deref().map(gateway_core::sql_fingerprint),
+                            sql_fingerprint: audit_sql
+                                .as_deref()
+                                .map(gateway_core::sql_fingerprint),
                             sql_text: audit_sql.clone(),
                             tables: audit_tables.clone(),
                             ..gateway_core::AuditEvent::default()
@@ -750,15 +732,15 @@ impl CoreGatewayConnection {
                             message: Some(message.clone()),
                             rule: Some(rule.clone()),
                             audit_level: Some(self.default_audit_level.clone()),
-                            sql_fingerprint: audit_sql.as_deref().map(gateway_core::sql_fingerprint),
+                            sql_fingerprint: audit_sql
+                                .as_deref()
+                                .map(gateway_core::sql_fingerprint),
                             sql_text: audit_sql.clone(),
                             tables: audit_tables.clone(),
                             ..gateway_core::AuditEvent::default()
                         });
-                        let response = GatewayResponse::Error {
-                            code: "security_deny".into(),
-                            message,
-                        };
+                        let response =
+                            GatewayResponse::Error { code: "security_deny".into(), message };
                         command_span.record("outcome", "security_deny");
                         let rule_class = crate::otel_metrics::classify_security_rule(&rule);
                         command_span.record("security_decision", "deny");
@@ -820,10 +802,7 @@ impl CoreGatewayConnection {
             } else {
                 // Merge PDP max_rows into streaming mode when configured.
                 match self.stream_mode {
-                    ExecuteMode::Streaming {
-                        window_rows,
-                        max_rows,
-                    } => ExecuteMode::Streaming {
+                    ExecuteMode::Streaming { window_rows, max_rows } => ExecuteMode::Streaming {
                         window_rows,
                         max_rows: match (max_rows, pending_obligations.max_rows) {
                             (Some(a), Some(b)) => Some(a.min(b)),
@@ -884,8 +863,8 @@ impl CoreGatewayConnection {
                     // Only selected when passthrough is allowed (no result obligations).
                     // Extended-query rewrite→simple Query TCP still ends with backend Z;
                     // strip it so only Sync emits ReadyForQuery (not original Parse/Bind relay).
-                    let skip_z = self.session.pg_extended_query
-                        && command_type != "PG_BACKEND_SYNC";
+                    let skip_z =
+                        self.session.pg_extended_query && command_type != "PG_BACKEND_SYNC";
                     let wire = write_wire_relay_observed(relay, writer, skip_z).await?;
                     let wire_bytes = wire.bytes;
                     if wire.error_response && self.session.pg_extended_query {
@@ -1040,11 +1019,8 @@ impl CoreGatewayConnection {
                     // Hold resume: only the client page size applies (no cumulative skip).
                     // Detect resume by empty skip + held stream was just consumed above —
                     // we set skip_rows=0 when hold_remainder is active.
-                    let obl = if encode_obl.has_result_obligations() {
-                        Some(&encode_obl)
-                    } else {
-                        None
-                    };
+                    let obl =
+                        if encode_obl.has_result_obligations() { Some(&encode_obl) } else { None };
                     let sample_opts = if self.audit_sample_enabled
                         && self.default_audit_level.eq_ignore_ascii_case("L2")
                     {
@@ -1194,13 +1170,7 @@ impl CoreGatewayConnection {
                             .with_execute_path(execute_path)
                             .with_wire_bytes(0),
                     );
-                    finish_command_metrics(
-                        &self.metrics,
-                        &labels,
-                        started_at,
-                        execute_path,
-                        0,
-                    );
+                    finish_command_metrics(&self.metrics, &labels, started_at, execute_path, 0);
                     continue;
                 }
                 Ok(ExecuteOutcome::Complete(response)) => {
@@ -1311,12 +1281,8 @@ impl CoreGatewayConnection {
                 db_user: self.session.user.clone(),
                 listener: Some(self.listener_name.clone()),
                 service: Some(self.service_name.clone()),
-                frontend_protocol: Some(
-                    protocol_metric_name(&self.frontend.protocol()).to_owned(),
-                ),
-                backend_protocol: Some(
-                    protocol_metric_name(&self.backend.protocol()).to_owned(),
-                ),
+                frontend_protocol: Some(protocol_metric_name(&self.frontend.protocol()).to_owned()),
+                backend_protocol: Some(protocol_metric_name(&self.backend.protocol()).to_owned()),
                 command_type: Some(command_type.to_owned()),
                 endpoint: Some(label_owned[5].clone()),
                 database: self.session.database.clone(),
@@ -1360,13 +1326,7 @@ impl CoreGatewayConnection {
                     .with_execute_path(execute_path)
                     .with_wire_bytes(wire_bytes),
             );
-            finish_command_metrics(
-                &self.metrics,
-                &labels,
-                started_at,
-                execute_path,
-                wire_bytes,
-            );
+            finish_command_metrics(&self.metrics, &labels, started_at, execute_path, wire_bytes);
         }
 
         Ok(())
@@ -1441,26 +1401,25 @@ impl CoreGatewayConnection {
         use gateway_core::{StreamingQuery, VecRowStream};
 
         match kind {
-            NamedCursorSql::Declare {
-                name,
-                select_sql,
-                with_hold,
-            } => {
+            NamedCursorSql::Declare { name, select_sql, with_hold } => {
                 if self.named_cursors.contains_key(&name) {
                     let msg = format!(
                         "cursor \"{name}\" already exists (process-local; not SQL WITH HOLD)"
                     );
-                    let response = GatewayResponse::Error {
-                        code: "42P03".into(),
-                        message: msg,
-                    };
+                    let response = GatewayResponse::Error { code: "42P03".into(), message: msg };
                     if self.session.transaction_state == TransactionState::Active {
                         self.session.transaction_state = TransactionState::Failed;
                     }
                     self.encode_response_to_writer(response, writer).await?;
                     command_span.record("outcome", "error");
                     command_span.record("execute_path", "sql_cursor_declare");
-                    finish_command_metrics(&self.metrics, labels, started_at, "sql_cursor_declare", 0);
+                    finish_command_metrics(
+                        &self.metrics,
+                        labels,
+                        started_at,
+                        "sql_cursor_declare",
+                        0,
+                    );
                     return Ok(());
                 }
                 // Open cursor without backend max_rows cap so multi-FETCH can page the
@@ -1471,9 +1430,7 @@ impl CoreGatewayConnection {
                 let outcome = self
                     .backend
                     .execute_outcome(
-                        GatewayCommand::Query {
-                            sql: select_sql.clone(),
-                        },
+                        GatewayCommand::Query { sql: select_sql.clone() },
                         &mut self.session,
                         exec_mode,
                     )
@@ -1485,9 +1442,8 @@ impl CoreGatewayConnection {
                             NamedCursorHeld { with_hold, query, exhausted: false },
                         );
                         self.metrics.record_portal_resume("sql_cursor_declare");
-                        let response = GatewayResponse::CommandComplete {
-                            tag: "DECLARE CURSOR".into(),
-                        };
+                        let response =
+                            GatewayResponse::CommandComplete { tag: "DECLARE CURSOR".into() };
                         self.encode_response_to_writer(response, writer).await?;
                         command_span.record("outcome", "sql_cursor_declare");
                         command_span.record("execute_path", "sql_cursor_declare");
@@ -1502,18 +1458,15 @@ impl CoreGatewayConnection {
                     }
                     ExecuteOutcome::Complete(GatewayResponse::ResultSet { columns, rows }) => {
                         // Fallback: materialize into VecRowStream so FETCH still works.
-                        let query = StreamingQuery {
-                            columns,
-                            stream: Box::new(VecRowStream::new(rows)),
-                        };
+                        let query =
+                            StreamingQuery { columns, stream: Box::new(VecRowStream::new(rows)) };
                         self.named_cursors.insert(
                             name.clone(),
                             NamedCursorHeld { with_hold, query, exhausted: false },
                         );
                         self.metrics.record_portal_resume("sql_cursor_declare");
-                        let response = GatewayResponse::CommandComplete {
-                            tag: "DECLARE CURSOR".into(),
-                        };
+                        let response =
+                            GatewayResponse::CommandComplete { tag: "DECLARE CURSOR".into() };
                         self.encode_response_to_writer(response, writer).await?;
                         command_span.record("outcome", "sql_cursor_declare");
                         command_span.record("execute_path", "sql_cursor_declare");
@@ -1610,13 +1563,7 @@ impl CoreGatewayConnection {
                 self.encode_response_to_writer(response, writer).await?;
                 command_span.record("outcome", "sql_cursor_fetch");
                 command_span.record("execute_path", "sql_cursor_fetch");
-                finish_command_metrics(
-                    &self.metrics,
-                    labels,
-                    started_at,
-                    "sql_cursor_fetch",
-                    0,
-                );
+                finish_command_metrics(&self.metrics, labels, started_at, "sql_cursor_fetch", 0);
                 Ok(())
             }
             NamedCursorSql::Close { name } => {
@@ -1636,19 +1583,11 @@ impl CoreGatewayConnection {
                     return Ok(());
                 }
                 self.metrics.record_portal_resume("sql_cursor_close");
-                let response = GatewayResponse::CommandComplete {
-                    tag: "CLOSE CURSOR".into(),
-                };
+                let response = GatewayResponse::CommandComplete { tag: "CLOSE CURSOR".into() };
                 self.encode_response_to_writer(response, writer).await?;
                 command_span.record("outcome", "sql_cursor_close");
                 command_span.record("execute_path", "sql_cursor_close");
-                finish_command_metrics(
-                    &self.metrics,
-                    labels,
-                    started_at,
-                    "sql_cursor_close",
-                    0,
-                );
+                finish_command_metrics(&self.metrics, labels, started_at, "sql_cursor_close", 0);
                 Ok(())
             }
             NamedCursorSql::Unsupported { verb } => {
@@ -1723,11 +1662,18 @@ enum NamedCursorSql {
         /// until CLOSE/session end. **Not** backend server-side WITH HOLD.
         with_hold: bool,
     },
-    Fetch { name: String, count: usize },
-    Close { name: String },
+    Fetch {
+        name: String,
+        count: usize,
+    },
+    Close {
+        name: String,
+    },
     /// MOVE / FETCH ABSOLUTE|RELATIVE|BACKWARD etc. — not supported on process-local
     /// forward-only RowStream hold (honest fail-closed).
-    Unsupported { verb: String },
+    Unsupported {
+        verb: String,
+    },
 }
 
 /// Parse `DECLARE name [BINARY] [INSENSITIVE] [NO] SCROLL CURSOR [WITH HOLD] FOR <select>`
@@ -1752,10 +1698,7 @@ fn parse_named_cursor_sql(sql: &str) -> Option<NamedCursorSql> {
             .split_whitespace()
             .find(|t| {
                 let u = t.to_ascii_uppercase();
-                !matches!(
-                    u.as_str(),
-                    "BINARY" | "INSENSITIVE" | "NO" | "SCROLL" | "ASENSITIVE"
-                )
+                !matches!(u.as_str(), "BINARY" | "INSENSITIVE" | "NO" | "SCROLL" | "ASENSITIVE")
             })?
             .trim_matches('"')
             .to_string();
@@ -1769,16 +1712,10 @@ fn parse_named_cursor_sql(sql: &str) -> Option<NamedCursorSql> {
         // BETWEEN cursor keyword and FOR: optional WITH HOLD / WITHOUT HOLD.
         let mid = &upper[cursor_pos..for_pos];
         let with_hold = mid.contains(" WITH HOLD");
-        return Some(NamedCursorSql::Declare {
-            name,
-            select_sql,
-            with_hold,
-        });
+        return Some(NamedCursorSql::Declare { name, select_sql, with_hold });
     }
     if upper.starts_with("MOVE ") {
-        return Some(NamedCursorSql::Unsupported {
-            verb: "MOVE".into(),
-        });
+        return Some(NamedCursorSql::Unsupported { verb: "MOVE".into() });
     }
     if upper.starts_with("FETCH ") {
         // FETCH [FORWARD] [n|ALL] [FROM|IN] name
@@ -1801,9 +1738,7 @@ fn parse_named_cursor_sql(sql: &str) -> Option<NamedCursorSql> {
             {
                 // fall through as FORWARD 1
             } else if first != "NEXT" {
-                return Some(NamedCursorSql::Unsupported {
-                    verb: format!("FETCH {first}"),
-                });
+                return Some(NamedCursorSql::Unsupported { verb: format!("FETCH {first}") });
             } else {
                 return Some(NamedCursorSql::Unsupported {
                     verb: "FETCH NEXT (unsupported form)".into(),
@@ -1827,8 +1762,7 @@ fn parse_named_cursor_sql(sql: &str) -> Option<NamedCursorSql> {
             idx = 1;
         }
         if idx < tokens.len()
-            && (tokens[idx].eq_ignore_ascii_case("FROM")
-                || tokens[idx].eq_ignore_ascii_case("IN"))
+            && (tokens[idx].eq_ignore_ascii_case("FROM") || tokens[idx].eq_ignore_ascii_case("IN"))
         {
             idx += 1;
         }
@@ -1960,15 +1894,8 @@ pub async fn handle_gateway_frame(
             GatewayResponse::Wire { packets: wire } => packets.extend(wire),
             GatewayResponse::ResultSet { columns, rows } => {
                 let mut writer = CollectingWriter::new();
-                write_resultset_windowed(
-                    frontend,
-                    session,
-                    columns,
-                    rows,
-                    256,
-                    &mut writer,
-                )
-                .await?;
+                write_resultset_windowed(frontend, session, columns, rows, 256, &mut writer)
+                    .await?;
                 packets.extend(writer.into_packets());
             }
             other => packets.extend(frontend.encode(other, session)?),
@@ -2132,8 +2059,7 @@ impl CoreGatewayListenerPlan {
         )?;
         let plugin_config = build_plugin_config(config, &service.plugin_policies)?;
         let auth_user = resolve_auth_user(config, listener.auth_policy.as_deref())?;
-        let translation_policy =
-            resolve_translation_policy(config, listener, service)?;
+        let translation_policy = resolve_translation_policy(config, listener, service)?;
         let security = gateway_core::LocalPdp::from_config(&config.security);
         let mut stream_mode = ExecuteMode::from_streaming_config(
             config.security.streaming.window_rows,
@@ -2284,9 +2210,13 @@ fn resolve_auth_user(
     let Some(name) = auth_policy_name else {
         return Ok(None);
     };
-    let policy = config.auth_policies.iter().find(|policy| policy.name == name).ok_or_else(|| {
-        GatewayError::Configuration(format!("listener references missing auth policy '{}'", name))
-    })?;
+    let policy =
+        config.auth_policies.iter().find(|policy| policy.name == name).ok_or_else(|| {
+            GatewayError::Configuration(format!(
+                "listener references missing auth policy '{}'",
+                name
+            ))
+        })?;
     let kind = policy.kind.to_ascii_lowercase();
     if kind != "static" {
         return Err(GatewayError::Configuration(format!(
@@ -2309,14 +2239,13 @@ fn build_plugin_config(
     let mut circuit_break = Vec::new();
 
     for name in policy_names {
-        let policy = config.plugin_policies.iter().find(|policy| policy.name == *name).ok_or_else(
-            || {
+        let policy =
+            config.plugin_policies.iter().find(|policy| policy.name == *name).ok_or_else(|| {
                 GatewayError::Configuration(format!(
                     "service references missing plugin policy '{}'",
                     name
                 ))
-            },
-        )?;
+            })?;
 
         let kind = normalize_policy_kind(&policy.kind);
         match kind.as_str() {
@@ -2408,11 +2337,7 @@ impl CoreRoutePolicy {
             CoreRoutePolicyKind::First
         };
 
-        Ok(Self {
-            endpoints,
-            kind,
-            dialect: Arc::from(runtime_dialect_parser(backend_protocol)),
-        })
+        Ok(Self { endpoints, kind, dialect: Arc::from(runtime_dialect_parser(backend_protocol)) })
     }
 
     fn select_initial_endpoint(&self) -> GatewayResult<EndpointConfig> {
@@ -2474,16 +2399,12 @@ impl CoreRoutePolicy {
     }
 
     fn endpoint_by_name(&self, name: &str) -> GatewayResult<EndpointConfig> {
-        self.endpoints
-            .iter()
-            .find(|endpoint| endpoint.name == name)
-            .cloned()
-            .ok_or_else(|| {
-                GatewayError::Configuration(format!(
-                    "route policy references missing endpoint '{}'",
-                    name
-                ))
-            })
+        self.endpoints.iter().find(|endpoint| endpoint.name == name).cloned().ok_or_else(|| {
+            GatewayError::Configuration(format!(
+                "route policy references missing endpoint '{}'",
+                name
+            ))
+        })
     }
 
     fn select_from_balancer(
@@ -2646,7 +2567,10 @@ fn build_backend_connector(
 
 #[cfg(test)]
 mod tests {
-    use gateway_core::{write_resultset_windowed, CollectingWriter, Column as GatewayColumn, GatewayCommand, GatewayValue};
+    use gateway_core::{
+        write_resultset_windowed, CollectingWriter, Column as GatewayColumn, GatewayCommand,
+        GatewayValue,
+    };
     use mysql_protocol::{
         mysql_const::{COM_INIT_DB, COM_PING, COM_QUERY, COM_QUIT},
         server::codec::ok_packet,
@@ -2731,7 +2655,10 @@ mod tests {
 
     #[tokio::test]
     async fn security_deny_returns_protocol_error_without_backend_execute() {
-        use gateway_core::{write_resultset_windowed, CollectingWriter, LocalPdp, SecurityPolicyConfig, SecurityRuleConfig};
+        use gateway_core::{
+            write_resultset_windowed, CollectingWriter, LocalPdp, SecurityPolicyConfig,
+            SecurityRuleConfig,
+        };
 
         let mut security = SecurityPolicyConfig::default();
         security.enabled = true;
@@ -2807,10 +2734,7 @@ mod tests {
             .unwrap();
         assert!(packets[0].windows(7).any(|field| field == b"C0A000\0"));
 
-        let recovery = connection
-            .handle_frame(&encode_query_message("select 1"))
-            .await
-            .unwrap();
+        let recovery = connection.handle_frame(&encode_query_message("select 1")).await.unwrap();
         assert!(recovery.iter().any(|packet| packet.first() == Some(&b'Z')));
     }
 
@@ -2821,12 +2745,8 @@ mod tests {
             Box::new(PostgreSqlFrontendProtocol::new("14.0".into())),
             Arc::new(StaticBackendConnector {
                 protocol: ProtocolKind::PostgreSql,
-                expected_command: GatewayCommand::ClientWire {
-                    packets: vec![ready.clone()],
-                },
-                response: GatewayResponse::Wire {
-                    packets: vec![ready],
-                },
+                expected_command: GatewayCommand::ClientWire { packets: vec![ready.clone()] },
+                response: GatewayResponse::Wire { packets: vec![ready] },
             }),
             SessionState::default(),
         );
@@ -2909,9 +2829,9 @@ mod tests {
                 username: "root".into(),
                 password: "backend-secret".into(),
                 weight: 1,
-            ssl_mode: Default::default(),
-            ssl_ca_file: None,
-            ssl_accept_invalid_certs: true,
+                ssl_mode: Default::default(),
+                ssl_ca_file: None,
+                ssl_accept_invalid_certs: true,
             }],
             ..GatewayConfig::default()
         }
@@ -2930,9 +2850,9 @@ mod tests {
             username: "root".into(),
             password: "backend-secret".into(),
             weight: 1,
-        ssl_mode: Default::default(),
-        ssl_ca_file: None,
-        ssl_accept_invalid_certs: true,
+            ssl_mode: Default::default(),
+            ssl_ca_file: None,
+            ssl_accept_invalid_certs: true,
         });
         config.route_policies = vec![gateway_core::RoutePolicyConfig {
             name: "orders-balance".into(),
@@ -2954,9 +2874,9 @@ mod tests {
             username: "root".into(),
             password: "backend-secret".into(),
             weight: 1,
-        ssl_mode: Default::default(),
-        ssl_ca_file: None,
-        ssl_accept_invalid_certs: true,
+            ssl_mode: Default::default(),
+            ssl_ca_file: None,
+            ssl_accept_invalid_certs: true,
         });
         config.route_policies = vec![gateway_core::RoutePolicyConfig {
             name: "orders-read-write".into(),
@@ -3190,32 +3110,21 @@ mod tests {
             ..SessionState::default()
         };
 
-        let plan = listener.route_policy.plan_command(
-
-
-            &GatewayCommand::Query { sql: "select * from orders".into() },
-
-
-            &session,
-
-
-        ).unwrap();
-
+        let plan = listener
+            .route_policy
+            .plan_command(&GatewayCommand::Query { sql: "select * from orders".into() }, &session)
+            .unwrap();
 
         apply_route_plan(&plan, &mut session).unwrap();
         assert_eq!(session.backend_endpoint, Some("orders-replica".into()));
 
-        let plan = listener.route_policy.plan_command(
-
-
-            &GatewayCommand::Query { sql: "insert into orders values (1)".into() },
-
-
-            &session,
-
-
-        ).unwrap();
-
+        let plan = listener
+            .route_policy
+            .plan_command(
+                &GatewayCommand::Query { sql: "insert into orders values (1)".into() },
+                &session,
+            )
+            .unwrap();
 
         apply_route_plan(&plan, &mut session).unwrap();
         assert_eq!(session.backend_endpoint, Some("orders-primary".into()));
@@ -3241,17 +3150,10 @@ mod tests {
             ..SessionState::default()
         };
 
-        let plan = listener.route_policy.plan_command(
-
-
-            &GatewayCommand::Query { sql: "select * from orders".into() },
-
-
-            &session,
-
-
-        ).unwrap();
-
+        let plan = listener
+            .route_policy
+            .plan_command(&GatewayCommand::Query { sql: "select * from orders".into() }, &session)
+            .unwrap();
 
         apply_route_plan(&plan, &mut session).unwrap();
 
@@ -3270,17 +3172,10 @@ mod tests {
             ..SessionState::default()
         };
 
-        let plan = listener.route_policy.plan_command(
-
-
-            &GatewayCommand::Query { sql: "select * from orders".into() },
-
-
-            &session,
-
-
-        ).unwrap();
-
+        let plan = listener
+            .route_policy
+            .plan_command(&GatewayCommand::Query { sql: "select * from orders".into() }, &session)
+            .unwrap();
 
         apply_route_plan(&plan, &mut session).unwrap();
 
@@ -3300,17 +3195,10 @@ mod tests {
             ..SessionState::default()
         };
 
-        let plan = listener.route_policy.plan_command(
-
-
-            &GatewayCommand::Query { sql: "select * from orders".into() },
-
-
-            &session,
-
-
-        ).unwrap();
-
+        let plan = listener
+            .route_policy
+            .plan_command(&GatewayCommand::Query { sql: "select * from orders".into() }, &session)
+            .unwrap();
 
         apply_route_plan(&plan, &mut session).unwrap();
 
@@ -3343,8 +3231,8 @@ mod tests {
     #[test]
     fn apply_reject_plan_returns_configuration_error() {
         let mut session = SessionState::default();
-        let err = apply_route_plan(&RoutePlan::reject("no healthy endpoint"), &mut session)
-            .unwrap_err();
+        let err =
+            apply_route_plan(&RoutePlan::reject("no healthy endpoint"), &mut session).unwrap_err();
         assert!(matches!(
             err,
             GatewayError::Configuration(message) if message.contains("no healthy")
@@ -3438,10 +3326,7 @@ mod tests {
                     sql: "SELECT \"id\" FROM t LIMIT 2 OFFSET 1".into(),
                 },
                 response: GatewayResponse::ResultSet {
-                    columns: vec![GatewayColumn {
-                        name: "id".into(),
-                        data_type: "int4".into(),
-                    }],
+                    columns: vec![GatewayColumn { name: "id".into(), data_type: "int4".into() }],
                     rows: vec![vec![GatewayValue::Integer(7)]],
                 },
             }),
@@ -3474,9 +3359,7 @@ mod tests {
             )),
             Arc::new(StaticBackendConnector {
                 protocol: ProtocolKind::PostgreSql,
-                expected_command: GatewayCommand::Query {
-                    sql: "should not run".into(),
-                },
+                expected_command: GatewayCommand::Query { sql: "should not run".into() },
                 response: GatewayResponse::Pong,
             }),
             SessionState::default(),
@@ -3500,11 +3383,7 @@ mod tests {
         match parse_named_cursor_sql(
             "DECLARE c1 CURSOR WITH HOLD FOR SELECT id, name FROM stream_smoke ORDER BY id",
         ) {
-            Some(NamedCursorSql::Declare {
-                name,
-                select_sql,
-                with_hold,
-            }) => {
+            Some(NamedCursorSql::Declare { name, select_sql, with_hold }) => {
                 assert_eq!(name, "c1");
                 assert!(select_sql.to_ascii_uppercase().starts_with("SELECT"));
                 assert!(with_hold);
@@ -3512,11 +3391,7 @@ mod tests {
             other => panic!("declare: {other:?}"),
         }
         match parse_named_cursor_sql("DECLARE c2 CURSOR FOR SELECT 1") {
-            Some(NamedCursorSql::Declare {
-                name,
-                with_hold,
-                ..
-            }) => {
+            Some(NamedCursorSql::Declare { name, with_hold, .. }) => {
                 assert_eq!(name, "c2");
                 assert!(!with_hold);
             }
@@ -3552,9 +3427,7 @@ mod tests {
         assert!(parse_named_cursor_sql("SELECT 1").is_none());
         // WITH HOLD is accepted in text but still process-local implementation.
         match parse_named_cursor_sql("DECLARE x NO SCROLL CURSOR WITH HOLD FOR SELECT 1") {
-            Some(NamedCursorSql::Declare {
-                name, with_hold, ..
-            }) => {
+            Some(NamedCursorSql::Declare { name, with_hold, .. }) => {
                 assert_eq!(name, "x");
                 assert!(with_hold);
             }

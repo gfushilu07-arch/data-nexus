@@ -22,11 +22,7 @@ use futures::{SinkExt, StreamExt};
 use gateway_core::EndpointConfig;
 use mysql_parser::ast::*;
 use mysql_protocol::{
-    client::{
-        codec::ResultsetStream,
-        conn::ClientConn,
-        stmt::Stmt,
-    },
+    client::{codec::ResultsetStream, conn::ClientConn, stmt::Stmt},
     column::{decode_column, Column, ColumnInfo},
     err::ProtocolError,
     mysql_const::*,
@@ -50,7 +46,8 @@ use super::{
 use crate::{
     frontend::mysql::{MySqlCommandService, ReqContext, RespContext},
     transaction_fsm::{
-        apply_handshake_to_fsm, check_get_conn, query_rewrite, route, route_sharding, TransEventName,
+        apply_handshake_to_fsm, check_get_conn, query_rewrite, route, route_sharding,
+        TransEventName,
     },
 };
 
@@ -120,7 +117,13 @@ where
         client_conn: &mut PoolConn<ClientConn>,
         payload: &[u8],
     ) -> Result<(), Error> {
-        let db = std::str::from_utf8(payload).map_err(|e| Error::new(ErrorKind::Protocol(mysql_protocol::err::ProtocolError::from(std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string())))))?.trim_matches(char::from(0));
+        let db = std::str::from_utf8(payload)
+            .map_err(|e| {
+                Error::new(ErrorKind::Protocol(mysql_protocol::err::ProtocolError::from(
+                    std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()),
+                )))
+            })?
+            .trim_matches(char::from(0));
 
         req.fsm.set_db(Some(db.to_string()));
 
@@ -154,7 +157,13 @@ where
         let sess = req.framed.codec_mut().get_session();
 
         apply_handshake_to_fsm(&mut req.fsm, sess);
-        let raw_sql = std::str::from_utf8(payload).map_err(|e| Error::new(ErrorKind::Protocol(mysql_protocol::err::ProtocolError::from(std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string())))))?.trim_matches(char::from(0));
+        let raw_sql = std::str::from_utf8(payload)
+            .map_err(|e| {
+                Error::new(ErrorKind::Protocol(mysql_protocol::err::ProtocolError::from(
+                    std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()),
+                )))
+            })?
+            .trim_matches(char::from(0));
         let (_, input_typ, rewrite_outputs) = Self::query_rewrite(req, raw_sql)?;
         req.rewrite_outputs = rewrite_outputs;
 
@@ -184,8 +193,7 @@ where
             is_get_conn
         );
 
-        let (mut stmts, shard_conns) =
-            Executor::shard_prepare_executor(
+        let (mut stmts, shard_conns) = Executor::shard_prepare_executor(
             req,
             req.fsm.session_db().map(|s| s.to_owned()),
             req.fsm.session_charset().to_owned(),
@@ -308,7 +316,13 @@ where
         let sess = req.framed.codec_mut().get_session();
 
         apply_handshake_to_fsm(&mut req.fsm, sess);
-        let raw_sql = std::str::from_utf8(payload).map_err(|e| Error::new(ErrorKind::Protocol(mysql_protocol::err::ProtocolError::from(std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string())))))?.trim_matches(char::from(0));
+        let raw_sql = std::str::from_utf8(payload)
+            .map_err(|e| {
+                Error::new(ErrorKind::Protocol(mysql_protocol::err::ProtocolError::from(
+                    std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()),
+                )))
+            })?
+            .trim_matches(char::from(0));
         let (is_get_conn, input_typ, rewrite_outputs) = Self::query_rewrite(req, raw_sql)?;
         req.rewrite_outputs = rewrite_outputs;
 
@@ -367,7 +381,13 @@ where
     ) -> Result<PoolConn<ClientConn>, Error> {
         let sess = req.framed.codec_mut().get_session();
         apply_handshake_to_fsm(&mut req.fsm, sess);
-        let sql = std::str::from_utf8(payload).map_err(|e| Error::new(ErrorKind::Protocol(mysql_protocol::err::ProtocolError::from(std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string())))))?.trim_matches(char::from(0));
+        let sql = std::str::from_utf8(payload)
+            .map_err(|e| {
+                Error::new(ErrorKind::Protocol(mysql_protocol::err::ProtocolError::from(
+                    std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()),
+                )))
+            })?
+            .trim_matches(char::from(0));
         let (is_get_conn, input_typ, _rewrite_outputs) = Self::query_rewrite(req, sql)?;
 
         if is_get_conn {
@@ -719,7 +739,13 @@ where
 {
     async fn init_db(cx: &mut ReqContext<T, C>, payload: &[u8]) -> Result<RespContext, Error> {
         let now = Instant::now();
-        let db = std::str::from_utf8(payload).map_err(|e| Error::new(ErrorKind::Protocol(mysql_protocol::err::ProtocolError::from(std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string())))))?.trim_matches(char::from(0));
+        let db = std::str::from_utf8(payload)
+            .map_err(|e| {
+                Error::new(ErrorKind::Protocol(mysql_protocol::err::ProtocolError::from(
+                    std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()),
+                )))
+            })?
+            .trim_matches(char::from(0));
         cx.framed.codec_mut().get_session().set_db(db.to_string());
 
         if cx.rewriter.is_some() {
@@ -790,7 +816,13 @@ where
             return Ok(RespContext { ep: None, duration: now.elapsed() });
         }
 
-        let sql = std::str::from_utf8(payload).map_err(|e| Error::new(ErrorKind::Protocol(mysql_protocol::err::ProtocolError::from(std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string())))))?.trim_matches(char::from(0));
+        let sql = std::str::from_utf8(payload)
+            .map_err(|e| {
+                Error::new(ErrorKind::Protocol(mysql_protocol::err::ProtocolError::from(
+                    std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()),
+                )))
+            })?
+            .trim_matches(char::from(0));
 
         let mut client_conn =
             Self::fsm_trigger(cx, TransEventName::PrepareEvent, RouteInputTyp::Statement, sql)

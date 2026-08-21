@@ -16,9 +16,7 @@
 //! `backend_identity` returns `(username, Zeroizing<String>)` so the password
 //! copy is wiped when the caller drops it. Still not mlock / secure heap.
 
-use crate::state_crypto::{
-    decode_maybe_encrypted, encrypt_blob, parse_encrypt_key,
-};
+use crate::state_crypto::{decode_maybe_encrypted, encrypt_blob, parse_encrypt_key};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::{self, File, OpenOptions};
@@ -37,9 +35,7 @@ static GLOBAL: OnceLock<Arc<VaultStore>> = OnceLock::new();
 const VAULT_ENC_MAGIC: &str = "DNVAULT1:";
 
 pub fn global_vault_store() -> Arc<VaultStore> {
-    GLOBAL
-        .get_or_init(|| Arc::new(VaultStore::new()))
-        .clone()
+    GLOBAL.get_or_init(|| Arc::new(VaultStore::new())).clone()
 }
 
 /// H05: install / reconfigure vault store.
@@ -56,9 +52,7 @@ pub fn install_vault_store(
         "memory" | "" => Arc::new(VaultStore::new()),
         "file" => Arc::new(VaultStore::with_file(PathBuf::from(path), key)?),
         other => {
-            return Err(format!(
-                "vault store backend '{other}' not supported (use memory or file)"
-            ))
+            return Err(format!("vault store backend '{other}' not supported (use memory or file)"))
         }
     };
     if let Some(existing) = GLOBAL.get() {
@@ -257,12 +251,8 @@ impl VaultStore {
         let mut max_seq = 1u64;
         if key.is_some() && !file.sealed_leases.is_empty() {
             for mut rec in file.sealed_leases {
-                if let Some(n) = rec
-                    .lease
-                    .lease_id
-                    .rsplit('-')
-                    .next()
-                    .and_then(|s| s.parse::<u64>().ok())
+                if let Some(n) =
+                    rec.lease.lease_id.rsplit('-').next().and_then(|s| s.parse::<u64>().ok())
                 {
                     max_seq = max_seq.max(n + 1);
                 }
@@ -280,11 +270,8 @@ impl VaultStore {
             }
         } else {
             for lease in file.leases {
-                if let Some(n) = lease
-                    .lease_id
-                    .rsplit('-')
-                    .next()
-                    .and_then(|s| s.parse::<u64>().ok())
+                if let Some(n) =
+                    lease.lease_id.rsplit('-').next().and_then(|s| s.parse::<u64>().ok())
                 {
                     max_seq = max_seq.max(n + 1);
                 }
@@ -346,11 +333,7 @@ impl VaultStore {
             let mut leases: Vec<VaultLease> =
                 leases_map.values().map(|r| r.lease.clone()).collect();
             leases.sort_by(|a, b| b.issued_at_unix_ms.cmp(&a.issued_at_unix_ms));
-            let file = VaultFile {
-                projects: projects.to_vec(),
-                leases,
-                sealed_leases: Vec::new(),
-            };
+            let file = VaultFile { projects: projects.to_vec(), leases, sealed_leases: Vec::new() };
             serde_json::to_vec_pretty(&file).map_err(|e| e.to_string())?
         };
         let tmp = path.with_extension("json.tmp");
@@ -375,11 +358,7 @@ impl VaultStore {
         }
         for (i, svc) in services.iter().enumerate() {
             guard.push(ProjectEnv {
-                name: if i == 0 {
-                    "default".into()
-                } else {
-                    svc.clone()
-                },
+                name: if i == 0 { "default".into() } else { svc.clone() },
                 environment: "dev".into(),
                 service: svc.clone(),
                 description: format!("auto project for service {svc}"),
@@ -399,11 +378,7 @@ impl VaultStore {
         password: &str,
     ) -> VaultLease {
         let now = now_ms();
-        let id = format!(
-            "lease-{}-{}",
-            now,
-            self.seq.fetch_add(1, Ordering::Relaxed)
-        );
+        let id = format!("lease-{}-{}", now, self.seq.fetch_add(1, Ordering::Relaxed));
         let token = format!("pvt-{}", simple_nonce(now));
         let lease = VaultLease {
             lease_id: id.clone(),
@@ -458,11 +433,7 @@ impl VaultStore {
     }
 
     pub fn get_lease(&self, lease_id: &str) -> Option<VaultLease> {
-        self.leases
-            .lock()
-            .ok()?
-            .get(lease_id)
-            .map(|r| r.lease.clone())
+        self.leases.lock().ok()?.get(lease_id).map(|r| r.lease.clone())
     }
 
     pub fn list_leases(&self, limit: usize) -> Vec<VaultLease> {
@@ -485,9 +456,7 @@ impl VaultStore {
     pub fn revoke(&self, lease_id: &str, revoked_by: Option<&str>) -> Result<VaultLease, String> {
         let now = now_ms();
         let mut guard = self.leases.lock().expect("leases");
-        let rec = guard
-            .get_mut(lease_id)
-            .ok_or_else(|| format!("lease '{lease_id}' not found"))?;
+        let rec = guard.get_mut(lease_id).ok_or_else(|| format!("lease '{lease_id}' not found"))?;
         if rec.lease.revoked {
             return Err(format!("lease '{lease_id}' already revoked"));
         }
@@ -507,9 +476,7 @@ impl VaultStore {
     pub fn renew(&self, lease_id: &str, ttl_secs: u64) -> Result<VaultLease, String> {
         let now = now_ms();
         let mut guard = self.leases.lock().expect("leases");
-        let rec = guard
-            .get_mut(lease_id)
-            .ok_or_else(|| format!("lease '{lease_id}' not found"))?;
+        let rec = guard.get_mut(lease_id).ok_or_else(|| format!("lease '{lease_id}' not found"))?;
         if rec.lease.revoked {
             return Err(format!("lease '{lease_id}' is revoked"));
         }
@@ -550,10 +517,7 @@ impl VaultStore {
         if rec.backend_password.is_empty() {
             return None;
         }
-        Some((
-            rec.backend_username.clone(),
-            Zeroizing::new(rec.backend_password.clone()),
-        ))
+        Some((rec.backend_username.clone(), Zeroizing::new(rec.backend_password.clone())))
     }
 }
 
@@ -579,10 +543,7 @@ fn open_state_lock(path: &std::path::Path) -> Result<File, String> {
 }
 
 fn now_ms() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_millis() as u64)
-        .unwrap_or(0)
+    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
 }
 
 fn simple_nonce(seed: u64) -> u64 {
@@ -647,9 +608,7 @@ mod tests {
         let renewed = store.renew(&lease.lease_id, 1200).unwrap();
         assert_ne!(renewed.access_token, old_token);
         assert!(store.get_valid_lease_by_token(&old_token).is_none());
-        assert!(store
-            .get_valid_lease_by_token(&renewed.access_token)
-            .is_some());
+        assert!(store.get_valid_lease_by_token(&renewed.access_token).is_some());
         store.revoke(&lease.lease_id, None).unwrap();
         assert!(store.renew(&lease.lease_id, 60).is_err());
     }
@@ -723,18 +682,15 @@ mod tests {
         assert!(!raw.contains("secret-pass"));
 
         let store2 = VaultStore::with_file(path.clone(), key).unwrap();
-        let id = store2
-            .backend_identity(&lease.lease_id)
-            .expect("restored secret");
+        let id = store2.backend_identity(&lease.lease_id).expect("restored secret");
         assert_eq!(id.0, "root");
         assert_eq!(id.1.as_str(), "secret-pass");
 
         // Wrong / missing key must not silently load secrets.
         assert!(VaultStore::with_file(path.clone(), None).is_err());
-        let bad = parse_encrypt_key(
-            "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-        )
-        .unwrap();
+        let bad =
+            parse_encrypt_key("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+                .unwrap();
         assert!(VaultStore::with_file(path, bad).is_err());
         let _ = std::fs::remove_dir_all(&dir);
     }

@@ -193,9 +193,7 @@ impl RemotePdpClient {
                 if let Some(token) = &token {
                     builder = builder.bearer_auth(token);
                 }
-                let response = builder
-                    .send()
-                    .map_err(|e| format!("remote PDP transport: {e}"))?;
+                let response = builder.send().map_err(|e| format!("remote PDP transport: {e}"))?;
                 let status = response.status();
                 if !status.is_success() {
                     let body = response.text().unwrap_or_default();
@@ -221,21 +219,11 @@ mod tests {
     #[test]
     fn f31_fixed_allow() {
         let c = RemotePdpClient::fixed_for_test(
-            RemotePdpResponse {
-                allow: true,
-                rule: None,
-                message: None,
-            },
+            RemotePdpResponse { allow: true, rule: None, message: None },
             true,
         );
-        c.authorize_tables(
-            "alice",
-            "orders",
-            StatementAction::Select,
-            &["employees".into()],
-            None,
-        )
-        .unwrap();
+        c.authorize_tables("alice", "orders", StatementAction::Select, &["employees".into()], None)
+            .unwrap();
     }
 
     #[test]
@@ -264,9 +252,8 @@ mod tests {
     #[test]
     fn f31_transport_error_surfaces() {
         let c = RemotePdpClient::transport_error_for_test("timeout", true);
-        let err = c
-            .authorize_tables("alice", "orders", StatementAction::Select, &[], None)
-            .unwrap_err();
+        let err =
+            c.authorize_tables("alice", "orders", StatementAction::Select, &[], None).unwrap_err();
         assert!(err.contains("timeout"), "{err}");
     }
 }

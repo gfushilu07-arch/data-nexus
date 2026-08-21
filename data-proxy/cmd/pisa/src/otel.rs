@@ -145,18 +145,13 @@ pub fn resolve_sampler() -> (Sampler, String) {
     match name.as_str() {
         "always_on" => (Sampler::AlwaysOn, "always_on".into()),
         "always_off" => (Sampler::AlwaysOff, "always_off".into()),
-        "traceidratio" => (
-            Sampler::TraceIdRatioBased(ratio),
-            format!("traceidratio({ratio})"),
-        ),
-        "parentbased_always_on" => (
-            Sampler::ParentBased(Box::new(Sampler::AlwaysOn)),
-            "parentbased_always_on".into(),
-        ),
-        "parentbased_always_off" => (
-            Sampler::ParentBased(Box::new(Sampler::AlwaysOff)),
-            "parentbased_always_off".into(),
-        ),
+        "traceidratio" => (Sampler::TraceIdRatioBased(ratio), format!("traceidratio({ratio})")),
+        "parentbased_always_on" => {
+            (Sampler::ParentBased(Box::new(Sampler::AlwaysOn)), "parentbased_always_on".into())
+        }
+        "parentbased_always_off" => {
+            (Sampler::ParentBased(Box::new(Sampler::AlwaysOff)), "parentbased_always_off".into())
+        }
         "parentbased_traceidratio" | _ => (
             Sampler::ParentBased(Box::new(Sampler::TraceIdRatioBased(ratio))),
             format!("parentbased_traceidratio({ratio})"),
@@ -173,10 +168,8 @@ fn install_otlp(
     let (sampler, sampler_label) = resolve_sampler();
 
     // --- traces ---
-    let span_exporter = opentelemetry_otlp::SpanExporter::builder()
-        .with_tonic()
-        .with_endpoint(endpoint)
-        .build()?;
+    let span_exporter =
+        opentelemetry_otlp::SpanExporter::builder().with_tonic().with_endpoint(endpoint).build()?;
     let tracer_provider = opentelemetry_sdk::trace::TracerProvider::builder()
         .with_batch_exporter(span_exporter, runtime::Tokio)
         .with_sampler(sampler)
@@ -194,17 +187,13 @@ fn install_otlp(
         let reader = PeriodicReader::builder(metric_exporter, runtime::Tokio)
             .with_interval(Duration::from_secs(15))
             .build();
-        let provider = SdkMeterProvider::builder()
-            .with_reader(reader)
-            .with_resource(resource.clone())
-            .build();
+        let provider =
+            SdkMeterProvider::builder().with_reader(reader).with_resource(resource.clone()).build();
         global::set_meter_provider(provider.clone());
         // Emit a process-uptime counter so collectors see activity immediately.
         let meter = global::meter("data-nexus");
-        let counter = meter
-            .u64_counter("data_nexus.otel.up")
-            .with_description("OTel metrics active")
-            .build();
+        let counter =
+            meter.u64_counter("data_nexus.otel.up").with_description("OTel metrics active").build();
         counter.add(1, &[]);
         Some(provider)
     } else {
@@ -233,22 +222,15 @@ fn install_otlp(
         fmt::layer().with_target(true).boxed()
     };
 
-    let registry = tracing_subscriber::registry()
-        .with(filter)
-        .with(fmt_layer)
-        .with(otel_trace_layer);
+    let registry =
+        tracing_subscriber::registry().with(filter).with(fmt_layer).with(otel_trace_layer);
     if let Some(log_layer) = otel_log_layer {
         registry.with(log_layer).init();
     } else {
         registry.init();
     }
 
-    Ok(OtelGuard {
-        tracer_provider,
-        meter_provider,
-        logger_provider,
-        sampler_label,
-    })
+    Ok(OtelGuard { tracer_provider, meter_provider, logger_provider, sampler_label })
 }
 
 #[cfg(test)]

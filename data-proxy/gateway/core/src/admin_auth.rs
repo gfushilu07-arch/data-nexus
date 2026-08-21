@@ -154,11 +154,7 @@ fn default_leeway_secs() -> u64 {
 }
 
 fn default_role_claim_paths() -> Vec<String> {
-    vec![
-        "roles".into(),
-        "groups".into(),
-        "realm_access.roles".into(),
-    ]
+    vec!["roles".into(), "groups".into(), "realm_access.roles".into()]
 }
 
 fn default_true() -> bool {
@@ -338,16 +334,14 @@ pub struct AdminAuthContext {
 }
 
 impl AdminAuthContext {
-    pub fn from_roles(subject: impl Into<String>, roles: Vec<AdminRole>, auth_method: &str) -> Self {
-        let permissions: Vec<_> = AdminAuthConfig::permissions_for_roles(&roles)
-            .into_iter()
-            .collect();
-        Self {
-            subject: subject.into(),
-            roles,
-            permissions,
-            auth_method: auth_method.to_owned(),
-        }
+    pub fn from_roles(
+        subject: impl Into<String>,
+        roles: Vec<AdminRole>,
+        auth_method: &str,
+    ) -> Self {
+        let permissions: Vec<_> =
+            AdminAuthConfig::permissions_for_roles(&roles).into_iter().collect();
+        Self { subject: subject.into(), roles, permissions, auth_method: auth_method.to_owned() }
     }
 
     pub fn allows(&self, permission: AdminPermission) -> bool {
@@ -401,9 +395,7 @@ pub fn required_permission(method: &str, path: &str) -> Option<AdminPermission> 
             Some(AdminPermission::PolicyWrite)
         }
         ("POST", "/admin/vault/leases/prune") => Some(AdminPermission::PolicyWrite),
-        ("POST", p)
-            if p.starts_with("/admin/tickets/") && p.ends_with("/revoke") =>
-        {
+        ("POST", p) if p.starts_with("/admin/tickets/") && p.ends_with("/revoke") => {
             Some(AdminPermission::PolicyWrite)
         }
         ("POST", "/admin/tickets/prune") => Some(AdminPermission::PolicyWrite),
@@ -463,10 +455,8 @@ mod tests {
     #[test]
     fn maps_bindings_and_unions_permissions() {
         let cfg = AdminAuthConfig::default();
-        let roles = cfg.map_claim_values(&[
-            "data-nexus-viewers".into(),
-            "data-nexus-operators".into(),
-        ]);
+        let roles =
+            cfg.map_claim_values(&["data-nexus-viewers".into(), "data-nexus-operators".into()]);
         assert!(roles.contains(&AdminRole::Viewer));
         assert!(roles.contains(&AdminRole::Operator));
         let perms = AdminAuthConfig::permissions_for_roles(&roles);

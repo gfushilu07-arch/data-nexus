@@ -7,8 +7,8 @@
 
 use gateway_core::{ObjectAccess, ObjectSet, StatementAction};
 use mysql_parser::ast::{
-    FromClause, InsertIdent, InsertStmt, Item, SelectStmt, SqlStmt, TableFactor, TableIdent,
-    TableRef, UpdateStmt, DeleteStmt, Value,
+    DeleteStmt, FromClause, InsertIdent, InsertStmt, Item, SelectStmt, SqlStmt, TableFactor,
+    TableIdent, TableRef, UpdateStmt, Value,
 };
 use mysql_parser::parser::Parser as MySqlAstParser;
 use sqlparser::ast::{
@@ -81,12 +81,7 @@ fn extract_with_sqlparser(sql: &str, mysql_dialect: bool) -> Option<ObjectSet> {
 fn walk_sqlparser_statement(stmt: &Statement, set: &mut ObjectSet) {
     match stmt {
         Statement::Query(q) => walk_query(q, StatementAction::Select, set),
-        Statement::Insert(Insert {
-            table_name,
-            columns,
-            source,
-            ..
-        }) => {
+        Statement::Insert(Insert { table_name, columns, source, .. }) => {
             let mut obj = object_from_name(table_name, StatementAction::Insert);
             for col in columns {
                 push_col(&mut obj.columns, col.value.clone());
@@ -96,19 +91,10 @@ fn walk_sqlparser_statement(stmt: &Statement, set: &mut ObjectSet) {
                 walk_query(query, StatementAction::Select, set);
             }
         }
-        Statement::Update {
-            table,
-            assignments,
-            from,
-            selection,
-            ..
-        } => {
+        Statement::Update { table, assignments, from, selection, .. } => {
             collect_table_with_joins(table, StatementAction::Update, set);
-            if let Some(last) = set
-                .objects
-                .iter_mut()
-                .rev()
-                .find(|o| o.op == StatementAction::Update)
+            if let Some(last) =
+                set.objects.iter_mut().rev().find(|o| o.op == StatementAction::Update)
             {
                 for assignment in assignments {
                     match &assignment.target {
@@ -138,17 +124,10 @@ fn walk_sqlparser_statement(stmt: &Statement, set: &mut ObjectSet) {
                 walk_expr_subqueries(sel, set);
             }
         }
-        Statement::Delete(Delete {
-            from,
-            using,
-            tables,
-            ..
-        }) => {
+        Statement::Delete(Delete { from, using, tables, .. }) => {
             // `from` may be FromTable enum — use visitor for relations + tables field.
-            let mut visitor = RelationCollector {
-                action: StatementAction::Delete,
-                objects: Vec::new(),
-            };
+            let mut visitor =
+                RelationCollector { action: StatementAction::Delete, objects: Vec::new() };
             let _ = stmt.visit(&mut visitor);
             for obj in visitor.objects {
                 push_object(set, obj);
@@ -180,10 +159,8 @@ fn walk_sqlparser_statement(stmt: &Statement, set: &mut ObjectSet) {
         }
         Statement::Truncate { table_names, .. } => {
             // TruncateTableTarget — fall back to visitor.
-            let mut visitor = RelationCollector {
-                action: StatementAction::Ddl,
-                objects: Vec::new(),
-            };
+            let mut visitor =
+                RelationCollector { action: StatementAction::Ddl, objects: Vec::new() };
             let _ = stmt.visit(&mut visitor);
             for obj in visitor.objects {
                 push_object(set, obj);
@@ -200,10 +177,7 @@ fn walk_sqlparser_statement(stmt: &Statement, set: &mut ObjectSet) {
         | Statement::ReleaseSavepoint { .. } => {}
         _ => {
             let action = StatementAction::Other;
-            let mut visitor = RelationCollector {
-                action,
-                objects: Vec::new(),
-            };
+            let mut visitor = RelationCollector { action, objects: Vec::new() };
             let _ = stmt.visit(&mut visitor);
             for obj in visitor.objects {
                 push_object(set, obj);
@@ -290,10 +264,7 @@ fn collect_table_with_joins(
                     walk_expr_subqueries(expr, set);
                 }
             }
-            sqlparser::ast::JoinOperator::AsOf {
-                match_condition,
-                constraint,
-            } => {
+            sqlparser::ast::JoinOperator::AsOf { match_condition, constraint } => {
                 walk_expr_subqueries(match_condition, set);
                 if let sqlparser::ast::JoinConstraint::On(expr) = constraint {
                     walk_expr_subqueries(expr, set);
@@ -312,9 +283,7 @@ fn collect_table_factor(factor: &SqlTableFactor, action: StatementAction, set: &
         SqlTableFactor::Derived { subquery, .. } => {
             walk_query(subquery, StatementAction::Select, set);
         }
-        SqlTableFactor::NestedJoin {
-            table_with_joins, ..
-        } => {
+        SqlTableFactor::NestedJoin { table_with_joins, .. } => {
             collect_table_with_joins(table_with_joins, action, set);
         }
         _ => {}
@@ -360,12 +329,7 @@ fn collect_expr_columns(expr: &Expr, columns: &mut Vec<String>) {
                 }
             }
         }
-        Expr::Case {
-            operand,
-            conditions,
-            results,
-            else_result,
-        } => {
+        Expr::Case { operand, conditions, results, else_result } => {
             if let Some(op) = operand {
                 collect_expr_columns(op, columns);
             }
@@ -438,12 +402,7 @@ fn walk_expr_subqueries(expr: &Expr, set: &mut ObjectSet) {
                 walk_query(q, StatementAction::Select, set);
             }
         }
-        Expr::Case {
-            operand,
-            conditions,
-            results,
-            else_result,
-        } => {
+        Expr::Case { operand, conditions, results, else_result } => {
             if let Some(op) = operand {
                 walk_expr_subqueries(op, set);
             }
@@ -475,8 +434,7 @@ impl Visitor for RelationCollector {
     type Break = ();
 
     fn pre_visit_relation(&mut self, relation: &ObjectName) -> ControlFlow<Self::Break> {
-        self.objects
-            .push(object_from_name(relation, self.action));
+        self.objects.push(object_from_name(relation, self.action));
         ControlFlow::Continue(())
     }
 }
@@ -662,8 +620,7 @@ fn walk_mysql_update(update: &UpdateStmt, set: &mut ObjectSet) {
 
 fn walk_mysql_delete(delete: &DeleteStmt, set: &mut ObjectSet) {
     if let Some(ident) = &delete.table_name {
-        set.objects
-            .push(object_from_mysql_ident(ident, StatementAction::Delete));
+        set.objects.push(object_from_mysql_ident(ident, StatementAction::Delete));
     }
     for r in &delete.table_refs {
         walk_mysql_table_ref(r, StatementAction::Delete, set);
@@ -688,8 +645,7 @@ fn walk_mysql_table_ref(table_ref: &TableRef, action: StatementAction, set: &mut
 fn walk_mysql_table_factor(factor: &TableFactor, action: StatementAction, set: &mut ObjectSet) {
     match factor {
         TableFactor::SingleTable(t) | TableFactor::SingleTableParens(t) => {
-            set.objects
-                .push(object_from_mysql_ident(&t.table_name, action));
+            set.objects.push(object_from_mysql_ident(&t.table_name, action));
         }
         TableFactor::DerivedTable(d) => {
             walk_mysql_select(&d.subquery, StatementAction::Select, set);
@@ -765,19 +721,12 @@ fn walk_mysql_expr_subqueries(expr: &mysql_parser::ast::Expr, set: &mut ObjectSe
         | E::CastExpr { expr, .. }
         | E::InSumExpr { expr, .. }
         | E::SetFuncSpecExpr(expr) => walk_mysql_expr_subqueries(expr, set),
-        E::BetweenExpr {
-            expr, left, right, ..
-        } => {
+        E::BetweenExpr { expr, left, right, .. } => {
             walk_mysql_expr_subqueries(expr, set);
             walk_mysql_expr_subqueries(left, set);
             walk_mysql_expr_subqueries(right, set);
         }
-        E::LikeExpr {
-            expr,
-            pattern_expr,
-            escape_expr,
-            ..
-        } => {
+        E::LikeExpr { expr, pattern_expr, escape_expr, .. } => {
             walk_mysql_expr_subqueries(expr, set);
             walk_mysql_expr_subqueries(pattern_expr, set);
             if let Some(esc) = escape_expr {
@@ -797,12 +746,7 @@ fn walk_mysql_expr_subqueries(expr: &mysql_parser::ast::Expr, set: &mut ObjectSe
                 walk_mysql_expr_subqueries(p, set);
             }
         }
-        E::CaseExpr {
-            expr,
-            when_exprs,
-            else_expr,
-            ..
-        } => {
+        E::CaseExpr { expr, when_exprs, else_expr, .. } => {
             if let Some(e) = expr.as_ref() {
                 walk_mysql_expr_subqueries(e, set);
             }
@@ -841,15 +785,14 @@ fn heuristic_object_set(sql: &str, action: StatementAction) -> ObjectSet {
     let mut set = ObjectSet::empty();
     for t in tables {
         let (schema, table) = split_schema_table(&t);
-        set.objects
-            .push(ObjectAccess::new(table, action).with_schema(schema));
+        set.objects.push(ObjectAccess::new(table, action).with_schema(schema));
     }
     let upper = sql.to_ascii_uppercase();
     // Heuristic only: sqlparser path already marks SelectItem::Wildcard / QualifiedWildcard.
     // Catch bare `SELECT *` and common `t.*` / `schema.t.*` forms when parse fails.
     let bare_star = upper.contains("SELECT *") || upper.contains("SELECT*");
-    let qualified_star = upper.contains(".*")
-        && (upper.contains("SELECT ") || upper.starts_with("SELECT"));
+    let qualified_star =
+        upper.contains(".*") && (upper.contains("SELECT ") || upper.starts_with("SELECT"));
     if bare_star || qualified_star {
         for obj in &mut set.objects {
             if obj.op == StatementAction::Select {
@@ -871,10 +814,7 @@ fn split_schema_table(name: &str) -> (Option<String>, String) {
 fn first_keyword(sql: &str) -> Option<String> {
     let sql = sql.trim_start();
     let upper = sql.to_ascii_uppercase();
-    upper
-        .split_whitespace()
-        .next()
-        .map(|t| t.trim_end_matches(';').to_owned())
+    upper.split_whitespace().next().map(|t| t.trim_end_matches(';').to_owned())
 }
 
 fn looks_like_data_sql(sql: &str) -> bool {
@@ -907,28 +847,11 @@ mod tests {
         );
         assert!(!set.parse_failed, "{set:?}");
         let tables: Vec<_> = set.objects.iter().map(|o| o.table.clone()).collect();
-        assert!(
-            tables.iter().any(|t| t.eq_ignore_ascii_case("orders")),
-            "{tables:?}"
-        );
-        assert!(
-            tables.iter().any(|t| t.eq_ignore_ascii_case("order_items")),
-            "{tables:?}"
-        );
-        let cols: Vec<String> = set
-            .objects
-            .iter()
-            .flat_map(|o| o.columns.clone())
-            .collect();
-        assert!(
-            cols.iter().any(|c| c.to_ascii_lowercase().contains("id")),
-            "{cols:?}"
-        );
-        assert!(
-            cols.iter()
-                .any(|c| c.to_ascii_lowercase().contains("name")),
-            "{cols:?}"
-        );
+        assert!(tables.iter().any(|t| t.eq_ignore_ascii_case("orders")), "{tables:?}");
+        assert!(tables.iter().any(|t| t.eq_ignore_ascii_case("order_items")), "{tables:?}");
+        let cols: Vec<String> = set.objects.iter().flat_map(|o| o.columns.clone()).collect();
+        assert!(cols.iter().any(|c| c.to_ascii_lowercase().contains("id")), "{cols:?}");
+        assert!(cols.iter().any(|c| c.to_ascii_lowercase().contains("name")), "{cols:?}");
     }
 
     #[test]
@@ -937,10 +860,7 @@ mod tests {
         assert!(!set.parse_failed);
         assert!(set.objects.iter().any(|o| {
             o.table.eq_ignore_ascii_case("events")
-                && o.schema
-                    .as_deref()
-                    .map(|s| s.eq_ignore_ascii_case("analytics"))
-                    .unwrap_or(false)
+                && o.schema.as_deref().map(|s| s.eq_ignore_ascii_case("analytics")).unwrap_or(false)
         }));
     }
 
@@ -959,10 +879,7 @@ mod tests {
             "SELECT e.id, e.* FROM employees e",
         ] {
             let set = extract_object_set(sql, "mysql");
-            assert!(
-                set.has_wildcard(),
-                "expected has_wildcard for {sql:?}: {set:?}"
-            );
+            assert!(set.has_wildcard(), "expected has_wildcard for {sql:?}: {set:?}");
         }
     }
 
@@ -970,15 +887,9 @@ mod tests {
     fn mysql_select_columns() {
         let set = extract_object_set("SELECT id, name, salary FROM employees", "mysql");
         assert!(!set.parse_failed, "{set:?}");
-        assert!(set
-            .objects
-            .iter()
-            .any(|o| o.table.eq_ignore_ascii_case("employees")));
-        let cols: Vec<String> = set
-            .objects
-            .iter()
-            .flat_map(|o| o.bare_columns().collect::<Vec<_>>())
-            .collect();
+        assert!(set.objects.iter().any(|o| o.table.eq_ignore_ascii_case("employees")));
+        let cols: Vec<String> =
+            set.objects.iter().flat_map(|o| o.bare_columns().collect::<Vec<_>>()).collect();
         assert!(cols.iter().any(|c| c == "salary"), "{cols:?}");
     }
 
@@ -989,16 +900,9 @@ mod tests {
             "mysql",
         );
         let tables = set.tables();
+        assert!(tables.iter().any(|t| t.to_ascii_lowercase().contains("orders")), "{tables:?}");
         assert!(
-            tables
-                .iter()
-                .any(|t| t.to_ascii_lowercase().contains("orders")),
-            "{tables:?}"
-        );
-        assert!(
-            tables
-                .iter()
-                .any(|t| t.to_ascii_lowercase().contains("order_items")),
+            tables.iter().any(|t| t.to_ascii_lowercase().contains("order_items")),
             "{tables:?}"
         );
     }
@@ -1053,40 +957,25 @@ mod tests {
         );
         assert!(!set.parse_failed, "{set:?}");
         assert!(
-            set.objects
-                .iter()
-                .any(|o| o.table.eq_ignore_ascii_case("employees")),
+            set.objects.iter().any(|o| o.table.eq_ignore_ascii_case("employees")),
             "expected inner employees table: {set:?}"
         );
-        let cols: Vec<String> = set
-            .objects
-            .iter()
-            .flat_map(|o| o.bare_columns().map(|c| c.to_owned()))
-            .collect();
+        let cols: Vec<String> =
+            set.objects.iter().flat_map(|o| o.bare_columns().map(|c| c.to_owned())).collect();
         // Outer may only see t.id; inner should still contribute salary/id when walked.
         assert!(
             cols.iter().any(|c| c.eq_ignore_ascii_case("id"))
-                || set
-                    .objects
-                    .iter()
-                    .any(|o| o.table.eq_ignore_ascii_case("employees")),
+                || set.objects.iter().any(|o| o.table.eq_ignore_ascii_case("employees")),
             "cols={cols:?} set={set:?}"
         );
     }
 
     #[test]
     fn t01_mysql_derived_subquery_extracts_inner_table() {
-        let set = extract_object_set(
-            "SELECT t.id FROM (SELECT id, salary FROM employees) t",
-            "mysql",
-        );
+        let set =
+            extract_object_set("SELECT t.id FROM (SELECT id, salary FROM employees) t", "mysql");
         assert!(!set.parse_failed, "{set:?}");
-        assert!(
-            set.objects
-                .iter()
-                .any(|o| o.table.eq_ignore_ascii_case("employees")),
-            "{set:?}"
-        );
+        assert!(set.objects.iter().any(|o| o.table.eq_ignore_ascii_case("employees")), "{set:?}");
     }
 
     #[test]
@@ -1098,15 +987,11 @@ mod tests {
         assert!(!set.parse_failed, "{set:?}");
         let tables = set.tables();
         assert!(
-            tables
-                .iter()
-                .any(|t| t.to_ascii_lowercase().contains("employees")),
+            tables.iter().any(|t| t.to_ascii_lowercase().contains("employees")),
             "outer table missing: {tables:?}"
         );
         assert!(
-            tables
-                .iter()
-                .any(|t| t.to_ascii_lowercase().contains("secret_tokens")),
+            tables.iter().any(|t| t.to_ascii_lowercase().contains("secret_tokens")),
             "WHERE IN subquery table must be extracted: {tables:?}"
         );
     }
@@ -1120,15 +1005,11 @@ mod tests {
         assert!(!set.parse_failed, "{set:?}");
         let tables = set.tables();
         assert!(
-            tables
-                .iter()
-                .any(|t| t.to_ascii_lowercase().contains("employees")),
+            tables.iter().any(|t| t.to_ascii_lowercase().contains("employees")),
             "outer table missing: {tables:?}"
         );
         assert!(
-            tables
-                .iter()
-                .any(|t| t.to_ascii_lowercase().contains("secret_tokens")),
+            tables.iter().any(|t| t.to_ascii_lowercase().contains("secret_tokens")),
             "MySQL WHERE IN subquery table must be extracted: {tables:?}"
         );
     }
@@ -1142,9 +1023,7 @@ mod tests {
         assert!(!set.parse_failed, "{set:?}");
         let tables = set.tables();
         assert!(
-            tables
-                .iter()
-                .any(|t| t.to_ascii_lowercase().contains("secret_tokens")),
+            tables.iter().any(|t| t.to_ascii_lowercase().contains("secret_tokens")),
             "EXISTS subquery table must be extracted: {tables:?}"
         );
     }
@@ -1158,9 +1037,7 @@ mod tests {
         assert!(!set.parse_failed, "{set:?}");
         let tables = set.tables();
         assert!(
-            tables
-                .iter()
-                .any(|t| t.to_ascii_lowercase().contains("secret_tokens")),
+            tables.iter().any(|t| t.to_ascii_lowercase().contains("secret_tokens")),
             "scalar subquery table must be extracted: {tables:?}"
         );
     }
@@ -1176,12 +1053,8 @@ mod tests {
         // CTE body should yield employees; outer may reference CTE name.
         let tables = set.tables();
         assert!(
-            tables
-                .iter()
-                .any(|t| t.to_ascii_lowercase().contains("employees"))
-                || tables
-                    .iter()
-                    .any(|t| t.to_ascii_lowercase().contains("active")),
+            tables.iter().any(|t| t.to_ascii_lowercase().contains("employees"))
+                || tables.iter().any(|t| t.to_ascii_lowercase().contains("active")),
             "tables={tables:?}"
         );
     }
@@ -1196,16 +1069,9 @@ mod tests {
         );
         assert!(!set.parse_failed, "{set:?}");
         let tables = set.tables();
+        assert!(tables.iter().any(|t| t.to_ascii_lowercase().contains("employees")), "{tables:?}");
         assert!(
-            tables
-                .iter()
-                .any(|t| t.to_ascii_lowercase().contains("employees")),
-            "{tables:?}"
-        );
-        assert!(
-            tables
-                .iter()
-                .any(|t| t.to_ascii_lowercase().contains("departments")),
+            tables.iter().any(|t| t.to_ascii_lowercase().contains("departments")),
             "{tables:?}"
         );
     }
@@ -1234,18 +1100,12 @@ mod tests {
             let set = extract_object_set("SELECT !!! FROM employees", proto);
             // Either parse_failed with empty objects, or heuristic tables only.
             if set.objects.is_empty() {
-                assert!(
-                    set.parse_failed,
-                    "{proto}: empty objects must set parse_failed: {set:?}"
-                );
+                assert!(set.parse_failed, "{proto}: empty objects must set parse_failed: {set:?}");
             } else {
                 // Heuristic recovered table names — still honest if parse_failed stays true.
                 assert!(
                     set.parse_failed
-                        || set
-                            .objects
-                            .iter()
-                            .any(|o| o.table.eq_ignore_ascii_case("employees")),
+                        || set.objects.iter().any(|o| o.table.eq_ignore_ascii_case("employees")),
                     "{proto}: {set:?}"
                 );
             }

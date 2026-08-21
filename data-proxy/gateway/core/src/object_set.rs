@@ -48,13 +48,7 @@ pub struct ObjectAccess {
 
 impl ObjectAccess {
     pub fn new(table: impl Into<String>, op: StatementAction) -> Self {
-        Self {
-            schema: None,
-            table: table.into(),
-            columns: Vec::new(),
-            op,
-            has_wildcard: false,
-        }
+        Self { schema: None, table: table.into(), columns: Vec::new(), op, has_wildcard: false }
     }
 
     pub fn with_schema(mut self, schema: Option<String>) -> Self {
@@ -98,11 +92,7 @@ impl ObjectSet {
     }
 
     pub fn parse_failed() -> Self {
-        Self {
-            objects: Vec::new(),
-            parse_failed: true,
-            heuristic: false,
-        }
+        Self { objects: Vec::new(), parse_failed: true, heuristic: false }
     }
 
     pub fn tables(&self) -> Vec<String> {
@@ -112,10 +102,7 @@ impl ObjectSet {
             if !out.iter().any(|t: &String| t.eq_ignore_ascii_case(&q)) {
                 out.push(q);
             }
-            if !out
-                .iter()
-                .any(|t: &String| t.eq_ignore_ascii_case(&obj.table))
-            {
+            if !out.iter().any(|t: &String| t.eq_ignore_ascii_case(&obj.table)) {
                 out.push(obj.table.clone());
             }
         }
@@ -148,8 +135,8 @@ mod tests {
 
     #[test]
     fn qualified_table_and_bare_columns() {
-        let mut obj = ObjectAccess::new("users", StatementAction::Select)
-            .with_schema(Some("public".into()));
+        let mut obj =
+            ObjectAccess::new("users", StatementAction::Select).with_schema(Some("public".into()));
         obj.columns = vec!["public.users.id".into(), "email".into()];
         assert_eq!(obj.qualified_table(), "public.users");
         let bare: Vec<_> = obj.bare_columns().collect();

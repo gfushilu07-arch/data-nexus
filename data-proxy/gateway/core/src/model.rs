@@ -82,10 +82,7 @@ mod tests {
     #[test]
     fn serializes_canonical_protocol_names() {
         assert_eq!(serde_json::to_string(&ProtocolKind::MySql).unwrap(), "\"mysql\"");
-        assert_eq!(
-            serde_json::to_string(&ProtocolKind::PostgreSql).unwrap(),
-            "\"postgresql\""
-        );
+        assert_eq!(serde_json::to_string(&ProtocolKind::PostgreSql).unwrap(), "\"postgresql\"");
     }
 }
 
@@ -182,26 +179,41 @@ pub struct Column {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "type", content = "payload")]
 pub enum GatewayCommand {
-    Query { sql: String },
+    Query {
+        sql: String,
+    },
     /// A10: parameterized simple/extended query — SQL keeps `$n` placeholders;
     /// backend binds via prepared protocol (no string rewrite).
     QueryParams {
         sql: String,
         parameters: Vec<GatewayValue>,
     },
-    Prepare { sql: String },
-    Execute { statement_id: String, parameters: Vec<GatewayValue> },
-    CloseStatement { statement_id: String },
+    Prepare {
+        sql: String,
+    },
+    Execute {
+        statement_id: String,
+        parameters: Vec<GatewayValue>,
+    },
+    CloseStatement {
+        statement_id: String,
+    },
     /// A10: describe result columns for SQL via backend prepare/catalog (no rows).
     /// Used when frontend cannot infer SELECT-list columns (e.g. `SELECT *`).
-    DescribeSql { sql: String },
+    DescribeSql {
+        sql: String,
+    },
     /// Frontend-only wire packets (A10 extended protocol acks: ParseComplete, BindComplete, Sync…).
     /// Backend must return these unchanged as [`GatewayResponse::Wire`].
-    ClientWire { packets: Vec<Vec<u8>> },
+    ClientWire {
+        packets: Vec<Vec<u8>>,
+    },
     /// A08: client Sync while a multi-Execute client-frame TCP unit is held open.
     /// Backend sends Sync on the held socket and streams until ReadyForQuery.
     PgBackendSync,
-    UseDatabase { database: String },
+    UseDatabase {
+        database: String,
+    },
     Begin,
     Commit,
     Rollback,
@@ -212,11 +224,22 @@ pub enum GatewayCommand {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "type", content = "payload")]
 pub enum GatewayResponse {
-    Ok { affected_rows: u64, last_insert_id: Option<u64> },
+    Ok {
+        affected_rows: u64,
+        last_insert_id: Option<u64>,
+    },
     /// Successful command with a frontend-visible command tag (for example PG cursor commands).
-    CommandComplete { tag: String },
-    Error { code: String, message: String },
-    ResultSet { columns: Vec<Column>, rows: Vec<Vec<GatewayValue>> },
+    CommandComplete {
+        tag: String,
+    },
+    Error {
+        code: String,
+        message: String,
+    },
+    ResultSet {
+        columns: Vec<Column>,
+        rows: Vec<Vec<GatewayValue>>,
+    },
     /// Result rows with an explicit command tag (for example `FETCH 2`).
     TaggedResultSet {
         columns: Vec<Column>,
@@ -227,7 +250,9 @@ pub enum GatewayResponse {
     ///
     /// MySQL: packet payloads **without** the 4-byte frame header (as
     /// `PacketSend::Encode` expects). PostgreSQL: full backend messages.
-    Wire { packets: Vec<Vec<u8>> },
+    Wire {
+        packets: Vec<Vec<u8>>,
+    },
     /// A10: gateway-owned prepared id. Optional `columns` from backend catalog
     /// prepare (MySQL COM_STMT_PREPARE result column defs; PG may leave empty).
     Prepared {
@@ -238,7 +263,9 @@ pub enum GatewayResponse {
     },
     /// A10: column metadata only (extended-protocol Describe / catalog prepare).
     /// Frontend encodes as RowDescription (or NoData if empty); no CommandComplete.
-    RowDescription { columns: Vec<Column> },
+    RowDescription {
+        columns: Vec<Column>,
+    },
     Pong,
     Bye,
 }
@@ -264,10 +291,7 @@ impl Default for ExecuteMode {
 impl ExecuteMode {
     pub fn from_streaming_config(window_rows: u32, max_rows: Option<u64>) -> Self {
         let window = window_rows.max(1) as usize;
-        Self::Streaming {
-            window_rows: window,
-            max_rows,
-        }
+        Self::Streaming { window_rows: window, max_rows }
     }
 
     pub fn effective_max_rows(self) -> Option<u64> {
@@ -325,9 +349,6 @@ mod execute_mode_tests {
         // Streaming / Passthrough unchanged.
         let s = ExecuteMode::from_streaming_config(64, Some(10));
         assert_eq!(s.promote_row_stream(), s);
-        assert_eq!(
-            ExecuteMode::Passthrough.promote_row_stream(),
-            ExecuteMode::Passthrough
-        );
+        assert_eq!(ExecuteMode::Passthrough.promote_row_stream(), ExecuteMode::Passthrough);
     }
 }

@@ -10,11 +10,7 @@ pub trait ShardingPlanner: Send + Sync {
 
     /// Plan a rewrite for `sql`. Returning `RoutePlan::Reject` means the
     /// statement is unsupported for sharding under this dialect.
-    fn plan_rewrite(
-        &self,
-        sql: &str,
-        dialect: &dyn DialectParser,
-    ) -> GatewayResult<RoutePlan>;
+    fn plan_rewrite(&self, sql: &str, dialect: &dyn DialectParser) -> GatewayResult<RoutePlan>;
 }
 
 /// Default stub used until dialect-specific rewrite is fully decoupled.
@@ -36,11 +32,7 @@ impl ShardingPlanner for UnsupportedShardingPlanner {
         self.dialect.clone()
     }
 
-    fn plan_rewrite(
-        &self,
-        sql: &str,
-        dialect: &dyn DialectParser,
-    ) -> GatewayResult<RoutePlan> {
+    fn plan_rewrite(&self, sql: &str, dialect: &dyn DialectParser) -> GatewayResult<RoutePlan> {
         if dialect.dialect() != self.dialect {
             return Err(GatewayError::Configuration(format!(
                 "sharding planner dialect {:?} does not match request dialect {:?}",

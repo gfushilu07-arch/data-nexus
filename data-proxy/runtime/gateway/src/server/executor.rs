@@ -88,7 +88,14 @@ where
                 for i in conns {
                     drop(i)
                 }
-                Self::get_shard_conns(&req.rewrite_outputs, req.pool.clone(), db.clone(), charset.clone(), autocommit.clone()).await?
+                Self::get_shard_conns(
+                    &req.rewrite_outputs,
+                    req.pool.clone(),
+                    db.clone(),
+                    charset.clone(),
+                    autocommit.clone(),
+                )
+                .await?
             } else {
                 conns
             }
@@ -660,14 +667,9 @@ where
         autocommit: Option<String>,
         _is_get_conn: bool,
     ) -> Result<(Vec<Stmt>, Vec<PoolConn<ClientConn>>), Error> {
-        let conns = Self::get_shard_conns(
-            &req.rewrite_outputs,
-            req.pool.clone(),
-            db,
-            charset,
-            autocommit,
-        )
-        .await?;
+        let conns =
+            Self::get_shard_conns(&req.rewrite_outputs, req.pool.clone(), db, charset, autocommit)
+                .await?;
         let mut send_futs = FuturesOrdered::new();
         let mut sended_conns = Vec::with_capacity(conns.len());
 

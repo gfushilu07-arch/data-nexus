@@ -179,21 +179,9 @@ pub fn record_command(
         return;
     };
     let security_on = env_security_attrs_enabled();
-    let sec_decision = if security_on {
-        attrs.security_decision
-    } else {
-        "none"
-    };
-    let sec_rule = if security_on {
-        attrs.security_rule_class
-    } else {
-        "none"
-    };
-    let exec_path = if security_on {
-        attrs.execute_path
-    } else {
-        "n/a"
-    };
+    let sec_decision = if security_on { attrs.security_decision } else { "none" };
+    let sec_rule = if security_on { attrs.security_rule_class } else { "none" };
+    let exec_path = if security_on { attrs.execute_path } else { "n/a" };
 
     let kv = [
         KeyValue::new("listener", listener.to_owned()),
@@ -208,11 +196,8 @@ pub fn record_command(
         KeyValue::new("execute_path", exec_path.to_owned()),
     ];
     inst.commands_total.add(1, &kv);
-    inst.command_duration_ms
-        .record(duration.as_secs_f64() * 1000.0, &kv);
-    if outcome.starts_with("error")
-        || outcome == "translation_reject"
-        || outcome == "plugin_reject"
+    inst.command_duration_ms.record(duration.as_secs_f64() * 1000.0, &kv);
+    if outcome.starts_with("error") || outcome == "translation_reject" || outcome == "plugin_reject"
     {
         inst.errors_total.add(1, &kv);
     }
@@ -230,8 +215,7 @@ pub fn record_command(
             KeyValue::new("command_type", command_type.to_owned()),
             KeyValue::new("endpoint", endpoint.to_owned()),
         ];
-        inst.passthrough_bytes_total
-            .add(attrs.wire_bytes, &byte_kv);
+        inst.passthrough_bytes_total.add(attrs.wire_bytes, &byte_kv);
     }
     debug!(
         target: "data_nexus::otel",

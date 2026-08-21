@@ -12,9 +12,7 @@
 //! With `security.state.ticket_encrypt_key` the file is AES-GCM sealed (sql_sample
 //! and metadata at rest).
 
-use crate::state_crypto::{
-    decode_maybe_encrypted, encrypt_blob, parse_encrypt_key,
-};
+use crate::state_crypto::{decode_maybe_encrypted, encrypt_blob, parse_encrypt_key};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::{self, File, OpenOptions};
@@ -32,9 +30,7 @@ const TICKET_ENC_MAGIC: &str = "DNTICKET1:";
 
 /// Process-wide ticket store (memory or file-backed per install).
 pub fn global_ticket_store() -> Arc<TicketStore> {
-    GLOBAL
-        .get_or_init(|| Arc::new(TicketStore::new()))
-        .clone()
+    GLOBAL.get_or_init(|| Arc::new(TicketStore::new())).clone()
 }
 
 /// H05: install / reconfigure ticket store backend. Safe to call on reload.
@@ -320,11 +316,8 @@ impl TicketStore {
         let file = TicketFile { tickets };
         let plain = serde_json::to_vec_pretty(&file).map_err(|e| e.to_string())?;
         let key = *self.encrypt_key.lock().map_err(|e| e.to_string())?;
-        let data = if let Some(key) = key {
-            encrypt_blob(TICKET_ENC_MAGIC, &key, &plain)?
-        } else {
-            plain
-        };
+        let data =
+            if let Some(key) = key { encrypt_blob(TICKET_ENC_MAGIC, &key, &plain)? } else { plain };
         let tmp = path.with_extension("json.tmp");
         fs::write(&tmp, data).map_err(|e| e.to_string())?;
         fs::rename(&tmp, path).map_err(|e| e.to_string())?;
@@ -333,11 +326,7 @@ impl TicketStore {
 
     pub fn issue(&self, req: IssueTicketRequest) -> Ticket {
         let now = now_unix_ms();
-        let id = format!(
-            "tkt-{}-{}",
-            now,
-            self.seq.fetch_add(1, Ordering::Relaxed)
-        );
+        let id = format!("tkt-{}-{}", now, self.seq.fetch_add(1, Ordering::Relaxed));
         let fp = sql_fingerprint(&req.sql);
         let dual = req.dual_control;
         let ticket = Ticket {
@@ -357,11 +346,7 @@ impl TicketStore {
             issued_by: req.issued_by,
             note: req.note,
             dual_control: dual,
-            status: if dual {
-                TicketStatus::Pending
-            } else {
-                TicketStatus::Active
-            },
+            status: if dual { TicketStatus::Pending } else { TicketStatus::Active },
             approved_by: None,
             approved_at_unix_ms: None,
             rejected_by: None,
@@ -400,9 +385,8 @@ impl TicketStore {
         }
         let now = now_unix_ms();
         let mut guard = self.inner.lock().expect("ticket lock");
-        let ticket = guard
-            .get_mut(ticket_id)
-            .ok_or_else(|| format!("ticket '{ticket_id}' not found"))?;
+        let ticket =
+            guard.get_mut(ticket_id).ok_or_else(|| format!("ticket '{ticket_id}' not found"))?;
         if ticket.is_expired(now) {
             return Err(format!("ticket '{ticket_id}' expired"));
         }
@@ -448,13 +432,10 @@ impl TicketStore {
             return Err("rejected_by is required".into());
         }
         let mut guard = self.inner.lock().expect("ticket lock");
-        let ticket = guard
-            .get_mut(ticket_id)
-            .ok_or_else(|| format!("ticket '{ticket_id}' not found"))?;
+        let ticket =
+            guard.get_mut(ticket_id).ok_or_else(|| format!("ticket '{ticket_id}' not found"))?;
         if ticket.uses > 0 {
-            return Err(format!(
-                "ticket '{ticket_id}' already consumed and cannot be rejected"
-            ));
+            return Err(format!("ticket '{ticket_id}' already consumed and cannot be rejected"));
         }
         match ticket.status {
             TicketStatus::Rejected => {
@@ -507,9 +488,8 @@ impl TicketStore {
         let now = now_unix_ms();
         let fp = sql_fingerprint(sql);
         let mut guard = self.inner.lock().expect("ticket lock");
-        let ticket = guard
-            .get_mut(ticket_id)
-            .ok_or_else(|| format!("ticket '{ticket_id}' not found"))?;
+        let ticket =
+            guard.get_mut(ticket_id).ok_or_else(|| format!("ticket '{ticket_id}' not found"))?;
         ticket.is_consumable(now)?;
         if !ticket.subject_id.eq_ignore_ascii_case(subject_id) {
             return Err(format!(
@@ -650,12 +630,8 @@ fn contains_top_level_keyword(sql: &str, keyword: &str) -> bool {
 }
 
 fn now_unix_ms() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_millis() as u64)
-        .unwrap_or(0)
+    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
 }
-
 
 /// Sidecar lock file next to the JSON state file (H05 multi-process).
 fn open_state_lock(path: &std::path::Path) -> Result<File, String> {
@@ -681,10 +657,7 @@ mod tests {
 
     #[test]
     fn extract_ticket_variants() {
-        assert_eq!(
-            extract_ticket_id("/*dn_ticket:abc-1*/ SELECT 1").as_deref(),
-            Some("abc-1")
-        );
+        assert_eq!(extract_ticket_id("/*dn_ticket:abc-1*/ SELECT 1").as_deref(), Some("abc-1"));
         assert_eq!(
             extract_ticket_id("/* data_nexus_ticket: xyz */ SELECT 1").as_deref(),
             Some("xyz")
@@ -715,9 +688,7 @@ mod tests {
         assert_eq!(t.status, TicketStatus::Active);
         assert!(!t.dual_control);
         let sql = format!("/*dn_ticket:{}*/ DROP TABLE smoke_t", t.id);
-        store
-            .consume(&t.id, "root", &sql, Some("ddl"))
-            .expect("consume");
+        store.consume(&t.id, "root", &sql, Some("ddl")).expect("consume");
         assert!(store.consume(&t.id, "root", &sql, Some("ddl")).is_err());
     }
 
@@ -738,9 +709,8 @@ mod tests {
         assert!(t.dual_control);
 
         let sql = format!("/*dn_ticket:{}*/ DROP TABLE vault_t", t.id);
-        let err = store
-            .consume(&t.id, "root", &sql, Some("ddl"))
-            .expect_err("pending must not consume");
+        let err =
+            store.consume(&t.id, "root", &sql, Some("ddl")).expect_err("pending must not consume");
         assert!(
             err.to_ascii_lowercase().contains("pending")
                 || err.to_ascii_lowercase().contains("dual"),
@@ -748,9 +718,7 @@ mod tests {
         );
 
         // Self-approve blocked.
-        let self_err = store
-            .approve(&t.id, "issuer-alice")
-            .expect_err("self-approve");
+        let self_err = store.approve(&t.id, "issuer-alice").expect_err("self-approve");
         assert!(
             self_err.to_ascii_lowercase().contains("differ")
                 || self_err.to_ascii_lowercase().contains("issuer"),
@@ -761,9 +729,7 @@ mod tests {
         assert_eq!(approved.status, TicketStatus::Active);
         assert_eq!(approved.approved_by.as_deref(), Some("approver-bob"));
 
-        store
-            .consume(&t.id, "root", &sql, Some("ddl"))
-            .expect("consume after approve");
+        store.consume(&t.id, "root", &sql, Some("ddl")).expect("consume after approve");
     }
 
     #[test]
@@ -779,13 +745,9 @@ mod tests {
             issued_by: Some("alice".into()),
             dual_control: true,
         });
-        store
-            .reject(&t.id, "bob", Some("too risky".into()))
-            .expect("reject");
+        store.reject(&t.id, "bob", Some("too risky".into())).expect("reject");
         let sql = format!("/*dn_ticket:{}*/ TRUNCATE TABLE t", t.id);
-        let err = store
-            .consume(&t.id, "root", &sql, Some("ddl"))
-            .expect_err("rejected");
+        let err = store.consume(&t.id, "root", &sql, Some("ddl")).expect_err("rejected");
         assert!(err.to_ascii_lowercase().contains("reject"), "err={err}");
     }
 
@@ -809,9 +771,7 @@ mod tests {
         assert_eq!(rejected.status, TicketStatus::Rejected);
         assert_eq!(rejected.rejected_by.as_deref(), Some("alice"));
         let sql = format!("/*dn_ticket:{}*/ DROP TABLE t", t.id);
-        let err = store
-            .consume(&t.id, "root", &sql, Some("ddl"))
-            .expect_err("rejected");
+        let err = store.consume(&t.id, "root", &sql, Some("ddl")).expect_err("rejected");
         assert!(err.to_ascii_lowercase().contains("reject"), "err={err}");
     }
 
@@ -838,7 +798,6 @@ mod tests {
         assert_eq!(got.sql_fingerprint, t.sql_fingerprint);
         let _ = std::fs::remove_dir_all(&dir);
     }
-
 
     #[test]
     fn h05_ticket_file_lock_serializes_writes() {
@@ -927,10 +886,9 @@ mod tests {
         assert!(got.sql_sample.as_deref().unwrap_or("").contains("secret_table"));
 
         assert!(TicketStore::with_file(path.clone(), None).is_err());
-        let bad = parse_encrypt_key(
-            "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-        )
-        .unwrap();
+        let bad =
+            parse_encrypt_key("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+                .unwrap();
         assert!(TicketStore::with_file(path, bad).is_err());
         let _ = std::fs::remove_dir_all(&dir);
     }

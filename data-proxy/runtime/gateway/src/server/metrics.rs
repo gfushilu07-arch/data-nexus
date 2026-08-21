@@ -237,20 +237,13 @@ impl MySQLServerMetricsCollector {
         let mut path_labels = [""; 7];
         path_labels[..6].copy_from_slice(labels);
         path_labels[6] = path;
-        GATEWAY_EXECUTE_PATH_TOTAL
-            .with_label_values(&path_labels)
-            .inc();
+        GATEWAY_EXECUTE_PATH_TOTAL.with_label_values(&path_labels).inc();
         if matches!(
             path,
-            "passthrough"
-                | "passthrough_rewrite"
-                | "passthrough_extended"
-                | "passthrough_client"
+            "passthrough" | "passthrough_rewrite" | "passthrough_extended" | "passthrough_client"
         ) && wire_bytes > 0
         {
-            GATEWAY_PASSTHROUGH_BYTES_TOTAL
-                .with_label_values(labels)
-                .inc_by(wire_bytes);
+            GATEWAY_PASSTHROUGH_BYTES_TOTAL.with_label_values(labels).inc_by(wire_bytes);
         }
     }
 
@@ -280,19 +273,13 @@ impl MySQLServerMetricsCollector {
             return;
         }
         if masked_rows > 0 {
-            GATEWAY_MASK_ROWS_TOTAL
-                .with_label_values(labels)
-                .inc_by(masked_rows);
+            GATEWAY_MASK_ROWS_TOTAL.with_label_values(labels).inc_by(masked_rows);
         }
         if windows > 0 {
-            GATEWAY_ENCODE_WINDOWS_TOTAL
-                .with_label_values(labels)
-                .inc_by(windows);
+            GATEWAY_ENCODE_WINDOWS_TOTAL.with_label_values(labels).inc_by(windows);
         }
         if encoded_bytes > 0 {
-            GATEWAY_ENCODE_BYTES_TOTAL
-                .with_label_values(labels)
-                .inc_by(encoded_bytes);
+            GATEWAY_ENCODE_BYTES_TOTAL.with_label_values(labels).inc_by(encoded_bytes);
         }
         if peak_window_rows > 0 {
             let g = GATEWAY_ENCODE_PEAK_WINDOW_ROWS.with_label_values(labels);
@@ -327,12 +314,8 @@ pub fn normalize_portal_resume_mode(mode: &str) -> &'static str {
         "sql_cursor_declare" | "declare" | "cursor_declare" => "sql_cursor_declare",
         "sql_cursor_fetch" | "fetch" | "cursor_fetch" => "sql_cursor_fetch",
         "sql_cursor_close" | "close" | "cursor_close" => "sql_cursor_close",
-        "sql_cursor_session_end" | "session_end" | "cursor_session_end" => {
-            "sql_cursor_session_end"
-        }
-        "sql_cursor_unsupported" | "cursor_unsupported" | "unsupported" => {
-            "sql_cursor_unsupported"
-        }
+        "sql_cursor_session_end" | "session_end" | "cursor_session_end" => "sql_cursor_session_end",
+        "sql_cursor_unsupported" | "cursor_unsupported" | "unsupported" => "sql_cursor_unsupported",
         _ => "n/a",
     }
 }
@@ -369,21 +352,15 @@ pub fn normalize_execute_path(path: &str) -> &'static str {
 pub fn refresh_audit_queue_metrics() {
     if let Some(pipe) = gateway_core::global_audit_pipeline() {
         let s = pipe.stats();
-        GATEWAY_AUDIT_QUEUE_LEN
-            .with_label_values(&["main"])
-            .set(s.queue_len as f64);
-        GATEWAY_AUDIT_QUEUE_LEN
-            .with_label_values(&["priority"])
-            .set(s.priority_queue_len as f64);
+        GATEWAY_AUDIT_QUEUE_LEN.with_label_values(&["main"]).set(s.queue_len as f64);
+        GATEWAY_AUDIT_QUEUE_LEN.with_label_values(&["priority"]).set(s.priority_queue_len as f64);
     }
 }
 
 /// O01: observe one audit worker process sample (seconds).
 pub fn observe_audit_process_duration(seconds: f64) {
     if seconds.is_finite() && seconds >= 0.0 {
-        GATEWAY_AUDIT_PROCESS_DURATION
-            .with_label_values(&["pipeline"])
-            .observe(seconds);
+        GATEWAY_AUDIT_PROCESS_DURATION.with_label_values(&["pipeline"]).observe(seconds);
     }
 }
 
@@ -401,18 +378,9 @@ mod tests {
     #[test]
     fn normalize_execute_path_values() {
         assert_eq!(normalize_execute_path("passthrough"), "passthrough");
-        assert_eq!(
-            normalize_execute_path("passthrough_client"),
-            "passthrough_client"
-        );
-        assert_eq!(
-            normalize_execute_path("passthrough_extended"),
-            "passthrough_extended"
-        );
-        assert_eq!(
-            normalize_execute_path("passthrough_rewrite"),
-            "passthrough_extended"
-        );
+        assert_eq!(normalize_execute_path("passthrough_client"), "passthrough_client");
+        assert_eq!(normalize_execute_path("passthrough_extended"), "passthrough_extended");
+        assert_eq!(normalize_execute_path("passthrough_rewrite"), "passthrough_extended");
         assert_eq!(normalize_execute_path("rewrite"), "passthrough_extended");
         assert_eq!(normalize_execute_path("STREAMING"), "streaming");
         assert_eq!(normalize_execute_path("streaming_demote"), "streaming_demote");
@@ -428,18 +396,9 @@ mod tests {
         assert_eq!(normalize_portal_resume_mode("hold_remainder"), "hold");
         assert_eq!(normalize_portal_resume_mode("logical_skip"), "logical_skip");
         assert_eq!(normalize_portal_resume_mode("resume_hold"), "resume_hold");
-        assert_eq!(
-            normalize_portal_resume_mode("sql_cursor_declare"),
-            "sql_cursor_declare"
-        );
-        assert_eq!(
-            normalize_portal_resume_mode("sql_cursor_fetch"),
-            "sql_cursor_fetch"
-        );
-        assert_eq!(
-            normalize_portal_resume_mode("sql_cursor_close"),
-            "sql_cursor_close"
-        );
+        assert_eq!(normalize_portal_resume_mode("sql_cursor_declare"), "sql_cursor_declare");
+        assert_eq!(normalize_portal_resume_mode("sql_cursor_fetch"), "sql_cursor_fetch");
+        assert_eq!(normalize_portal_resume_mode("sql_cursor_close"), "sql_cursor_close");
         assert_eq!(normalize_portal_resume_mode("weird"), "n/a");
     }
 
@@ -449,15 +408,9 @@ mod tests {
         m.record_portal_resume("hold");
         m.record_portal_resume("resume_hold");
         m.record_portal_resume("logical_skip");
-        let hold = GATEWAY_PORTAL_RESUME_TOTAL
-            .with_label_values(&["hold"])
-            .get();
-        let resume = GATEWAY_PORTAL_RESUME_TOTAL
-            .with_label_values(&["resume_hold"])
-            .get();
-        let skip = GATEWAY_PORTAL_RESUME_TOTAL
-            .with_label_values(&["logical_skip"])
-            .get();
+        let hold = GATEWAY_PORTAL_RESUME_TOTAL.with_label_values(&["hold"]).get();
+        let resume = GATEWAY_PORTAL_RESUME_TOTAL.with_label_values(&["resume_hold"]).get();
+        let skip = GATEWAY_PORTAL_RESUME_TOTAL.with_label_values(&["logical_skip"]).get();
         assert!(hold >= 1, "hold={hold}");
         assert!(resume >= 1, "resume_hold={resume}");
         assert!(skip >= 1, "logical_skip={skip}");
@@ -466,14 +419,7 @@ mod tests {
     #[test]
     fn record_execute_path_increments_counters() {
         let m = MySQLServerMetricsCollector::new();
-        let labels = [
-            "listener-a05",
-            "svc",
-            "mysql",
-            "mysql",
-            "query",
-            "ep",
-        ];
+        let labels = ["listener-a05", "svc", "mysql", "mysql", "query", "ep"];
         m.record_execute_path(&labels, "passthrough", 42);
         m.record_execute_path(&labels, "streaming", 0);
         // Prometheus registry is process-global; just ensure no panic and values move.
@@ -489,23 +435,14 @@ mod tests {
             ])
             .get();
         assert!(pt >= 1, "passthrough path counter={pt}");
-        let bytes = GATEWAY_PASSTHROUGH_BYTES_TOTAL
-            .with_label_values(&labels)
-            .get();
+        let bytes = GATEWAY_PASSTHROUGH_BYTES_TOTAL.with_label_values(&labels).get();
         assert!(bytes >= 42, "passthrough bytes={bytes}");
     }
 
     #[test]
     fn record_secure_encode_increments() {
         let m = MySQLServerMetricsCollector::new();
-        let labels = [
-            "listener-o01",
-            "svc",
-            "mysql",
-            "mysql",
-            "query",
-            "ep",
-        ];
+        let labels = ["listener-o01", "svc", "mysql", "mysql", "query", "ep"];
         m.record_secure_encode_peak(&labels, 3, 2, 100, 7, 50);
         let masked = GATEWAY_MASK_ROWS_TOTAL.with_label_values(&labels).get();
         assert!(masked >= 3, "masked={masked}");

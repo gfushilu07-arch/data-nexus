@@ -297,11 +297,8 @@ impl GatewayConfig {
             self.auth_policies.iter().map(|item| item.name.as_str()).collect();
         let plugins: HashSet<&str> =
             self.plugin_policies.iter().map(|item| item.name.as_str()).collect();
-        let translations: HashMap<&str, &crate::TranslationPolicyConfig> = self
-            .translation_policies
-            .iter()
-            .map(|item| (item.name.as_str(), item))
-            .collect();
+        let translations: HashMap<&str, &crate::TranslationPolicyConfig> =
+            self.translation_policies.iter().map(|item| (item.name.as_str(), item)).collect();
 
         for listener in &self.listeners {
             require_non_empty("listener name", &listener.name)?;
@@ -377,12 +374,13 @@ impl GatewayConfig {
                         service.name, endpoint
                     )));
                 }
-                let endpoint_protocol = endpoint_protocols.get(endpoint.as_str()).ok_or_else(|| {
-                    GatewayError::Configuration(format!(
-                        "service '{}' references missing endpoint '{}'",
-                        service.name, endpoint
-                    ))
-                })?;
+                let endpoint_protocol =
+                    endpoint_protocols.get(endpoint.as_str()).ok_or_else(|| {
+                        GatewayError::Configuration(format!(
+                            "service '{}' references missing endpoint '{}'",
+                            service.name, endpoint
+                        ))
+                    })?;
                 if *endpoint_protocol != &service.backend_protocol {
                     return Err(GatewayError::Configuration(format!(
                         "service '{}' backend protocol '{}' does not match endpoint '{}' protocol '{}'",
@@ -694,10 +692,7 @@ mod tests {
         config.endpoints[0].ssl_accept_invalid_certs = false;
         let err = config.validate().unwrap_err();
         let msg = err.to_string();
-        assert!(
-            msg.contains("ssl_ca_file") && msg.contains("require"),
-            "{msg}"
-        );
+        assert!(msg.contains("ssl_ca_file") && msg.contains("require"), "{msg}");
     }
 
     #[test]

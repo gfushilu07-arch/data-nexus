@@ -81,9 +81,9 @@ impl DispatchPlan {
     /// Convert to protocol-neutral RoutePlan (name+address only).
     pub fn to_route_plan(&self) -> RoutePlan {
         match self {
-            Self::Single { endpoint, .. } => {
-                RoutePlan::Single { endpoint: EndpointRef::new(endpoint.name.clone(), endpoint.addr.clone()) }
-            }
+            Self::Single { endpoint, .. } => RoutePlan::Single {
+                endpoint: EndpointRef::new(endpoint.name.clone(), endpoint.addr.clone()),
+            },
             Self::Reject { reason } => RoutePlan::reject(reason.clone()),
         }
     }
@@ -97,10 +97,7 @@ impl DispatchPlan {
     }
 }
 
-fn plan_from_endpoint_role(
-    endpoint: Option<Endpoint>,
-    role: TargetRole,
-) -> DispatchPlan {
+fn plan_from_endpoint_role(endpoint: Option<Endpoint>, role: TargetRole) -> DispatchPlan {
     match endpoint {
         Some(endpoint) => DispatchPlan::single(endpoint, role),
         None => DispatchPlan::reject("route strategy produced no endpoint"),
@@ -123,17 +120,16 @@ mod dispatch_plan_tests {
             addr: "127.0.0.1:3306".into(),
         };
         let plan = DispatchPlan::single(endpoint, TargetRole::ReadWrite);
-        assert_eq!(
-            plan.to_route_plan(),
-            RoutePlan::single("primary", "127.0.0.1:3306")
-        );
+        assert_eq!(plan.to_route_plan(), RoutePlan::single("primary", "127.0.0.1:3306"));
         assert_eq!(plan.as_endpoint().unwrap().name, "primary");
     }
 
     #[test]
     fn reject_plan_converts_to_core_reject() {
         let plan = DispatchPlan::reject("no healthy endpoint");
-        assert!(matches!(plan.to_route_plan(), RoutePlan::Reject { reason } if reason.contains("no healthy")));
+        assert!(
+            matches!(plan.to_route_plan(), RoutePlan::Reject { reason } if reason.contains("no healthy"))
+        );
         assert!(plan.as_endpoint().is_none());
     }
 }

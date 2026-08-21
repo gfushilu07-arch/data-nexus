@@ -15,7 +15,9 @@ use std::path::Path;
 use gateway_core::{EndpointConfig, GatewayError, GatewayResult};
 
 /// Build a `native_tls::TlsConnector` from endpoint SSL settings.
-pub fn build_native_tls_connector(endpoint: &EndpointConfig) -> GatewayResult<native_tls::TlsConnector> {
+pub fn build_native_tls_connector(
+    endpoint: &EndpointConfig,
+) -> GatewayResult<native_tls::TlsConnector> {
     let mut builder = native_tls::TlsConnector::builder();
 
     if endpoint.ssl_accept_invalid_certs {
@@ -26,9 +28,7 @@ pub fn build_native_tls_connector(endpoint: &EndpointConfig) -> GatewayResult<na
         add_ca_pem_file(&mut builder, ca_path)?;
     }
 
-    builder
-        .build()
-        .map_err(|e| GatewayError::Backend(format!("pg tls connector: {e}")))
+    builder.build().map_err(|e| GatewayError::Backend(format!("pg tls connector: {e}")))
 }
 
 /// Host name used for SNI / cert validation (strip `:port` from endpoint address).
@@ -223,10 +223,7 @@ mod tests {
     fn tempfile_dir() -> std::path::PathBuf {
         let dir = std::env::temp_dir().join(format!(
             "dn-a08-tls-{}",
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()
         ));
         fs::create_dir_all(&dir).unwrap();
         dir

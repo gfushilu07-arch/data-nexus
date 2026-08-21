@@ -59,13 +59,7 @@ impl ClientConn {
         endpoint: String,
         tls: Option<super::tls_opts::ClientTlsOpts>,
     ) -> ClientConn {
-        ClientConn {
-            user,
-            password,
-            endpoint,
-            tls_opts: tls,
-            ..Default::default()
-        }
+        ClientConn { user, password, endpoint, tls_opts: tls, ..Default::default() }
     }
 
     #[cfg(test)]

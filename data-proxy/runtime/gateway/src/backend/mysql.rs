@@ -13,9 +13,9 @@ use bytes::BytesMut;
 use conn_pool::{ConnAttr, ConnAttrMut, ConnLike, Pool, PoolConn};
 use futures::StreamExt;
 use gateway_core::{
-    BackendConnector, Column as GatewayColumn, EndpointConfig, EndpointRole, EndpointSslMode, ExecuteMode,
-    ExecuteOutcome, GatewayCommand, GatewayError, GatewayResponse, GatewayResult, GatewayValue,
-    ProtocolKind, RowStream, SessionState, StreamingQuery, TransactionState,
+    BackendConnector, Column as GatewayColumn, EndpointConfig, EndpointRole, EndpointSslMode,
+    ExecuteMode, ExecuteOutcome, GatewayCommand, GatewayError, GatewayResponse, GatewayResult,
+    GatewayValue, ProtocolKind, RowStream, SessionState, StreamingQuery, TransactionState,
 };
 use mysql_protocol::{
     client::{
@@ -297,9 +297,8 @@ fn classify_mysql_temporal_string(s: &str) -> Option<MySqlTemporalKind> {
 }
 
 fn encode_mysql_binary_date_param(out: &mut Vec<u8>, s: &str) -> GatewayResult<()> {
-    let (y, m, d) = parse_mysql_param_date(s).ok_or_else(|| {
-        GatewayError::Protocol(format!("invalid mysql DATE param '{s}'"))
-    })?;
+    let (y, m, d) = parse_mysql_param_date(s)
+        .ok_or_else(|| GatewayError::Protocol(format!("invalid mysql DATE param '{s}'")))?;
     out.push(4);
     out.extend_from_slice(&y.to_le_bytes());
     out.push(m);
@@ -308,9 +307,8 @@ fn encode_mysql_binary_date_param(out: &mut Vec<u8>, s: &str) -> GatewayResult<(
 }
 
 fn encode_mysql_binary_datetime_param(out: &mut Vec<u8>, s: &str) -> GatewayResult<()> {
-    let (y, mo, d, h, mi, sec, micro) = parse_mysql_param_datetime(s).ok_or_else(|| {
-        GatewayError::Protocol(format!("invalid mysql DATETIME param '{s}'"))
-    })?;
+    let (y, mo, d, h, mi, sec, micro) = parse_mysql_param_datetime(s)
+        .ok_or_else(|| GatewayError::Protocol(format!("invalid mysql DATETIME param '{s}'")))?;
     if micro == 0 {
         out.push(7);
         out.extend_from_slice(&y.to_le_bytes());
@@ -333,9 +331,8 @@ fn encode_mysql_binary_datetime_param(out: &mut Vec<u8>, s: &str) -> GatewayResu
 }
 
 fn encode_mysql_binary_time_param(out: &mut Vec<u8>, s: &str) -> GatewayResult<()> {
-    let (neg, days, h, m, sec, micro) = parse_mysql_param_time(s).ok_or_else(|| {
-        GatewayError::Protocol(format!("invalid mysql TIME param '{s}'"))
-    })?;
+    let (neg, days, h, m, sec, micro) = parse_mysql_param_time(s)
+        .ok_or_else(|| GatewayError::Protocol(format!("invalid mysql TIME param '{s}'")))?;
     if micro == 0 {
         out.push(8);
         out.push(if neg { 1 } else { 0 });
@@ -410,11 +407,7 @@ fn parse_mysql_param_time(s: &str) -> Option<(bool, u32, u8, u8, u8, u32)> {
     if s.contains('-') && !s.contains(':') {
         return None;
     }
-    let (neg, rest) = if let Some(r) = s.strip_prefix('-') {
-        (true, r.trim())
-    } else {
-        (false, s)
-    };
+    let (neg, rest) = if let Some(r) = s.strip_prefix('-') { (true, r.trim()) } else { (false, s) };
     // Optional leading days: "D HH:MM:SS" or just "HH:MM:SS"
     let (days, time_part) = if let Some((d, t)) = rest.split_once(' ') {
         let days: u32 = d.parse().ok()?;
@@ -645,9 +638,7 @@ impl MySqlBackendConnector {
             )));
         }
         if parameters.is_empty() {
-            return self
-                .execute_simple_query(endpoint, sql, session, mode)
-                .await;
+            return self.execute_simple_query(endpoint, sql, session, mode).await;
         }
 
         let in_txn = session.transaction_state == TransactionState::Active
@@ -757,9 +748,7 @@ impl MySqlBackendConnector {
                 if in_transaction {
                     self.store_lease(conn);
                 }
-                return Err(GatewayError::Backend(
-                    "mysql backend connection is not open".into(),
-                ));
+                return Err(GatewayError::Backend("mysql backend connection is not open".into()));
             }
         };
         let mut stream = match client.send_execute(&payload).await {
@@ -768,9 +757,7 @@ impl MySqlBackendConnector {
                 if in_transaction {
                     self.store_lease(conn);
                 }
-                return Err(GatewayError::Backend(format!(
-                    "mysql COM_STMT_EXECUTE: {error}"
-                )));
+                return Err(GatewayError::Backend(format!("mysql COM_STMT_EXECUTE: {error}")));
             }
         };
 
@@ -851,16 +838,15 @@ impl MySqlBackendConnector {
                         return Err(e);
                     }
                 };
-            let column_payload =
-                match packet_payload("mysql column definition", &column_packet) {
-                    Ok(p) => p,
-                    Err(e) => {
-                        if in_transaction {
-                            self.store_lease(conn);
-                        }
-                        return Err(e);
+            let column_payload = match packet_payload("mysql column definition", &column_packet) {
+                Ok(p) => p,
+                Err(e) => {
+                    if in_transaction {
+                        self.store_lease(conn);
                     }
-                };
+                    return Err(e);
+                }
+            };
             column_infos.push(decode_column(column_payload));
         }
         if let Err(e) = read_mysql_result_packet(&mut stream, "mysql column eof").await {
@@ -869,18 +855,12 @@ impl MySqlBackendConnector {
             }
             return Err(e);
         }
-        let columns: Vec<GatewayColumn> = column_infos
-            .iter()
-            .map(mysql_column_to_gateway_column)
-            .collect();
+        let columns: Vec<GatewayColumn> =
+            column_infos.iter().map(mysql_column_to_gateway_column).collect();
 
         drop(stream);
 
-        let lease_slot = if in_transaction {
-            Some(self.txn_lease.clone())
-        } else {
-            None
-        };
+        let lease_slot = if in_transaction { Some(self.txn_lease.clone()) } else { None };
         let (tx, rx) = tokio::sync::mpsc::channel::<Vec<Vec<GatewayValue>>>(2);
         tokio::spawn(async move {
             let run = async {
@@ -888,8 +868,7 @@ impl MySqlBackendConnector {
                     GatewayError::Backend("mysql backend connection is not open".into())
                 })?;
                 let mut stream = ResultsetStream::new(client.framed.as_mut());
-                let mut window_buf: Vec<Vec<GatewayValue>> =
-                    Vec::with_capacity(window.min(256));
+                let mut window_buf: Vec<Vec<GatewayValue>> = Vec::with_capacity(window.min(256));
                 let mut total: u64 = 0;
                 let mut truncated = false;
                 while let Some(row_packet) = read_optional_mysql_result_packet(&mut stream).await? {
@@ -908,10 +887,7 @@ impl MySqlBackendConnector {
                     if window_buf.len() >= window {
                         let chunk: Vec<_> = window_buf.drain(..).collect();
                         if tx.send(chunk).await.is_err() {
-                            while read_optional_mysql_result_packet(&mut stream)
-                                .await?
-                                .is_some()
-                            {}
+                            while read_optional_mysql_result_packet(&mut stream).await?.is_some() {}
                             return Ok(());
                         }
                     }
@@ -974,9 +950,10 @@ impl MySqlBackendConnector {
             self.acquire_conn(&endpoint, session).await?
         };
 
-        let client = conn.client.as_mut().ok_or_else(|| {
-            GatewayError::Backend("mysql backend connection is not open".into())
-        })?;
+        let client = conn
+            .client
+            .as_mut()
+            .ok_or_else(|| GatewayError::Backend("mysql backend connection is not open".into()))?;
         let mut stream = client
             .send_query(sql.as_bytes())
             .await
@@ -1030,20 +1007,14 @@ impl MySqlBackendConnector {
             column_infos.push(decode_column(column_payload));
         }
         let _ = read_mysql_result_packet(&mut stream, "mysql column eof").await?;
-        let columns: Vec<GatewayColumn> = column_infos
-            .iter()
-            .map(mysql_column_to_gateway_column)
-            .collect();
+        let columns: Vec<GatewayColumn> =
+            column_infos.iter().map(mysql_column_to_gateway_column).collect();
 
         // Spawn producer that owns `conn` and re-opens ResultsetStream for remaining
         // packets (query already in flight).
         drop(stream);
 
-        let lease_slot = if in_transaction {
-            Some(self.txn_lease.clone())
-        } else {
-            None
-        };
+        let lease_slot = if in_transaction { Some(self.txn_lease.clone()) } else { None };
         let (tx, rx) = tokio::sync::mpsc::channel::<Vec<Vec<GatewayValue>>>(2);
         tokio::spawn(async move {
             let run = async {
@@ -1051,8 +1022,7 @@ impl MySqlBackendConnector {
                     GatewayError::Backend("mysql backend connection is not open".into())
                 })?;
                 let mut stream = ResultsetStream::new(client.framed.as_mut());
-                let mut window_buf: Vec<Vec<GatewayValue>> =
-                    Vec::with_capacity(window.min(256));
+                let mut window_buf: Vec<Vec<GatewayValue>> = Vec::with_capacity(window.min(256));
                 let mut total: u64 = 0;
                 let mut truncated = false;
                 while let Some(row_packet) = read_optional_mysql_result_packet(&mut stream).await? {
@@ -1071,10 +1041,7 @@ impl MySqlBackendConnector {
                     if window_buf.len() >= window {
                         let chunk: Vec<_> = window_buf.drain(..).collect();
                         if tx.send(chunk).await.is_err() {
-                            while read_optional_mysql_result_packet(&mut stream)
-                                .await?
-                                .is_some()
-                            {}
+                            while read_optional_mysql_result_packet(&mut stream).await?.is_some() {}
                             return Ok(());
                         }
                     }
@@ -1245,8 +1212,7 @@ impl BackendConnector for MySqlBackendConnector {
             // A10: parameterized query — backend prepare/bind (COM_STMT_*), not text rewrite.
             GatewayCommand::QueryParams { sql, parameters } => {
                 let endpoint = self.select_endpoint(session)?;
-                self.execute_param_query(endpoint, &sql, &parameters, session, mode)
-                    .await
+                self.execute_param_query(endpoint, &sql, &parameters, session, mode).await
             }
             // A10: gateway-owned prepared registry; Execute binds via backend prepare.
             // When an endpoint is available, also COM_STMT_PREPARE on a backend
@@ -1254,33 +1220,25 @@ impl BackendConnector for MySqlBackendConnector {
             GatewayCommand::Prepare { sql } => {
                 let (statement_id, parameter_count) = self.prepared.prepare(sql.clone());
                 let columns = match self.select_endpoint(session) {
-                    Ok(endpoint) => match self
-                        .describe_sql_columns(endpoint, &sql, session)
-                        .await
-                    {
-                        Ok(cols) => cols,
-                        Err(e) => {
-                            // Fail soft for unit tests / empty connectors: keep empty columns.
-                            tracing::debug!(
-                                target: "data_nexus::a10",
-                                error = %e,
-                                "mysql COM_STMT_PREPARE catalog describe skipped"
-                            );
-                            Vec::new()
+                    Ok(endpoint) => {
+                        match self.describe_sql_columns(endpoint, &sql, session).await {
+                            Ok(cols) => cols,
+                            Err(e) => {
+                                // Fail soft for unit tests / empty connectors: keep empty columns.
+                                tracing::debug!(
+                                    target: "data_nexus::a10",
+                                    error = %e,
+                                    "mysql COM_STMT_PREPARE catalog describe skipped"
+                                );
+                                Vec::new()
+                            }
                         }
-                    },
+                    }
                     Err(_) => Vec::new(),
                 };
-                Ok(GatewayResponse::Prepared {
-                    statement_id,
-                    parameter_count,
-                    columns,
-                })
+                Ok(GatewayResponse::Prepared { statement_id, parameter_count, columns })
             }
-            GatewayCommand::Execute {
-                statement_id,
-                parameters,
-            } => {
+            GatewayCommand::Execute { statement_id, parameters } => {
                 let sql = self.prepared.take_sql(&statement_id).ok_or_else(|| {
                     GatewayError::Backend(format!(
                         "unknown mysql prepared statement id '{statement_id}'"
@@ -1295,15 +1253,11 @@ impl BackendConnector for MySqlBackendConnector {
                     )));
                 }
                 let endpoint = self.select_endpoint(session)?;
-                self.execute_param_query(endpoint, &sql, &parameters, session, mode)
-                    .await
+                self.execute_param_query(endpoint, &sql, &parameters, session, mode).await
             }
             GatewayCommand::CloseStatement { statement_id } => {
                 let _ = self.prepared.close(&statement_id);
-                Ok(GatewayResponse::Ok {
-                    affected_rows: 0,
-                    last_insert_id: None,
-                })
+                Ok(GatewayResponse::Ok { affected_rows: 0, last_insert_id: None })
             }
             // A10: catalog describe via COM_STMT_PREPARE result column defs (no execute).
             GatewayCommand::DescribeSql { sql } => {
@@ -1350,15 +1304,14 @@ impl BackendConnector for MySqlBackendConnector {
         // MySQL stays demote-only for COM_STMT.
         // Preserve any max_rows already on the mode (from stream_mode merge); do
         // not open an uncapped demote window under passthrough=true.
-        let (mode, streaming) = if matches!(mode, ExecuteMode::Passthrough)
-            && (is_query_params || is_execute)
-        {
-            let max = mode.effective_max_rows();
-            let m = ExecuteMode::from_streaming_config(256, max);
-            (m, true)
-        } else {
-            (mode, streaming)
-        };
+        let (mode, streaming) =
+            if matches!(mode, ExecuteMode::Passthrough) && (is_query_params || is_execute) {
+                let max = mode.effective_max_rows();
+                let m = ExecuteMode::from_streaming_config(256, max);
+                (m, true)
+            } else {
+                (mode, streaming)
+            };
 
         if streaming && is_query {
             if let GatewayCommand::Query { sql } = command {
@@ -1386,11 +1339,7 @@ impl BackendConnector for MySqlBackendConnector {
             }
         }
         if streaming && is_execute {
-            if let GatewayCommand::Execute {
-                statement_id,
-                parameters,
-            } = command
-            {
+            if let GatewayCommand::Execute { statement_id, parameters } = command {
                 let sql = self.prepared.take_sql(&statement_id).ok_or_else(|| {
                     GatewayError::Backend(format!(
                         "unknown mysql prepared statement id '{statement_id}'"
@@ -1487,13 +1436,7 @@ impl Default for MySqlBackendConnection {
 impl MySqlBackendConnection {
     fn factory(endpoint: EndpointConfig, database: String) -> Self {
         let pool_key = mysql_pool_key(&endpoint, &database);
-        Self {
-            endpoint,
-            pool_key,
-            database,
-            client: None,
-            stmt_cache: Mutex::new(HashMap::new()),
-        }
+        Self { endpoint, pool_key, database, client: None, stmt_cache: Mutex::new(HashMap::new()) }
     }
 
     /// A10: prepare on backend (or reuse connection-local cache).
@@ -1501,9 +1444,10 @@ impl MySqlBackendConnection {
         if let Some(p) = self.stmt_cache.lock().get(sql).cloned() {
             return Ok(p);
         }
-        let client = self.client.as_mut().ok_or_else(|| {
-            GatewayError::Backend("mysql backend connection is not open".into())
-        })?;
+        let client = self
+            .client
+            .as_mut()
+            .ok_or_else(|| GatewayError::Backend("mysql backend connection is not open".into()))?;
         let stmt = client
             .send_prepare(sql.as_bytes())
             .await
@@ -1520,11 +1464,8 @@ impl MySqlBackendConnection {
                 Some(mysql_column_to_gateway_column(&info))
             })
             .collect();
-        let prepared = BackendPrepared {
-            stmt_id: stmt.stmt_id,
-            param_count: stmt.params_count,
-            columns,
-        };
+        let prepared =
+            BackendPrepared { stmt_id: stmt.stmt_id, param_count: stmt.params_count, columns };
         let mut cache = self.stmt_cache.lock();
         if cache.len() >= MAX_MYSQL_STMT_CACHE_PER_CONN {
             cache.clear();
@@ -1547,9 +1488,10 @@ impl MySqlBackendConnection {
         sql: &str,
         mode: ExecuteMode,
     ) -> GatewayResult<GatewayResponse> {
-        let client = self.client.as_mut().ok_or_else(|| {
-            GatewayError::Backend("mysql backend connection is not open".into())
-        })?;
+        let client = self
+            .client
+            .as_mut()
+            .ok_or_else(|| GatewayError::Backend("mysql backend connection is not open".into()))?;
         let mut stream = client
             .send_query(sql.as_bytes())
             .await
@@ -1577,9 +1519,10 @@ impl MySqlBackendConnection {
             )));
         }
         let payload = encode_stmt_execute_payload(prepared.stmt_id, parameters)?;
-        let client = self.client.as_mut().ok_or_else(|| {
-            GatewayError::Backend("mysql backend connection is not open".into())
-        })?;
+        let client = self
+            .client
+            .as_mut()
+            .ok_or_else(|| GatewayError::Backend("mysql backend connection is not open".into()))?;
         let mut stream = client
             .send_execute(&payload)
             .await
@@ -1593,9 +1536,9 @@ impl MySqlBackendConnection {
     }
 
     fn client_ref(&self) -> GatewayResult<&ClientConn> {
-        self.client.as_ref().ok_or_else(|| {
-            GatewayError::Backend("mysql backend connection is not open".into())
-        })
+        self.client
+            .as_ref()
+            .ok_or_else(|| GatewayError::Backend("mysql backend connection is not open".into()))
     }
 }
 
@@ -1649,9 +1592,10 @@ impl ConnLike for MySqlBackendConnection {
     }
 
     async fn ping(&mut self) -> Result<(), Self::Error> {
-        let client = self.client.as_mut().ok_or_else(|| {
-            GatewayError::Backend("mysql backend connection is not open".into())
-        })?;
+        let client = self
+            .client
+            .as_mut()
+            .ok_or_else(|| GatewayError::Backend("mysql backend connection is not open".into()))?;
         client
             .send_ping()
             .await
@@ -1662,15 +1606,11 @@ impl ConnLike for MySqlBackendConnection {
 
 impl ConnAttr for MySqlBackendConnection {
     fn get_host(&self) -> String {
-        parse_endpoint_address(&self.endpoint.address)
-            .map(|(host, _)| host)
-            .unwrap_or_default()
+        parse_endpoint_address(&self.endpoint.address).map(|(host, _)| host).unwrap_or_default()
     }
 
     fn get_port(&self) -> u16 {
-        parse_endpoint_address(&self.endpoint.address)
-            .map(|(_, port)| port)
-            .unwrap_or_default()
+        parse_endpoint_address(&self.endpoint.address).map(|(_, port)| port).unwrap_or_default()
     }
 
     fn get_user(&self) -> String {
@@ -1728,11 +1668,7 @@ fn register_endpoint_factory(
 }
 
 fn effective_database(endpoint: &EndpointConfig, session: &SessionState) -> String {
-    session
-        .database
-        .clone()
-        .or_else(|| endpoint.database.clone())
-        .unwrap_or_default()
+    session.database.clone().or_else(|| endpoint.database.clone()).unwrap_or_default()
 }
 
 fn mysql_pool_key(endpoint: &EndpointConfig, database: &str) -> String {
@@ -1752,11 +1688,7 @@ fn mysql_session_attrs(session: &SessionState) -> Vec<SessionAttr> {
         attrs.push(SessionAttr::Charset(charset));
     }
     if let Some(autocommit) = session.autocommit {
-        attrs.push(SessionAttr::Autocommit(Some(if autocommit {
-            "1".into()
-        } else {
-            "0".into()
-        })));
+        attrs.push(SessionAttr::Autocommit(Some(if autocommit { "1".into() } else { "0".into() })));
     }
     attrs
 }
@@ -1781,7 +1713,6 @@ fn parse_endpoint_address(address: &str) -> GatewayResult<(String, u16)> {
 
     Ok((host.to_string(), port))
 }
-
 
 /// Collect backend packets as frontend-ready payloads (no logical decode).
 ///
@@ -1822,18 +1753,14 @@ async fn read_mysql_query_passthrough(
             // still need that EOF packet to finish the text resultset.
             // ResultsetStream does not yield the terminal EOF payload; always append.
             // Payload-only EOF packet body (header re-applied by frontend Encode).
-            let last_is_eof = packets
-                .last()
-                .map(|p| p.first() == Some(&EOF_HEADER))
-                .unwrap_or(false);
+            let last_is_eof =
+                packets.last().map(|p| p.first() == Some(&EOF_HEADER)).unwrap_or(false);
             if !last_is_eof {
                 packets.push(vec![EOF_HEADER, 0, 0, 0, 0]);
             }
             Ok(GatewayResponse::Wire { packets })
         }
-        None => Err(GatewayError::Protocol(
-            "mysql query header packet has empty payload".into(),
-        )),
+        None => Err(GatewayError::Protocol("mysql query header packet has empty payload".into())),
     }
 }
 
@@ -1984,9 +1911,9 @@ async fn read_mysql_query_response_binary(
                 rows,
             })
         }
-        None => Err(GatewayError::Protocol(
-            "mysql binary query header packet has empty payload".into(),
-        )),
+        None => {
+            Err(GatewayError::Protocol("mysql binary query header packet has empty payload".into()))
+        }
     }
 }
 
@@ -2106,16 +2033,12 @@ fn binary_row_to_gateway_values(
     columns: &[ColumnInfo],
 ) -> GatewayResult<Vec<GatewayValue>> {
     if row.is_empty() {
-        return Err(GatewayError::Protocol(
-            "mysql binary row payload is empty".into(),
-        ));
+        return Err(GatewayError::Protocol("mysql binary row payload is empty".into()));
     }
     // Header 0x00 + null bitmap ((n+7+2)/8)
     let null_len = (columns.len() + 7 + 2) / 8;
     if row.len() < 1 + null_len {
-        return Err(GatewayError::Protocol(
-            "mysql binary row shorter than null bitmap".into(),
-        ));
+        return Err(GatewayError::Protocol("mysql binary row shorter than null bitmap".into()));
     }
     if row[0] != 0x00 {
         // Some servers may send OK/EOF here; treat non-0x00 as protocol error for rows.
@@ -2181,9 +2104,7 @@ fn decode_binary_result_value(
         }
         MYSQL_TYPE_LONGLONG => {
             if data.len() < 8 {
-                return Err(GatewayError::Protocol(
-                    "mysql binary LONGLONG truncated".into(),
-                ));
+                return Err(GatewayError::Protocol("mysql binary LONGLONG truncated".into()));
             }
             let v = i64::from_le_bytes(data[..8].try_into().unwrap());
             if column.column_flag & (ColumnFlag::UNSIGNED_FLAG as u16) > 0 {
@@ -2201,17 +2122,12 @@ fn decode_binary_result_value(
         }
         MYSQL_TYPE_DOUBLE => {
             if data.len() < 8 {
-                return Err(GatewayError::Protocol(
-                    "mysql binary DOUBLE truncated".into(),
-                ));
+                return Err(GatewayError::Protocol("mysql binary DOUBLE truncated".into()));
             }
             let bits = u64::from_le_bytes(data[..8].try_into().unwrap());
             Ok((GatewayValue::Float(f64::from_bits(bits)), 8))
         }
-        MYSQL_TYPE_DATE
-        | MYSQL_TYPE_DATETIME
-        | MYSQL_TYPE_TIMESTAMP
-        | MYSQL_TYPE_TIME
+        MYSQL_TYPE_DATE | MYSQL_TYPE_DATETIME | MYSQL_TYPE_TIMESTAMP | MYSQL_TYPE_TIME
         | MYSQL_TYPE_NEWDATE => {
             if data.is_empty() {
                 return Err(GatewayError::Protocol("mysql binary date/time truncated".into()));
@@ -2307,9 +2223,7 @@ fn decode_mysql_binary_datetime_text(payload: &[u8]) -> GatewayResult<String> {
     let mi = payload[5];
     let sec = payload[6];
     if payload.len() == 7 {
-        return Ok(format!(
-            "{y:04}-{mo:02}-{d:02} {h:02}:{mi:02}:{sec:02}"
-        ));
+        return Ok(format!("{y:04}-{mo:02}-{d:02} {h:02}:{mi:02}:{sec:02}"));
     }
     if payload.len() < 11 {
         return Err(GatewayError::Protocol(format!(
@@ -2318,9 +2232,7 @@ fn decode_mysql_binary_datetime_text(payload: &[u8]) -> GatewayResult<String> {
         )));
     }
     let micro = u32::from_le_bytes([payload[7], payload[8], payload[9], payload[10]]);
-    Ok(format!(
-        "{y:04}-{mo:02}-{d:02} {h:02}:{mi:02}:{sec:02}.{micro:06}"
-    ))
+    Ok(format!("{y:04}-{mo:02}-{d:02} {h:02}:{mi:02}:{sec:02}.{micro:06}"))
 }
 
 /// A10: TIME payload → `[-][D ]HH:MM:SS[.ffffff]` (D days only when non-zero).
@@ -2341,9 +2253,7 @@ fn decode_mysql_binary_time_text(payload: &[u8]) -> GatewayResult<String> {
     let m = payload[6];
     let sec = payload[7];
     let micro = if payload.len() >= 12 {
-        Some(u32::from_le_bytes([
-            payload[8], payload[9], payload[10], payload[11],
-        ]))
+        Some(u32::from_le_bytes([payload[8], payload[9], payload[10], payload[11]]))
     } else if payload.len() == 8 {
         None
     } else {
@@ -2385,10 +2295,7 @@ fn decode_lenc_bytes(data: &[u8]) -> GatewayResult<(Vec<u8>, usize)> {
             if data.len() < 4 {
                 return Err(GatewayError::Protocol("mysql lenc 0xfd truncated".into()));
             }
-            (
-                u32::from_le_bytes([data[1], data[2], data[3], 0]) as usize,
-                4,
-            )
+            (u32::from_le_bytes([data[1], data[2], data[3], 0]) as usize, 4)
         }
         0xfe => {
             if data.len() < 9 {
@@ -2404,9 +2311,7 @@ fn decode_lenc_bytes(data: &[u8]) -> GatewayResult<(Vec<u8>, usize)> {
         }
     };
     if data.len() < hdr + len {
-        return Err(GatewayError::Protocol(
-            "mysql lenc value exceeds packet".into(),
-        ));
+        return Err(GatewayError::Protocol("mysql lenc value exceeds packet".into()));
     }
     Ok((data[hdr..hdr + len].to_vec(), hdr + len))
 }
@@ -2477,7 +2382,6 @@ fn decode_fixed_lenc_int(
     Ok((LittleEndian::read_uint(&data[1..], value_len), false, total_len))
 }
 
-
 fn mysql_client_tls_opts(
     endpoint: &EndpointConfig,
 ) -> GatewayResult<Option<mysql_protocol::client::tls_opts::ClientTlsOpts>> {
@@ -2509,7 +2413,6 @@ fn mysql_client_tls_opts(
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -2689,20 +2592,11 @@ mod tests {
         let mut session = SessionState::default();
 
         let prepared = connector
-            .execute(
-                GatewayCommand::Prepare {
-                    sql: "SELECT 1".into(),
-                },
-                &mut session,
-            )
+            .execute(GatewayCommand::Prepare { sql: "SELECT 1".into() }, &mut session)
             .await
             .unwrap();
         let statement_id = match prepared {
-            GatewayResponse::Prepared {
-                statement_id,
-                parameter_count,
-                columns: _,
-            } => {
+            GatewayResponse::Prepared { statement_id, parameter_count, columns: _ } => {
                 assert_eq!(parameter_count, 0);
                 statement_id
             }
@@ -2712,10 +2606,7 @@ mod tests {
         // Unknown id errors without hitting backend.
         let err = connector
             .execute(
-                GatewayCommand::Execute {
-                    statement_id: "99999".into(),
-                    parameters: vec![],
-                },
+                GatewayCommand::Execute { statement_id: "99999".into(), parameters: vec![] },
                 &mut session,
             )
             .await;
@@ -2735,45 +2626,27 @@ mod tests {
 
         // Prepare with placeholders reports count.
         let prepared2 = connector
-            .execute(
-                GatewayCommand::Prepare {
-                    sql: "SELECT ? + ?".into(),
-                },
-                &mut session,
-            )
+            .execute(GatewayCommand::Prepare { sql: "SELECT ? + ?".into() }, &mut session)
             .await
             .unwrap();
         match prepared2 {
-            GatewayResponse::Prepared {
-                parameter_count, ..
-            } => assert_eq!(parameter_count, 2),
+            GatewayResponse::Prepared { parameter_count, .. } => assert_eq!(parameter_count, 2),
             other => panic!("{other:?}"),
         }
 
         assert_eq!(
             connector
                 .execute(
-                    GatewayCommand::CloseStatement {
-                        statement_id: statement_id.clone(),
-                    },
+                    GatewayCommand::CloseStatement { statement_id: statement_id.clone() },
                     &mut session,
                 )
                 .await,
-            Ok(GatewayResponse::Ok {
-                affected_rows: 0,
-                last_insert_id: None
-            })
+            Ok(GatewayResponse::Ok { affected_rows: 0, last_insert_id: None })
         );
 
         // After close, Execute fails as unknown.
         let err = connector
-            .execute(
-                GatewayCommand::Execute {
-                    statement_id,
-                    parameters: vec![],
-                },
-                &mut session,
-            )
+            .execute(GatewayCommand::Execute { statement_id, parameters: vec![] }, &mut session)
             .await;
         assert!(matches!(err, Err(GatewayError::Backend(_))));
     }
@@ -2784,10 +2657,7 @@ mod tests {
         assert_eq!(count_mysql_placeholders("SELECT '?'"), 0);
         let sql = bind_mysql_placeholders(
             "SELECT ? FROM t WHERE id=?",
-            &[
-                GatewayValue::String("x".into()),
-                GatewayValue::Integer(3),
-            ],
+            &[GatewayValue::String("x".into()), GatewayValue::Integer(3)],
         )
         .unwrap();
         assert_eq!(sql, "SELECT 'x' FROM t WHERE id=3");
@@ -2795,11 +2665,9 @@ mod tests {
 
     #[test]
     fn a10_encode_stmt_execute_payload_null_and_int() {
-        let payload = encode_stmt_execute_payload(
-            7,
-            &[GatewayValue::Null, GatewayValue::Integer(42)],
-        )
-        .unwrap();
+        let payload =
+            encode_stmt_execute_payload(7, &[GatewayValue::Null, GatewayValue::Integer(42)])
+                .unwrap();
         // stmt_id=7, flags=0, iteration=1
         assert_eq!(&payload[0..4], &7u32.to_le_bytes());
         assert_eq!(payload[4], 0);
@@ -2807,7 +2675,7 @@ mod tests {
         // null bitmap 1 byte: bit0 set
         assert_eq!(payload[9] & 0x01, 0x01);
         assert_eq!(payload[10], 1); // new_params_bound
-        // types: NULL, LONGLONG
+                                    // types: NULL, LONGLONG
         assert_eq!(payload[11], ColumnType::MYSQL_TYPE_NULL as u8);
         assert_eq!(payload[13], ColumnType::MYSQL_TYPE_LONGLONG as u8);
         // only non-null value encoded: 42 i64
@@ -2822,9 +2690,7 @@ mod tests {
             (ColumnType::MYSQL_TYPE_DATE as u8, false)
         );
         assert_eq!(
-            gateway_value_mysql_param_type(&GatewayValue::String(
-                "2022-08-31 07:16:16".into()
-            )),
+            gateway_value_mysql_param_type(&GatewayValue::String("2022-08-31 07:16:16".into())),
             (ColumnType::MYSQL_TYPE_DATETIME as u8, false)
         );
         assert_eq!(
@@ -2863,15 +2729,9 @@ mod tests {
         // DATE: 4 + year LE + mon + day
         assert_eq!(&values[0..5], &[4, 0xe8, 0x07, 8, 31]);
         // DATETIME: 7 + y m d h mi s
-        assert_eq!(
-            &values[5..13],
-            &[7, 0xe6, 0x07, 8, 31, 7, 16, 16]
-        );
+        assert_eq!(&values[5..13], &[7, 0xe6, 0x07, 8, 31, 7, 16, 16]);
         // TIME: 8 + neg days h m s
-        assert_eq!(
-            &values[13..22],
-            &[8, 1, 1, 0, 0, 0, 10, 8, 21]
-        );
+        assert_eq!(&values[13..22], &[8, 1, 1, 0, 0, 0, 10, 8, 21]);
     }
 
     #[test]
@@ -2885,34 +2745,23 @@ mod tests {
             column_info("b", ColumnType::MYSQL_TYPE_LONGLONG),
         ];
         let values = binary_row_to_gateway_values(&row, &columns).unwrap();
-        assert_eq!(
-            values,
-            vec![GatewayValue::Null, GatewayValue::Integer(99)]
-        );
+        assert_eq!(values, vec![GatewayValue::Null, GatewayValue::Integer(99)]);
     }
 
     #[test]
     fn a10_binary_date_datetime_time_to_iso_text() {
         // DATE 2024-08-31: len=4, year LE 0x07E8=2024, mon=8, day=31
         let date_payload = [0xE8u8, 0x07, 8, 31];
-        assert_eq!(
-            decode_mysql_binary_date_text(&date_payload).unwrap(),
-            "2024-08-31"
-        );
+        assert_eq!(decode_mysql_binary_date_text(&date_payload).unwrap(), "2024-08-31");
         // empty date
         assert_eq!(decode_mysql_binary_date_text(&[]).unwrap(), "0000-00-00");
 
         // DATETIME 2022-08-31 07:16:16 (fixture from protocol tests)
         let dt = [0xE6u8, 0x07, 0x08, 0x1f, 0x07, 0x10, 0x10];
-        assert_eq!(
-            decode_mysql_binary_datetime_text(&dt).unwrap(),
-            "2022-08-31 07:16:16"
-        );
+        assert_eq!(decode_mysql_binary_datetime_text(&dt).unwrap(), "2022-08-31 07:16:16");
         // DATETIME with micros 2003-12-31 01:02:03.123123
         // year 2003=0x07D3, micro 123123=0x0001E0F3 LE
-        let dt_us = [
-            0xD3u8, 0x07, 12, 31, 1, 2, 3, 0xF3, 0xE0, 0x01, 0x00,
-        ];
+        let dt_us = [0xD3u8, 0x07, 12, 31, 1, 2, 3, 0xF3, 0xE0, 0x01, 0x00];
         assert_eq!(
             decode_mysql_binary_datetime_text(&dt_us).unwrap(),
             "2003-12-31 01:02:03.123123"
@@ -2926,10 +2775,7 @@ mod tests {
         // TIME -1 day 10:08:21 → "-1 10:08:21" (protocol fixture)
         // is_neg=1 days=1 h=10 m=8 s=21
         let tm = [0x01u8, 0x01, 0x00, 0x00, 0x00, 10, 8, 21];
-        assert_eq!(
-            decode_mysql_binary_time_text(&tm).unwrap(),
-            "-1 10:08:21"
-        );
+        assert_eq!(decode_mysql_binary_time_text(&tm).unwrap(), "-1 10:08:21");
         // plain 00:00:00 empty
         assert_eq!(decode_mysql_binary_time_text(&[]).unwrap(), "00:00:00");
     }
@@ -2943,10 +2789,7 @@ mod tests {
         row.extend_from_slice(&[0xE6, 0x07, 0x08, 0x1f, 0x07, 0x10, 0x10]);
         let columns = vec![column_info("ts", ColumnType::MYSQL_TYPE_DATETIME)];
         let values = binary_row_to_gateway_values(&row, &columns).unwrap();
-        assert_eq!(
-            values,
-            vec![GatewayValue::String("2022-08-31 07:16:16".into())]
-        );
+        assert_eq!(values, vec![GatewayValue::String("2022-08-31 07:16:16".into())]);
     }
 
     #[tokio::test]
@@ -2958,13 +2801,8 @@ mod tests {
         ep.username = "root".into();
         ep.password = "root".into();
         let connector = MySqlBackendConnector::with_endpoints(vec![ep]);
-        let mut session = SessionState {
-            database: Some("orders".into()),
-            ..Default::default()
-        };
-        let ping = connector
-            .execute(GatewayCommand::Ping, &mut session)
-            .await;
+        let mut session = SessionState { database: Some("orders".into()), ..Default::default() };
+        let ping = connector.execute(GatewayCommand::Ping, &mut session).await;
         let _ = ping; // Ping does not need backend
         let result = connector
             .execute(
@@ -3013,10 +2851,7 @@ mod tests {
             GatewayCommand::QueryParams { .. }
         ));
         assert!(!matches!(
-            GatewayCommand::QueryParams {
-                sql: "SELECT ?".into(),
-                parameters: vec![],
-            },
+            GatewayCommand::QueryParams { sql: "SELECT ?".into(), parameters: vec![] },
             GatewayCommand::Query { .. }
         ));
     }
@@ -3045,10 +2880,7 @@ mod tests {
         ep.username = "root".into();
         ep.password = "root".into();
         let connector = MySqlBackendConnector::with_endpoints(vec![ep]);
-        let mut session = SessionState {
-            database: Some("orders".into()),
-            ..Default::default()
-        };
+        let mut session = SessionState { database: Some("orders".into()), ..Default::default() };
         let mode = ExecuteMode::from_streaming_config(2, Some(10));
         let outcome = connector
             .execute_outcome(
@@ -3070,10 +2902,7 @@ mod tests {
                 while let Some(chunk) = query.stream.poll_window(2).await.unwrap() {
                     rows.extend(chunk);
                 }
-                assert!(
-                    rows.len() >= 2,
-                    "expected multi-row streaming windows, got {rows:?}"
-                );
+                assert!(rows.len() >= 2, "expected multi-row streaming windows, got {rows:?}");
             }
             Ok(ExecuteOutcome::Complete(GatewayResponse::ResultSet { rows, .. })) => {
                 // Accept Complete if server returned tiny set without streaming path edge.
@@ -3107,10 +2936,7 @@ mod tests {
         assert!(matches!(mode, ExecuteMode::Streaming { .. }));
         assert_eq!(mode.window_rows(), Some(64));
         assert_eq!(mode.effective_max_rows(), Some(100));
-        assert!(!matches!(
-            ExecuteMode::Materialized,
-            ExecuteMode::Streaming { .. }
-        ));
+        assert!(!matches!(ExecuteMode::Materialized, ExecuteMode::Streaming { .. }));
         // Connector keeps a txn_lease slot for producer return-after-drain.
         let c = MySqlBackendConnector::with_endpoints(vec![endpoint()]);
         assert!(!c.has_transaction_lease());

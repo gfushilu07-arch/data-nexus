@@ -102,11 +102,7 @@ fn mysql_pool_attrs(
     charset: String,
     autocommit: Option<String>,
 ) -> Vec<SessionAttr> {
-    vec![
-        SessionAttr::DB(db),
-        SessionAttr::Charset(charset),
-        SessionAttr::Autocommit(autocommit),
-    ]
+    vec![SessionAttr::DB(db), SessionAttr::Charset(charset), SessionAttr::Autocommit(autocommit)]
 }
 
 use strategy::sharding_rewrite::ShardingRewrite;
@@ -469,8 +465,11 @@ impl TransFsm {
                 let factory =
                     ClientConn::with_opts(endpoint.user, endpoint.password, endpoint.addr.clone());
                 self.pool.set_factory(&endpoint.addr, factory);
-                let attrs =
-                    mysql_pool_attrs(self.db.clone(), self.charset.clone(), self.autocommit.clone());
+                let attrs = mysql_pool_attrs(
+                    self.db.clone(),
+                    self.charset.clone(),
+                    self.autocommit.clone(),
+                );
                 match self.pool.get_conn_with_endpoint_session(&endpoint.addr, &attrs).await {
                     Ok(client_conn) => Ok(client_conn),
                     Err(err) => Err(Error::new(ErrorKind::Protocol(err))),

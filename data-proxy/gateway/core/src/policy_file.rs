@@ -84,10 +84,7 @@ pub fn policy_file_mtime_ns(path: &str) -> Option<u64> {
     }
     let meta = std::fs::metadata(path).ok()?;
     let modified = meta.modified().ok()?;
-    modified
-        .duration_since(std::time::UNIX_EPOCH)
-        .ok()
-        .map(|d| d.as_nanos() as u64)
+    modified.duration_since(std::time::UNIX_EPOCH).ok().map(|d| d.as_nanos() as u64)
 }
 
 /// Load policy snapshot from disk (shared lock). Missing file → `None`.
@@ -114,10 +111,7 @@ pub fn load_local_pdp_policy_file(path: &str) -> Result<Option<LocalPdpPolicyFil
 }
 
 /// Persist policy snapshot (exclusive lock, atomic rename).
-pub fn save_local_pdp_policy_file(
-    path: &str,
-    snapshot: &LocalPdpPolicyFile,
-) -> Result<(), String> {
+pub fn save_local_pdp_policy_file(path: &str, snapshot: &LocalPdpPolicyFile) -> Result<(), String> {
     let path = path.trim();
     if path.is_empty() {
         return Ok(());
@@ -140,7 +134,9 @@ pub fn save_local_pdp_policy_file(
 
 /// If `policy_path` is set: load overlay when present, else seed file from `config`.
 /// Returns config with shared fields applied (or original clone if path empty).
-pub fn merge_local_pdp_from_file(config: &SecurityPolicyConfig) -> Result<SecurityPolicyConfig, String> {
+pub fn merge_local_pdp_from_file(
+    config: &SecurityPolicyConfig,
+) -> Result<SecurityPolicyConfig, String> {
     let path = config.state.policy_path.trim();
     if path.is_empty() {
         return Ok(config.clone());
@@ -186,10 +182,7 @@ mod tests {
     use std::time::{SystemTime, UNIX_EPOCH};
 
     fn tmp(tag: &str) -> PathBuf {
-        let ms = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_millis();
+        let ms = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
         std::env::temp_dir().join(format!("dn-h05-policy-{tag}-{ms}.json"))
     }
 
@@ -218,11 +211,12 @@ mod tests {
         };
         cfg.state.policy_path = path.to_string_lossy().into();
 
-        save_local_pdp_policy_file(path.to_str().unwrap(), &LocalPdpPolicyFile::from_security(&cfg))
-            .unwrap();
-        let loaded = load_local_pdp_policy_file(path.to_str().unwrap())
-            .unwrap()
-            .expect("file");
+        save_local_pdp_policy_file(
+            path.to_str().unwrap(),
+            &LocalPdpPolicyFile::from_security(&cfg),
+        )
+        .unwrap();
+        let loaded = load_local_pdp_policy_file(path.to_str().unwrap()).unwrap().expect("file");
         assert_eq!(loaded.star_policy, "allow");
         assert!(!loaded.fail_closed);
         assert_eq!(loaded.rules.len(), 1);
@@ -275,10 +269,7 @@ mod tests {
             SecurityRuleConfig, TicketStore, VaultStore,
         };
         use std::time::{SystemTime, UNIX_EPOCH};
-        let ms = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_millis();
+        let ms = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
         let dir = std::env::temp_dir().join(format!("dn-h05-bundle-{ms}"));
         let _ = std::fs::create_dir_all(&dir);
         let ticket_path = dir.join("tickets.json");
@@ -346,9 +337,8 @@ mod tests {
         let tickets_b = TicketStore::with_file(ticket_path.clone(), key).unwrap();
         assert!(tickets_b.get(&t.id).is_some());
         let vault_b = VaultStore::with_file(vault_path.clone(), key).unwrap();
-        let (user, pass) = vault_b
-            .backend_identity(&lease.lease_id)
-            .expect("password restored with encrypt key");
+        let (user, pass) =
+            vault_b.backend_identity(&lease.lease_id).expect("password restored with encrypt key");
         assert_eq!(user, "app");
         assert_eq!(pass.as_str(), "s3cret");
 
@@ -356,11 +346,7 @@ mod tests {
         cfg_b.enabled = true;
         cfg_b.state.policy_path = policy_path.to_string_lossy().into();
         let merged = crate::merge_local_pdp_from_file(&cfg_b).expect("merge");
-        assert!(
-            merged.rules.iter().any(|r| r.name == "deny-secret"),
-            "{:?}",
-            merged.rules
-        );
+        assert!(merged.rules.iter().any(|r| r.name == "deny-secret"), "{:?}", merged.rules);
 
         let raw_t = std::fs::read_to_string(&ticket_path).unwrap();
         assert!(raw_t.starts_with("DNTICKET1:"), "{raw_t}");
@@ -371,6 +357,4 @@ mod tests {
 
         let _ = std::fs::remove_dir_all(&dir);
     }
-
-
 }

@@ -60,12 +60,11 @@ impl LocalStream {
         match self {
             Self::Plain(ref mut try_plain) => {
                 let connector = tokio_native_tls::TlsConnector::from(connector);
-                let plain_stream = try_plain.take().ok_or_else(|| {
-                    ProtocolError::InvalidPacket {
+                let plain_stream =
+                    try_plain.take().ok_or_else(|| ProtocolError::InvalidPacket {
                         method: "make_tls: plain stream already taken".into(),
                         data: vec![],
-                    }
-                })?;
+                    })?;
 
                 let host = if server_name.is_empty() {
                     plain_stream
@@ -76,15 +75,12 @@ impl LocalStream {
                     server_name.to_owned()
                 };
 
-                let tls_stream = connector
-                    .connect(&host, plain_stream)
-                    .await
-                    .map_err(|e| {
-                        ProtocolError::InvalidPacket {
-                            method: format!("mysql tls handshake: {e}"),
-                            data: vec![],
-                        }
-                    })?;
+                let tls_stream = connector.connect(&host, plain_stream).await.map_err(|e| {
+                    ProtocolError::InvalidPacket {
+                        method: format!("mysql tls handshake: {e}"),
+                        data: vec![],
+                    }
+                })?;
 
                 *self = LocalStream::from(tls_stream);
                 Ok(())

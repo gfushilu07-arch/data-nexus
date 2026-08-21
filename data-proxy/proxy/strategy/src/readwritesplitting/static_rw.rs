@@ -53,10 +53,7 @@ pub struct ReadWriteSplittingStatic {
 
 impl Route for ReadWriteSplittingStatic {
     type Error = BoxError;
-    fn dispatch(
-        &mut self,
-        input: &RouteInput,
-    ) -> Result<crate::route::DispatchPlan, Self::Error> {
+    fn dispatch(&mut self, input: &RouteInput) -> Result<crate::route::DispatchPlan, Self::Error> {
         let b = self.rules_match.get(input);
         match b.0.next() {
             Some(endpoint) => Ok(crate::route::DispatchPlan::single(endpoint, b.1)),

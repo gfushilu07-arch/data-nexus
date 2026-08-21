@@ -21,9 +21,7 @@ pub struct MySqlAstDialectParser {
 
 impl MySqlAstDialectParser {
     pub fn new() -> Self {
-        Self {
-            fallback: HeuristicDialectParser::mysql(),
-        }
+        Self { fallback: HeuristicDialectParser::mysql() }
     }
 }
 
@@ -178,9 +176,7 @@ pub struct PostgreSqlStructuredDialectParser {
 
 impl PostgreSqlStructuredDialectParser {
     pub fn new() -> Self {
-        Self {
-            fallback: HeuristicDialectParser::postgresql(),
-        }
+        Self { fallback: HeuristicDialectParser::postgresql() }
     }
 }
 
@@ -289,12 +285,10 @@ fn classify_postgresql_sql(sql: &str) -> Option<PostgresStmtKind> {
         "ROLLBACK" | "ABORT" => PostgresStmtKind::Rollback,
         "SET" => PostgresStmtKind::Set,
         "COPY" => PostgresStmtKind::Copy,
-        "CREATE" | "ALTER" | "DROP" | "TRUNCATE" | "VACUUM" | "ANALYZE" | "REINDEX"
-        | "CLUSTER" | "CALL" | "DO" | "LISTEN" | "NOTIFY" | "UNLISTEN" | "LOCK"
-        | "GRANT" | "REVOKE" | "COMMENT" | "SECURITY" | "PREPARE" | "EXECUTE"
-        | "DEALLOCATE" | "DECLARE" | "FETCH" | "MOVE" | "CLOSE" | "DISCARD" => {
-            PostgresStmtKind::Other
-        }
+        "CREATE" | "ALTER" | "DROP" | "TRUNCATE" | "VACUUM" | "ANALYZE" | "REINDEX" | "CLUSTER"
+        | "CALL" | "DO" | "LISTEN" | "NOTIFY" | "UNLISTEN" | "LOCK" | "GRANT" | "REVOKE"
+        | "COMMENT" | "SECURITY" | "PREPARE" | "EXECUTE" | "DEALLOCATE" | "DECLARE" | "FETCH"
+        | "MOVE" | "CLOSE" | "DISCARD" => PostgresStmtKind::Other,
         _ => return None,
     })
 }
@@ -430,9 +424,7 @@ pub struct PostgreSqlAstDialectParser {
 
 impl PostgreSqlAstDialectParser {
     pub fn new() -> Self {
-        Self {
-            fallback: PostgreSqlStructuredDialectParser::new(),
-        }
+        Self { fallback: PostgreSqlStructuredDialectParser::new() }
     }
 }
 
@@ -482,10 +474,7 @@ enum PostgresAstKind {
 
 impl PostgresAstKind {
     fn is_read_only_from_ast(self) -> bool {
-        matches!(
-            self,
-            Self::Select | Self::Values | Self::Show | Self::Explain
-        )
+        matches!(self, Self::Select | Self::Values | Self::Show | Self::Explain)
     }
 
     fn leading_keyword(self) -> &'static str {
@@ -687,9 +676,9 @@ mod tests {
         assert!(!parser.is_read_only("DELETE FROM t"));
         assert!(!parser.is_read_only("COPY t FROM STDIN"));
         assert!(!parser.is_read_only("SELECT * FROM t FOR UPDATE"));
-        assert!(!parser.is_read_only(
-            "WITH cte AS (SELECT id FROM t) INSERT INTO u SELECT * FROM cte"
-        ));
+        assert!(
+            !parser.is_read_only("WITH cte AS (SELECT id FROM t) INSERT INTO u SELECT * FROM cte")
+        );
     }
 
     #[test]
@@ -698,10 +687,7 @@ mod tests {
         assert!(parser.is_read_only("-- comment\nSELECT 1"));
         assert!(parser.is_read_only("/* block */ SELECT 1"));
         assert!(!parser.is_read_only("/* x */ INSERT INTO t VALUES (1)"));
-        assert_eq!(
-            parser.leading_keyword("-- hi\n  update t set a=1"),
-            Some("UPDATE".into())
-        );
+        assert_eq!(parser.leading_keyword("-- hi\n  update t set a=1"), Some("UPDATE".into()));
     }
 
     #[test]
@@ -716,9 +702,9 @@ mod tests {
         assert!(!parser.is_read_only("UPDATE t SET a = 1 WHERE id = 2"));
         assert!(!parser.is_read_only("DELETE FROM t WHERE id = 1"));
         assert!(!parser.is_read_only("SELECT * FROM t FOR UPDATE"));
-        assert!(!parser.is_read_only(
-            "WITH cte AS (SELECT id FROM t) INSERT INTO u SELECT id FROM cte"
-        ));
+        assert!(
+            !parser.is_read_only("WITH cte AS (SELECT id FROM t) INSERT INTO u SELECT id FROM cte")
+        );
         assert!(!parser.is_read_only("CREATE TABLE t (id INT)"));
         assert!(!parser.is_read_only("DROP TABLE t"));
     }
@@ -727,10 +713,7 @@ mod tests {
     fn postgresql_ast_leading_keyword() {
         let parser = PostgreSqlAstDialectParser::new();
         assert_eq!(parser.leading_keyword("select 1"), Some("SELECT".into()));
-        assert_eq!(
-            parser.leading_keyword("insert into t values (1)"),
-            Some("INSERT".into())
-        );
+        assert_eq!(parser.leading_keyword("insert into t values (1)"), Some("INSERT".into()));
         assert_eq!(
             parser.leading_keyword("with c as (select 1) select * from c"),
             Some("SELECT".into())

@@ -12,11 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{
-    collections::BTreeMap,
-    sync::Arc,
-    time::Instant,
-};
+use std::{collections::BTreeMap, sync::Arc, time::Instant};
 
 use conn_pool::Pool;
 use gateway_core::{
@@ -41,10 +37,7 @@ use tracing::{debug, error};
 
 use crate::{
     core_engine::{CoreGatewayConnection, CoreGatewayListenerPlan, CoreGatewayRuntimePlan},
-    frontend::{
-        mysql::MySqlFrontendProtocol,
-        postgresql::PostgreSqlFrontendProtocol,
-    },
+    frontend::{mysql::MySqlFrontendProtocol, postgresql::PostgreSqlFrontendProtocol},
     server::metrics::*,
 };
 
@@ -144,9 +137,7 @@ impl GatewayRuntime {
 
     fn build_listener_config(&self) -> Result<Listener, Error> {
         let plan = self.core_listener_plan().ok_or_else(|| {
-            runtime_configuration_error(
-                "core listener plan must exist for native gateway runtime",
-            )
+            runtime_configuration_error("core listener plan must exist for native gateway runtime")
         })?;
         Ok(Listener {
             name: plan.listener().name.clone(),
@@ -286,10 +277,7 @@ impl GatewayRuntime {
         }
         for handle in session_handles {
             if let Err(error) = handle.await {
-                error!(
-                    "gateway '{}' session task stopped with error: {}",
-                    listener_name, error
-                );
+                error!("gateway '{}' session task stopped with error: {}", listener_name, error);
             }
         }
         debug!("gateway '{}' session drain complete", listener_name);
@@ -349,16 +337,14 @@ where
 {
     async fn write_packets(&mut self, packets: Vec<Vec<u8>>) -> GatewayResult<()> {
         for packet in packets {
-            self.stream
-                .write_all(&packet)
-                .await
-                .map_err(|e| {
-                    GatewayError::Protocol(format!("postgresql response write error: {e}"))
-                })?;
+            self.stream.write_all(&packet).await.map_err(|e| {
+                GatewayError::Protocol(format!("postgresql response write error: {e}"))
+            })?;
         }
-        self.stream.flush().await.map_err(|e| {
-            GatewayError::Protocol(format!("postgresql response flush error: {e}"))
-        })?;
+        self.stream
+            .flush()
+            .await
+            .map_err(|e| GatewayError::Protocol(format!("postgresql response flush error: {e}")))?;
         Ok(())
     }
 }
@@ -381,12 +367,8 @@ async fn run_mysql_core_session(
         session::Session,
     };
 
-    let frontend = MySqlFrontendProtocol::new(
-        auth_user.clone(),
-        auth_password,
-        auth_database,
-        server_version,
-    );
+    let frontend =
+        MySqlFrontendProtocol::new(auth_user.clone(), auth_password, auth_database, server_version);
     let mut framed = match frontend.handshake(socket).await {
         Ok(framed) => framed,
         Err(error) => {
@@ -449,18 +431,12 @@ async fn run_mysql_core_session(
         let terminate = frame.first() == Some(&mysql_protocol::mysql_const::COM_QUIT);
 
         // A07: progressive encode → socket (windowed ResultSet with back-pressure).
-        let mut writer = MySqlSocketWriter {
-            framed: &mut framed,
-        };
+        let mut writer = MySqlSocketWriter { framed: &mut framed };
         if let Err(error) = connection.handle_frame_to_writer(&frame, &mut writer).await {
-            let err_info = make_err_packet(MySQLError::new(
-                1105,
-                b"HY000".to_vec(),
-                error.to_string(),
-            ));
-            if let Err(send_error) = framed
-                .send(PacketSend::Encode::<Box<[u8]>>(err_info[4..].into()))
-                .await
+            let err_info =
+                make_err_packet(MySQLError::new(1105, b"HY000".to_vec(), error.to_string()));
+            if let Err(send_error) =
+                framed.send(PacketSend::Encode::<Box<[u8]>>(err_info[4..].into())).await
             {
                 error!("mysql error response write failed {:?}", send_error);
             }
@@ -529,16 +505,12 @@ async fn run_postgresql_core_session(
         let terminate = frame.first() == Some(&b'X');
 
         // A07: progressive encode → socket.
-        let mut writer = PgSocketWriter {
-            stream: &mut stream,
-        };
+        let mut writer = PgSocketWriter { stream: &mut stream };
         if let Err(error) = connection.handle_frame_to_writer(&frame, &mut writer).await {
             error!("postgresql core frame handling error {:?}", error);
-            if let Some(packet) = postgresql_extended_error_packet(
-                &frame,
-                connection.session_mut(),
-                &error,
-            ) {
+            if let Some(packet) =
+                postgresql_extended_error_packet(&frame, connection.session_mut(), &error)
+            {
                 if let Err(write_error) = writer.write_packets(vec![packet]).await {
                     error!("postgresql error response write failed {:?}", write_error);
                     break;
@@ -564,10 +536,8 @@ fn postgresql_extended_error_packet(
         GatewayError::Unsupported(_) => "0A000",
         _ => return None,
     };
-    let extended_tag = matches!(
-        frame.first(),
-        Some(b'P' | b'B' | b'D' | b'E' | b'C' | b'H' | b'S')
-    );
+    let extended_tag =
+        matches!(frame.first(), Some(b'P' | b'B' | b'D' | b'E' | b'C' | b'H' | b'S'));
     if !session.pg_extended_query && !extended_tag {
         return None;
     }
@@ -685,7 +655,6 @@ fn protocol_name(protocol: &ProtocolKind) -> &'static str {
     }
 }
 
-
 fn build_pool_snapshot(pool: &Pool<ClientConn>, configured_endpoints: &[String]) -> PoolSnapshot {
     let endpoints = known_pool_endpoints(pool, configured_endpoints);
 
@@ -778,7 +747,6 @@ impl Drop for SessionRegistration {
     }
 }
 
-
 #[async_trait::async_trait]
 impl proxy::factory::Proxy for GatewayRuntime {
     /// Run the accept loop until shutdown is requested, then drain sessions.
@@ -811,7 +779,7 @@ mod tests {
         EndpointConfig, EndpointRole, GatewayConfig, ListenerConfig, ProtocolKind, ServiceConfig,
     };
     use proxy::factory::Proxy as _;
-    use tokio::io::{AsyncWriteExt as _, duplex};
+    use tokio::io::{duplex, AsyncWriteExt as _};
 
     use super::*;
 
@@ -838,10 +806,7 @@ mod tests {
 
     #[test]
     fn sqlt_3f3_postgresql_unsupported_waits_for_sync() {
-        let mut session = SessionState {
-            pg_extended_query: true,
-            ..SessionState::default()
-        };
+        let mut session = SessionState { pg_extended_query: true, ..SessionState::default() };
         let packet = postgresql_extended_error_packet(
             b"P\0\0\0\x04",
             &mut session,
@@ -870,10 +835,7 @@ mod tests {
 
     #[test]
     fn sqlt_3f2_postgresql_backend_error_is_not_reclassified() {
-        let mut session = SessionState {
-            pg_extended_query: true,
-            ..SessionState::default()
-        };
+        let mut session = SessionState { pg_extended_query: true, ..SessionState::default() };
 
         assert_eq!(
             postgresql_extended_error_packet(
@@ -956,9 +918,9 @@ mod tests {
                 username: "root".into(),
                 password: "backend-secret".into(),
                 weight: 1,
-            ssl_mode: Default::default(),
-            ssl_ca_file: None,
-            ssl_accept_invalid_certs: true,
+                ssl_mode: Default::default(),
+                ssl_ca_file: None,
+                ssl_accept_invalid_certs: true,
             }],
             ..GatewayConfig::default()
         }
@@ -990,9 +952,9 @@ mod tests {
                 username: "postgres".into(),
                 password: "backend-secret".into(),
                 weight: 1,
-            ssl_mode: Default::default(),
-            ssl_ca_file: None,
-            ssl_accept_invalid_certs: true,
+                ssl_mode: Default::default(),
+                ssl_ca_file: None,
+                ssl_accept_invalid_certs: true,
             }],
             ..GatewayConfig::default()
         }
@@ -1089,7 +1051,6 @@ mod tests {
             ]
         );
     }
-
 
     #[test]
     fn reports_missing_core_config() {

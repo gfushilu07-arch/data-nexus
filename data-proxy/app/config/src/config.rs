@@ -476,10 +476,7 @@ weight = 1
         assert_eq!(config.gateway.security.star_policy, "deny");
         assert_eq!(config.gateway.security.rules.len(), 1);
         assert_eq!(config.gateway.security.rules[0].name, "deny-secret");
-        assert_eq!(
-            config.gateway.security.rules[0].columns,
-            vec!["salary".to_string()]
-        );
+        assert_eq!(config.gateway.security.rules[0].columns, vec!["salary".to_string()]);
     }
 
     #[test]
@@ -600,10 +597,7 @@ weight = 1
         assert_eq!(config.gateway.listeners.len(), 1);
         assert_eq!(config.gateway.listeners[0].protocol, ProtocolKind::MySql);
         assert_eq!(config.gateway.services[0].backend_protocol, ProtocolKind::PostgreSql);
-        assert_eq!(
-            config.gateway.services[0].translation_policy.as_deref(),
-            Some("mysql-to-pg")
-        );
+        assert_eq!(config.gateway.services[0].translation_policy.as_deref(), Some("mysql-to-pg"));
         assert_eq!(config.gateway.translation_policies.len(), 1);
         assert!(config.gateway.translation_policies[0].enabled);
     }
@@ -617,10 +611,7 @@ weight = 1
 
         assert_eq!(config.gateway.listeners[0].protocol, ProtocolKind::PostgreSql);
         assert_eq!(config.gateway.services[0].backend_protocol, ProtocolKind::MySql);
-        assert_eq!(
-            config.gateway.services[0].translation_policy.as_deref(),
-            Some("pg-to-mysql")
-        );
+        assert_eq!(config.gateway.services[0].translation_policy.as_deref(), Some("pg-to-mysql"));
         assert!(config.gateway.translation_policies[0].enabled);
     }
 

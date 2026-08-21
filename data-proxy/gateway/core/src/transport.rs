@@ -1,8 +1,6 @@
 use async_trait::async_trait;
 
-use crate::obligations::{
-    apply_masks_to_rows, apply_watermark_to_resultset, build_mask_index,
-};
+use crate::obligations::{apply_masks_to_rows, apply_watermark_to_resultset, build_mask_index};
 use crate::{
     Column, ExecuteMode, GatewayCommand, GatewayResponse, GatewayResult, GatewayValue, Obligations,
     ProtocolKind, SessionState,
@@ -64,9 +62,7 @@ pub struct CollectingWriter {
 
 impl CollectingWriter {
     pub fn new() -> Self {
-        Self {
-            packets: Vec::new(),
-        }
+        Self { packets: Vec::new() }
     }
 
     pub fn into_packets(self) -> Vec<Vec<u8>> {
@@ -111,8 +107,7 @@ pub trait BackendConnector: Send + Sync {
         command: GatewayCommand,
         session: &mut SessionState,
     ) -> GatewayResult<GatewayResponse> {
-        self.execute_with_mode(command, session, ExecuteMode::Materialized)
-            .await
+        self.execute_with_mode(command, session, ExecuteMode::Materialized).await
     }
 
     /// A06: execute and optionally return a progressive row stream.
@@ -149,10 +144,7 @@ pub struct WireRelay {
 #[async_trait]
 pub trait WireStream: Send {
     /// Next batch of wire packets (up to `max_packets`). `None` = end of response.
-    async fn poll_packets(
-        &mut self,
-        max_packets: usize,
-    ) -> GatewayResult<Option<Vec<Vec<u8>>>>;
+    async fn poll_packets(&mut self, max_packets: usize) -> GatewayResult<Option<Vec<Vec<u8>>>>;
 }
 
 /// Outcome of a backend execute that may stream rows (A06) or wire frames (A08).
@@ -186,9 +178,7 @@ pub struct VecRowStream {
 
 impl VecRowStream {
     pub fn new(rows: Vec<Vec<GatewayValue>>) -> Self {
-        Self {
-            rows: rows.into_iter(),
-        }
+        Self { rows: rows.into_iter() }
     }
 }
 
@@ -237,9 +227,7 @@ pub async fn write_wire_relay_opts<W: ResponseWriter + ?Sized>(
     writer: &mut W,
     skip_ready_for_query: bool,
 ) -> GatewayResult<u64> {
-    Ok(write_wire_relay_observed(relay, writer, skip_ready_for_query)
-        .await?
-        .bytes)
+    Ok(write_wire_relay_observed(relay, writer, skip_ready_for_query).await?.bytes)
 }
 
 /// Terminal PostgreSQL state observed while draining a same-protocol relay.
@@ -266,7 +254,9 @@ pub async fn write_wire_relay_observed<W: ResponseWriter + ?Sized>(
                 for packet in &batch {
                     match packet.first() {
                         Some(b'E') => observation.error_response = true,
-                        Some(b'Z') if packet.len() >= 6 => observation.ready_status = Some(packet[5]),
+                        Some(b'Z') if packet.len() >= 6 => {
+                            observation.ready_status = Some(packet[5])
+                        }
                         _ => {}
                     }
                 }
@@ -336,10 +326,7 @@ pub struct PrefixedRowStream {
 
 impl PrefixedRowStream {
     pub fn new(prefix: Vec<Vec<GatewayValue>>, inner: Box<dyn RowStream>) -> Self {
-        Self {
-            prefix: if prefix.is_empty() { None } else { Some(prefix) },
-            inner,
-        }
+        Self { prefix: if prefix.is_empty() { None } else { Some(prefix) }, inner }
     }
 }
 
@@ -433,30 +420,20 @@ pub async fn write_streaming_query_with_obligations_sample<W: ResponseWriter + ?
         apply_watermark_to_resultset(&mut columns, &mut empty, wm);
     }
 
-    let mask_idx = obligations
-        .map(|o| build_mask_index(&columns, &o.column_masks))
-        .unwrap_or_default();
+    let mask_idx =
+        obligations.map(|o| build_mask_index(&columns, &o.column_masks)).unwrap_or_default();
     let max_total = obligations.and_then(|o| o.max_rows);
     let header_width = columns.len();
     let has_masks = !mask_idx.is_empty();
     // A10 logical portal resume: re-Execute re-runs SQL; skip already-sent rows.
     let mut skip_remaining = session.pg_portal_skip_rows;
 
-    writer
-        .write_packets(frontend.encode_resultset_header(&columns, session)?)
-        .await?;
+    writer.write_packets(frontend.encode_resultset_header(&columns, session)?).await?;
 
     let mut stats = StreamingEncodeStats::default();
-    let sample_budget = if sample_opts.enabled {
-        sample_opts.max_rows.max(1)
-    } else {
-        0
-    };
-    let mut sample_rows: Vec<Vec<GatewayValue>> = if sample_budget > 0 {
-        Vec::with_capacity(sample_budget.min(64))
-    } else {
-        Vec::new()
-    };
+    let sample_budget = if sample_opts.enabled { sample_opts.max_rows.max(1) } else { 0 };
+    let mut sample_rows: Vec<Vec<GatewayValue>> =
+        if sample_budget > 0 { Vec::with_capacity(sample_budget.min(64)) } else { Vec::new() };
     // A10 hold: leftover rows from a mid-window truncate, plus live stream.
     let mut hold_prefix: Option<Vec<Vec<GatewayValue>>> = None;
     let mut should_hold = false;
@@ -619,10 +596,7 @@ pub async fn write_streaming_query_with_obligations_sample<W: ResponseWriter + ?
         } else {
             query.stream
         };
-        Some(StreamingQuery {
-            columns: columns.clone(),
-            stream,
-        })
+        Some(StreamingQuery { columns: columns.clone(), stream })
     } else {
         None
     };
@@ -689,19 +663,13 @@ pub async fn write_resultset_windowed_with_obligations<W: ResponseWriter + ?Size
         }
     }
 
-    let mask_idx = obligations
-        .map(|o| build_mask_index(&columns, &o.column_masks))
-        .unwrap_or_default();
+    let mask_idx =
+        obligations.map(|o| build_mask_index(&columns, &o.column_masks)).unwrap_or_default();
     let has_masks = !mask_idx.is_empty();
 
-    let mut stats = StreamingEncodeStats {
-        total_rows: rows.len() as u64,
-        truncated,
-        ..Default::default()
-    };
-    writer
-        .write_packets(frontend.encode_resultset_header(&columns, session)?)
-        .await?;
+    let mut stats =
+        StreamingEncodeStats { total_rows: rows.len() as u64, truncated, ..Default::default() };
+    writer.write_packets(frontend.encode_resultset_header(&columns, session)?).await?;
 
     while !rows.is_empty() {
         let take = window.min(rows.len());
@@ -801,23 +769,12 @@ mod tests {
 
     #[tokio::test]
     async fn windowed_write_splits_rows() {
-        let mut fe = FakeFrontend {
-            header_calls: 0,
-            row_calls: 0,
-            footer_calls: 0,
-        };
+        let mut fe = FakeFrontend { header_calls: 0, row_calls: 0, footer_calls: 0 };
         let session = SessionState::default();
-        let columns = vec![Column {
-            name: "id".into(),
-            data_type: "int".into(),
-        }];
-        let rows = (0..5)
-            .map(|i| vec![GatewayValue::Integer(i)])
-            .collect();
+        let columns = vec![Column { name: "id".into(), data_type: "int".into() }];
+        let rows = (0..5).map(|i| vec![GatewayValue::Integer(i)]).collect();
         let mut writer = CollectingWriter::new();
-        write_resultset_windowed(&mut fe, &session, columns, rows, 2, &mut writer)
-            .await
-            .unwrap();
+        write_resultset_windowed(&mut fe, &session, columns, rows, 2, &mut writer).await.unwrap();
         assert_eq!(fe.header_calls, 1);
         assert_eq!(fe.row_calls, 3); // 2+2+1
         assert_eq!(fe.footer_calls, 1);
@@ -843,11 +800,8 @@ mod tests {
 
         let relay = WireRelay {
             stream: Box::new(FakeWire {
-                batches: vec![
-                    vec![vec![b'Z', 0, 0, 0, 5, b'I']],
-                    vec![vec![1, 2, 3], vec![4, 5]],
-                ]
-                .into_iter(),
+                batches: vec![vec![vec![b'Z', 0, 0, 0, 5, b'I']], vec![vec![1, 2, 3], vec![4, 5]]]
+                    .into_iter(),
             }),
         };
         let mut writer = CollectingWriter::new();
@@ -876,16 +830,14 @@ mod tests {
 
         let relay = WireRelay {
             stream: Box::new(FakeWire {
-                batches: vec![
-                    vec![
-                        vec![b'1', 0, 0, 0, 4], // ParseComplete from backend re-encode
-                        vec![b'2', 0, 0, 0, 4], // BindComplete
-                        vec![b'T', 0, 0, 0, 4],
-                        vec![b'D', 0, 0, 0, 4],
-                        vec![b'C', 0, 0, 0, 4],
-                        vec![b'Z', 0, 0, 0, 5, b'I'],
-                    ],
-                ]
+                batches: vec![vec![
+                    vec![b'1', 0, 0, 0, 4], // ParseComplete from backend re-encode
+                    vec![b'2', 0, 0, 0, 4], // BindComplete
+                    vec![b'T', 0, 0, 0, 4],
+                    vec![b'D', 0, 0, 0, 4],
+                    vec![b'C', 0, 0, 0, 4],
+                    vec![b'Z', 0, 0, 0, 5, b'I'],
+                ]]
                 .into_iter(),
             }),
         };
@@ -893,10 +845,7 @@ mod tests {
         let bytes = write_wire_relay_opts(relay, &mut writer, true).await.unwrap();
         assert_eq!(bytes, 5 + 5 + 5);
         assert_eq!(writer.packets.len(), 3);
-        assert!(writer
-            .packets
-            .iter()
-            .all(|p| !matches!(p.first(), Some(&b'Z' | &b'1' | &b'2'))));
+        assert!(writer.packets.iter().all(|p| !matches!(p.first(), Some(&b'Z' | &b'1' | &b'2'))));
         assert_eq!(writer.packets[0][0], b'T');
         assert_eq!(writer.packets[2][0], b'C');
     }
@@ -919,11 +868,8 @@ mod tests {
 
         let relay = WireRelay {
             stream: Box::new(FakeWire {
-                batches: vec![vec![
-                    vec![b'E', 0, 0, 0, 4],
-                    vec![b'Z', 0, 0, 0, 5, b'E'],
-                ]]
-                .into_iter(),
+                batches: vec![vec![vec![b'E', 0, 0, 0, 4], vec![b'Z', 0, 0, 0, 5, b'E']]]
+                    .into_iter(),
             }),
         };
         let mut writer = CollectingWriter::new();
@@ -939,21 +885,11 @@ mod tests {
     async fn windowed_write_with_mask_obligation() {
         use crate::{MaskAlgorithm, MaskSpec, Obligations};
 
-        let mut fe = FakeFrontend {
-            header_calls: 0,
-            row_calls: 0,
-            footer_calls: 0,
-        };
+        let mut fe = FakeFrontend { header_calls: 0, row_calls: 0, footer_calls: 0 };
         let session = SessionState::default();
         let columns = vec![
-            Column {
-                name: "id".into(),
-                data_type: "int".into(),
-            },
-            Column {
-                name: "salary".into(),
-                data_type: "int".into(),
-            },
+            Column { name: "id".into(), data_type: "int".into() },
+            Column { name: "salary".into(), data_type: "int".into() },
         ];
         let rows = vec![
             vec![GatewayValue::Integer(1), GatewayValue::Integer(100)],
@@ -961,8 +897,7 @@ mod tests {
             vec![GatewayValue::Integer(3), GatewayValue::Integer(300)],
         ];
         let mut obl = Obligations::default();
-        obl.column_masks
-            .push(MaskSpec::new("salary", MaskAlgorithm::Nullify, "m"));
+        obl.column_masks.push(MaskSpec::new("salary", MaskAlgorithm::Nullify, "m"));
         obl.max_rows = Some(2);
         let mut writer = CollectingWriter::new();
         write_resultset_windowed_with_obligations(
@@ -988,21 +923,11 @@ mod tests {
     async fn streaming_query_yields_windows_with_mask() {
         use crate::{MaskAlgorithm, MaskSpec, Obligations};
 
-        let mut fe = FakeFrontend {
-            header_calls: 0,
-            row_calls: 0,
-            footer_calls: 0,
-        };
+        let mut fe = FakeFrontend { header_calls: 0, row_calls: 0, footer_calls: 0 };
         let session = SessionState::default();
         let columns = vec![
-            Column {
-                name: "id".into(),
-                data_type: "int".into(),
-            },
-            Column {
-                name: "salary".into(),
-                data_type: "int".into(),
-            },
+            Column { name: "id".into(), data_type: "int".into() },
+            Column { name: "salary".into(), data_type: "int".into() },
         ];
         let rows = vec![
             vec![GatewayValue::Integer(1), GatewayValue::Integer(100)],
@@ -1011,13 +936,9 @@ mod tests {
             vec![GatewayValue::Integer(4), GatewayValue::Integer(400)],
         ];
         let mut obl = Obligations::default();
-        obl.column_masks
-            .push(MaskSpec::new("salary", MaskAlgorithm::Nullify, "m"));
+        obl.column_masks.push(MaskSpec::new("salary", MaskAlgorithm::Nullify, "m"));
         obl.max_rows = Some(3);
-        let query = StreamingQuery {
-            columns,
-            stream: Box::new(VecRowStream::new(rows)),
-        };
+        let query = StreamingQuery { columns, stream: Box::new(VecRowStream::new(rows)) };
         let mut writer = CollectingWriter::new();
         let total = write_streaming_query_with_obligations(
             &mut fe,
@@ -1073,24 +994,12 @@ mod tests {
         }
 
         let peak = Arc::new(AtomicUsize::new(0));
-        let rows = (0..100)
-            .map(|i| vec![GatewayValue::Integer(i)])
-            .collect::<Vec<_>>();
+        let rows = (0..100).map(|i| vec![GatewayValue::Integer(i)]).collect::<Vec<_>>();
         let query = StreamingQuery {
-            columns: vec![Column {
-                name: "id".into(),
-                data_type: "int".into(),
-            }],
-            stream: Box::new(PeakTrackStream {
-                remaining: rows,
-                peak: peak.clone(),
-            }),
+            columns: vec![Column { name: "id".into(), data_type: "int".into() }],
+            stream: Box::new(PeakTrackStream { remaining: rows, peak: peak.clone() }),
         };
-        let mut fe = FakeFrontend {
-            header_calls: 0,
-            row_calls: 0,
-            footer_calls: 0,
-        };
+        let mut fe = FakeFrontend { header_calls: 0, row_calls: 0, footer_calls: 0 };
         let session = SessionState::default();
         let mut writer = CollectingWriter::new();
         let window = 7usize;
@@ -1125,11 +1034,7 @@ mod tests {
         );
         assert!(stats.peak_window_rows >= 1);
         // A06 logical peak window bytes: positive and well below full-result bytes.
-        assert!(
-            stats.peak_window_bytes > 0,
-            "peak_window_bytes={}",
-            stats.peak_window_bytes
-        );
+        assert!(stats.peak_window_bytes > 0, "peak_window_bytes={}", stats.peak_window_bytes);
         assert!(
             stats.peak_window_bytes < stats.encoded_bytes || stats.windows == 1,
             "peak_window_bytes={} encoded_bytes={} windows={}",
@@ -1154,35 +1059,16 @@ mod tests {
     async fn b08_streaming_first_window_sample_after_mask() {
         use crate::{MaskAlgorithm, MaskSpec, Obligations};
         let columns = vec![
-            Column {
-                name: "id".into(),
-                data_type: "int".into(),
-            },
-            Column {
-                name: "secret".into(),
-                data_type: "text".into(),
-            },
+            Column { name: "id".into(), data_type: "int".into() },
+            Column { name: "secret".into(), data_type: "text".into() },
         ];
         let rows = (0..5)
-            .map(|i| {
-                vec![
-                    GatewayValue::Integer(i),
-                    GatewayValue::String(format!("s{i}")),
-                ]
-            })
+            .map(|i| vec![GatewayValue::Integer(i), GatewayValue::String(format!("s{i}"))])
             .collect::<Vec<_>>();
         let mut obl = Obligations::default();
-        obl.column_masks
-            .push(MaskSpec::new("secret", MaskAlgorithm::Nullify, "m"));
-        let query = StreamingQuery {
-            columns,
-            stream: Box::new(VecRowStream::new(rows)),
-        };
-        let mut fe = FakeFrontend {
-            header_calls: 0,
-            row_calls: 0,
-            footer_calls: 0,
-        };
+        obl.column_masks.push(MaskSpec::new("secret", MaskAlgorithm::Nullify, "m"));
+        let query = StreamingQuery { columns, stream: Box::new(VecRowStream::new(rows)) };
+        let mut fe = FakeFrontend { header_calls: 0, row_calls: 0, footer_calls: 0 };
         let session = SessionState::default();
         let mut writer = CollectingWriter::new();
         let (stats, held) = write_streaming_query_with_obligations_sample(
@@ -1192,11 +1078,7 @@ mod tests {
             2,
             Some(&obl),
             &mut writer,
-            StreamingSampleOpts {
-                enabled: true,
-                max_rows: 3,
-                max_bytes: 4096,
-            },
+            StreamingSampleOpts { enabled: true, max_rows: 3, max_bytes: 4096 },
             false,
         )
         .await
@@ -1215,24 +1097,13 @@ mod tests {
     #[tokio::test]
     async fn a10_hold_remainder_keeps_stream_for_resume() {
         // 5 rows, page max_rows=2, window=2 → hold after first page without drain.
-        let columns = vec![Column {
-            name: "id".into(),
-            data_type: "int".into(),
-        }];
-        let rows = (1..=5)
-            .map(|i| vec![GatewayValue::Integer(i)])
-            .collect::<Vec<_>>();
+        let columns = vec![Column { name: "id".into(), data_type: "int".into() }];
+        let rows = (1..=5).map(|i| vec![GatewayValue::Integer(i)]).collect::<Vec<_>>();
         let mut obl = Obligations::default();
         obl.max_rows = Some(2);
-        let query = StreamingQuery {
-            columns: columns.clone(),
-            stream: Box::new(VecRowStream::new(rows)),
-        };
-        let mut fe = FakeFrontend {
-            header_calls: 0,
-            row_calls: 0,
-            footer_calls: 0,
-        };
+        let query =
+            StreamingQuery { columns: columns.clone(), stream: Box::new(VecRowStream::new(rows)) };
+        let mut fe = FakeFrontend { header_calls: 0, row_calls: 0, footer_calls: 0 };
         let session = SessionState::default();
         let mut writer = CollectingWriter::new();
         let (stats, held) = write_streaming_query_with_obligations_sample(
@@ -1254,11 +1125,7 @@ mod tests {
         // Resume second page of 2.
         let mut obl2 = Obligations::default();
         obl2.max_rows = Some(2);
-        let mut fe2 = FakeFrontend {
-            header_calls: 0,
-            row_calls: 0,
-            footer_calls: 0,
-        };
+        let mut fe2 = FakeFrontend { header_calls: 0, row_calls: 0, footer_calls: 0 };
         let mut writer2 = CollectingWriter::new();
         let (stats2, held2) = write_streaming_query_with_obligations_sample(
             &mut fe2,
@@ -1279,11 +1146,7 @@ mod tests {
         // Final page: 1 remaining → not truncated, no hold.
         let mut obl3 = Obligations::default();
         obl3.max_rows = Some(2);
-        let mut fe3 = FakeFrontend {
-            header_calls: 0,
-            row_calls: 0,
-            footer_calls: 0,
-        };
+        let mut fe3 = FakeFrontend { header_calls: 0, row_calls: 0, footer_calls: 0 };
         let mut writer3 = CollectingWriter::new();
         let (stats3, held3) = write_streaming_query_with_obligations_sample(
             &mut fe3,
@@ -1305,9 +1168,7 @@ mod tests {
 
     #[tokio::test]
     async fn a06_vec_row_stream_poll_window_sizes() {
-        let rows = (0..5)
-            .map(|i| vec![GatewayValue::Integer(i)])
-            .collect::<Vec<_>>();
+        let rows = (0..5).map(|i| vec![GatewayValue::Integer(i)]).collect::<Vec<_>>();
         let mut stream = VecRowStream::new(rows);
         let first = stream.poll_window(2).await.unwrap().unwrap();
         assert_eq!(first.len(), 2);
@@ -1325,27 +1186,14 @@ mod tests {
         // release leases (A06 drain contract).
         use crate::{MaskAlgorithm, MaskSpec, Obligations};
 
-        let mut fe = FakeFrontend {
-            header_calls: 0,
-            row_calls: 0,
-            footer_calls: 0,
-        };
+        let mut fe = FakeFrontend { header_calls: 0, row_calls: 0, footer_calls: 0 };
         let session = SessionState::default();
-        let columns = vec![Column {
-            name: "id".into(),
-            data_type: "int".into(),
-        }];
-        let rows = (0..10)
-            .map(|i| vec![GatewayValue::Integer(i)])
-            .collect();
+        let columns = vec![Column { name: "id".into(), data_type: "int".into() }];
+        let rows = (0..10).map(|i| vec![GatewayValue::Integer(i)]).collect();
         let mut obl = Obligations::default();
         obl.max_rows = Some(3);
-        obl.column_masks
-            .push(MaskSpec::new("id", MaskAlgorithm::Nullify, "m"));
-        let query = StreamingQuery {
-            columns,
-            stream: Box::new(VecRowStream::new(rows)),
-        };
+        obl.column_masks.push(MaskSpec::new("id", MaskAlgorithm::Nullify, "m"));
+        let query = StreamingQuery { columns, stream: Box::new(VecRowStream::new(rows)) };
         let mut writer = CollectingWriter::new();
         let total = write_streaming_query_with_obligations(
             &mut fe,
@@ -1367,25 +1215,13 @@ mod tests {
     #[tokio::test]
     async fn a10_streaming_marks_truncated_when_cap_leaves_remainder() {
         // max_rows=1 with 3 producer rows → encode 1 and truncated=true after drain sees more.
-        let mut fe = FakeFrontend {
-            header_calls: 0,
-            row_calls: 0,
-            footer_calls: 0,
-        };
+        let mut fe = FakeFrontend { header_calls: 0, row_calls: 0, footer_calls: 0 };
         let session = SessionState::default();
-        let columns = vec![Column {
-            name: "id".into(),
-            data_type: "int".into(),
-        }];
-        let rows = (0..3)
-            .map(|i| vec![GatewayValue::Integer(i)])
-            .collect::<Vec<_>>();
+        let columns = vec![Column { name: "id".into(), data_type: "int".into() }];
+        let rows = (0..3).map(|i| vec![GatewayValue::Integer(i)]).collect::<Vec<_>>();
         let mut obl = Obligations::default();
         obl.max_rows = Some(1);
-        let query = StreamingQuery {
-            columns,
-            stream: Box::new(VecRowStream::new(rows)),
-        };
+        let query = StreamingQuery { columns, stream: Box::new(VecRowStream::new(rows)) };
         let mut writer = CollectingWriter::new();
         let stats = write_streaming_query_with_obligations(
             &mut fe,
@@ -1398,38 +1234,23 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(stats.total_rows, 1);
-        assert!(
-            stats.truncated,
-            "expected truncated when more backend rows remained"
-        );
+        assert!(stats.truncated, "expected truncated when more backend rows remained");
     }
 
     #[tokio::test]
     async fn a10_streaming_skips_portal_offset_then_pages() {
         // 3 rows, skip=1, max_rows=1 → encode only middle row; truncated (row 3 remains).
-        let mut fe = FakeFrontend {
-            header_calls: 0,
-            row_calls: 0,
-            footer_calls: 0,
-        };
+        let mut fe = FakeFrontend { header_calls: 0, row_calls: 0, footer_calls: 0 };
         let session = SessionState {
             pg_portal_skip_rows: 1,
             pg_portal_name: Some("p".into()),
             ..SessionState::default()
         };
-        let columns = vec![Column {
-            name: "id".into(),
-            data_type: "int".into(),
-        }];
-        let rows = (0..3)
-            .map(|i| vec![GatewayValue::Integer(i)])
-            .collect::<Vec<_>>();
+        let columns = vec![Column { name: "id".into(), data_type: "int".into() }];
+        let rows = (0..3).map(|i| vec![GatewayValue::Integer(i)]).collect::<Vec<_>>();
         let mut obl = Obligations::default();
         obl.max_rows = Some(1);
-        let query = StreamingQuery {
-            columns,
-            stream: Box::new(VecRowStream::new(rows)),
-        };
+        let query = StreamingQuery { columns, stream: Box::new(VecRowStream::new(rows)) };
         let mut writer = CollectingWriter::new();
         let stats = write_streaming_query_with_obligations(
             &mut fe,

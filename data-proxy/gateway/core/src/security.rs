@@ -320,11 +320,7 @@ impl SecurityPolicyConfig {
                     "security.column_tags[{idx}].mask_rule must not be empty"
                 )));
             }
-            if !self
-                .mask_rules
-                .iter()
-                .any(|m| m.name.eq_ignore_ascii_case(&tag.mask_rule))
-            {
+            if !self.mask_rules.iter().any(|m| m.name.eq_ignore_ascii_case(&tag.mask_rule)) {
                 return Err(GatewayError::Configuration(format!(
                     "security.column_tags[{idx}].mask_rule '{}' not found in mask_rules",
                     tag.mask_rule
@@ -404,9 +400,7 @@ impl SecurityPolicyConfig {
             ("vault_encrypt_key", self.state.vault_encrypt_key.trim()),
             ("ticket_encrypt_key", self.state.ticket_encrypt_key.trim()),
         ] {
-            if !key.is_empty()
-                && (key.len() != 64 || !key.chars().all(|c| c.is_ascii_hexdigit()))
-            {
+            if !key.is_empty() && (key.len() != 64 || !key.chars().all(|c| c.is_ascii_hexdigit())) {
                 return Err(GatewayError::Configuration(format!(
                     "security.state.{name} must be empty or 64 hex characters (AES-256 key)"
                 )));
@@ -441,9 +435,7 @@ fn default_subject_sources() -> Vec<String> {
 
 impl Default for SecuritySubjectConfig {
     fn default() -> Self {
-        Self {
-            sources: default_subject_sources(),
-        }
+        Self { sources: default_subject_sources() }
     }
 }
 
@@ -912,10 +904,7 @@ mod tests {
         cfg.streaming.backend_sql_with_hold = true;
         let err = cfg.validate().expect_err("backend_sql_with_hold not implemented");
         let msg = err.to_string();
-        assert!(
-            msg.contains("backend_sql_with_hold") && msg.contains("not implemented"),
-            "{msg}"
-        );
+        assert!(msg.contains("backend_sql_with_hold") && msg.contains("not implemented"), "{msg}");
     }
 
     #[test]
@@ -928,10 +917,7 @@ mod tests {
         cfg.audit.sample_max_bytes = 4096;
         let err = cfg.validate().unwrap_err();
         let msg = err.to_string();
-        assert!(
-            msg.contains("default_audit_level=L2") || msg.contains("L2"),
-            "{msg}"
-        );
+        assert!(msg.contains("default_audit_level=L2") || msg.contains("L2"), "{msg}");
     }
 
     #[test]
@@ -1017,7 +1003,6 @@ mod tests {
         #[cfg(not(feature = "security-cedar"))]
         assert!(err.contains("security-cedar") || err.contains("feature"), "{err}");
     }
-
 
     #[test]
     fn h05_state_file_requires_paths() {

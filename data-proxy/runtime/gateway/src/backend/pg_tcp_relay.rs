@@ -90,10 +90,7 @@ impl std::fmt::Debug for PgTcpSession {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PgTcpSession")
             .field("read_buf_len", &self.read_buf.len())
-            .field(
-                "tls",
-                &matches!(self.stream, PgBackendStream::Tls(_)),
-            )
+            .field("tls", &matches!(self.stream, PgBackendStream::Tls(_)))
             .finish_non_exhaustive()
     }
 }
@@ -113,16 +110,9 @@ pub enum SessionReturn {
     /// In-transaction reuse slot.
     Txn(PgTcpTxnSlot),
     /// Non-txn idle pool (keyed by address|db|user).
-    Idle {
-        pool: Arc<PgTcpIdlePool>,
-        key: String,
-    },
+    Idle { pool: Arc<PgTcpIdlePool>, key: String },
     /// Route an idle response to the pool and an active/failed response to the txn slot.
-    IdleOrTxn {
-        pool: Arc<PgTcpIdlePool>,
-        key: String,
-        txn: PgTcpTxnSlot,
-    },
+    IdleOrTxn { pool: Arc<PgTcpIdlePool>, key: String, txn: PgTcpTxnSlot },
     /// A08: multi-Execute client-frame unit held open (no Sync sent yet).
     Hold(PgTcpTxnSlot),
 }
@@ -169,10 +159,7 @@ impl PgTcpIdlePool {
     }
 
     pub fn pool_key(endpoint: &EndpointConfig, database: &str) -> String {
-        format!(
-            "{}|{}|{}",
-            endpoint.address, database, endpoint.username
-        )
+        format!("{}|{}|{}", endpoint.address, database, endpoint.username)
     }
 
     pub fn len(&self) -> usize {
@@ -231,10 +218,7 @@ impl PgTcpIdlePool {
             // Drop oldest overflow.
             let _ = q.pop_front();
         }
-        q.push_back(IdleEntry {
-            session,
-            idle_since,
-        });
+        q.push_back(IdleEntry { session, idle_since });
     }
 
     /// Test-only: insert with a custom idle_since (no real TCP required if session
@@ -290,15 +274,11 @@ impl PgTcpIdlePool {
 }
 
 impl PgTcpSession {
-    pub async fn connect(
-        endpoint: &EndpointConfig,
-        database: &str,
-    ) -> GatewayResult<Self> {
+    pub async fn connect(endpoint: &EndpointConfig, database: &str) -> GatewayResult<Self> {
         let tcp = TcpStream::connect(&endpoint.address)
             .await
             .map_err(|e| GatewayError::Backend(format!("pg tcp connect: {e}")))?;
-        tcp.set_nodelay(true)
-            .map_err(|e| GatewayError::Backend(format!("pg tcp nodelay: {e}")))?;
+        tcp.set_nodelay(true).map_err(|e| GatewayError::Backend(format!("pg tcp nodelay: {e}")))?;
 
         let stream = maybe_upgrade_tls(tcp, endpoint).await?;
 
@@ -313,18 +293,13 @@ impl PgTcpSession {
         let mut out = BytesMut::new();
         frontend::startup_message(params.into_iter(), &mut out)
             .map_err(|e| GatewayError::Backend(format!("pg startup encode: {e}")))?;
-        let mut session = Self {
-            stream,
-            read_buf: BytesMut::with_capacity(16 * 1024),
-        };
+        let mut session = Self { stream, read_buf: BytesMut::with_capacity(16 * 1024) };
         session
             .stream
             .write_all(&out)
             .await
             .map_err(|e| GatewayError::Backend(format!("pg startup write: {e}")))?;
-        session
-            .authenticate(&endpoint.username, &endpoint.password)
-            .await?;
+        session.authenticate(&endpoint.username, &endpoint.password).await?;
         Ok(session)
     }
 
@@ -365,9 +340,10 @@ impl PgTcpSession {
                 Message::AuthenticationSasl(body) => {
                     let mut has_scram = false;
                     let mut mechs = body.mechanisms();
-                    while let Some(m) = mechs.next().map_err(|e| {
-                        GatewayError::Backend(format!("pg sasl mechanisms: {e}"))
-                    })? {
+                    while let Some(m) = mechs
+                        .next()
+                        .map_err(|e| GatewayError::Backend(format!("pg sasl mechanisms: {e}")))?
+                    {
                         if m == SCRAM_SHA_256 {
                             has_scram = true;
                             break;
@@ -380,10 +356,9 @@ impl PgTcpSession {
                     }
                     let s = ScramSha256::new(password.as_bytes(), ChannelBinding::unsupported());
                     let mut out = BytesMut::new();
-                    frontend::sasl_initial_response(SCRAM_SHA_256, s.message(), &mut out)
-                        .map_err(|e| {
-                            GatewayError::Backend(format!("pg sasl initial encode: {e}"))
-                        })?;
+                    frontend::sasl_initial_response(SCRAM_SHA_256, s.message(), &mut out).map_err(
+                        |e| GatewayError::Backend(format!("pg sasl initial encode: {e}")),
+                    )?;
                     self.stream.write_all(&out).await.map_err(|e| {
                         GatewayError::Backend(format!("pg sasl initial write: {e}"))
                     })?;
@@ -399,10 +374,9 @@ impl PgTcpSession {
                     frontend::sasl_response(s.message(), &mut out).map_err(|e| {
                         GatewayError::Backend(format!("pg sasl response encode: {e}"))
                     })?;
-                    self.stream
-                        .write_all(&out)
-                        .await
-                        .map_err(|e| GatewayError::Backend(format!("pg sasl response write: {e}")))?;
+                    self.stream.write_all(&out).await.map_err(|e| {
+                        GatewayError::Backend(format!("pg sasl response write: {e}"))
+                    })?;
                 }
                 Message::AuthenticationSaslFinal(body) => {
                     let s = scram.as_mut().ok_or_else(|| {
@@ -430,19 +404,17 @@ impl PgTcpSession {
 
     async fn drain_until_ready(&mut self) -> GatewayResult<()> {
         loop {
-            let msg = self
-                .next_message()
-                .await?
-                .ok_or_else(|| GatewayError::Backend("pg auth: closed before ReadyForQuery".into()))?;
+            let msg = self.next_message().await?.ok_or_else(|| {
+                GatewayError::Backend("pg auth: closed before ReadyForQuery".into())
+            })?;
             match msg {
                 Message::ReadyForQuery(_) => return Ok(()),
-                Message::ParameterStatus(_) | Message::BackendKeyData(_) | Message::NoticeResponse(_) => {
-                }
+                Message::ParameterStatus(_)
+                | Message::BackendKeyData(_)
+                | Message::NoticeResponse(_) => {}
                 Message::ErrorResponse(body) => {
                     let detail = format_error_fields(body);
-                    return Err(GatewayError::Backend(format!(
-                        "pg auth post-ok error: {detail}"
-                    )));
+                    return Err(GatewayError::Backend(format!("pg auth post-ok error: {detail}")));
                 }
                 other => {
                     return Err(GatewayError::Backend(format!(
@@ -497,13 +469,10 @@ impl PgTcpSession {
         return_to: SessionReturn,
     ) -> GatewayResult<PgTcpWireStream> {
         if client_frames.is_empty() {
-            return Err(GatewayError::Backend(
-                "pg client frame relay: empty frame list".into(),
-            ));
+            return Err(GatewayError::Backend("pg client frame relay: empty frame list".into()));
         }
-        let mut out = BytesMut::with_capacity(
-            client_frames.iter().map(|f| f.len()).sum::<usize>() + 32,
-        );
+        let mut out =
+            BytesMut::with_capacity(client_frames.iter().map(|f| f.len()).sum::<usize>() + 32);
         // If the client unit omitted Describe, inject Describe(portal) after Bind so
         // multi-column SELECTs still emit RowDescription. Portal name is taken from
         // the Bind frame (empty string = unnamed).
@@ -565,9 +534,8 @@ impl PgTcpSession {
                 "pg client frame hold relay: empty frame list".into(),
             ));
         }
-        let mut out = BytesMut::with_capacity(
-            client_frames.iter().map(|f| f.len()).sum::<usize>() + 32,
-        );
+        let mut out =
+            BytesMut::with_capacity(client_frames.iter().map(|f| f.len()).sum::<usize>() + 32);
         let mut saw_describe = false;
         let mut bound_portal: Option<String> = None;
         for f in client_frames {
@@ -623,11 +591,10 @@ impl PgTcpSession {
         return_to: SessionReturn,
     ) -> GatewayResult<PgTcpWireStream> {
         if execute_frames.is_empty() {
-            return Err(GatewayError::Backend(
-                "pg client execute hold relay: empty".into(),
-            ));
+            return Err(GatewayError::Backend("pg client execute hold relay: empty".into()));
         }
-        let mut out = BytesMut::with_capacity(execute_frames.iter().map(|f| f.len()).sum::<usize>() + 5);
+        let mut out =
+            BytesMut::with_capacity(execute_frames.iter().map(|f| f.len()).sum::<usize>() + 5);
         for f in execute_frames {
             out.extend_from_slice(f);
         }
@@ -690,22 +657,18 @@ impl PgTcpSession {
             "",
             formats,
             values,
-            |v, buf| {
-                match v {
-                    None => Ok(IsNull::Yes),
-                    Some(bytes) => {
-                        buf.extend_from_slice(bytes);
-                        Ok(IsNull::No)
-                    }
+            |v, buf| match v {
+                None => Ok(IsNull::Yes),
+                Some(bytes) => {
+                    buf.extend_from_slice(bytes);
+                    Ok(IsNull::No)
                 }
             },
             // Empty ⇒ all result columns use text format (not "only first column").
             std::iter::empty::<i16>(),
             &mut out,
         )
-        .map_err(|_e| {
-            GatewayError::Backend("pg extended bind encode failed".into())
-        })?;
+        .map_err(|_e| GatewayError::Backend("pg extended bind encode failed".into()))?;
         // Describe portal so Execute path yields RowDescription for multi-column SELECTs
         // even when the client skipped Describe (common in raw-frame smokes).
         frontend::describe(b'P', "", &mut out)
@@ -732,9 +695,8 @@ impl PgTcpSession {
         sql: &str,
     ) -> GatewayResult<(Self, Vec<Vec<u8>>)> {
         let slot = new_tcp_txn_slot();
-        let mut stream = self
-            .simple_query_relay_into(sql, SessionReturn::Txn(slot.clone()))
-            .await?;
+        let mut stream =
+            self.simple_query_relay_into(sql, SessionReturn::Txn(slot.clone())).await?;
         let mut packets = Vec::new();
         loop {
             match stream.poll_packets(64).await? {
@@ -756,9 +718,7 @@ impl PgTcpSession {
         match timeout(budget, self.health_check_inner()).await {
             Ok(Ok(())) => Ok(self),
             Ok(Err(e)) => Err(e),
-            Err(_) => Err(GatewayError::Backend(
-                "pg tcp health probe timed out".into(),
-            )),
+            Err(_) => Err(GatewayError::Backend("pg tcp health probe timed out".into())),
         }
     }
 
@@ -775,9 +735,7 @@ impl PgTcpSession {
         while let Some(frame) = self.next_raw_frame().await? {
             match frame.first().copied() {
                 Some(b'E') => {
-                    return Err(GatewayError::Backend(
-                        "pg tcp health probe: ErrorResponse".into(),
-                    ));
+                    return Err(GatewayError::Backend("pg tcp health probe: ErrorResponse".into()));
                 }
                 Some(b'Z') => {
                     saw_ready = true;
@@ -785,9 +743,7 @@ impl PgTcpSession {
                 }
                 Some(_) => {}
                 None => {
-                    return Err(GatewayError::Backend(
-                        "pg tcp health probe: empty frame".into(),
-                    ));
+                    return Err(GatewayError::Backend("pg tcp health probe: empty frame".into()));
                 }
             }
         }
@@ -815,9 +771,7 @@ impl PgTcpSession {
                 if self.read_buf.is_empty() {
                     return Ok(None);
                 }
-                return Err(GatewayError::Backend(
-                    "pg tcp: connection closed mid-message".into(),
-                ));
+                return Err(GatewayError::Backend("pg tcp: connection closed mid-message".into()));
             }
             self.read_buf.extend_from_slice(&tmp[..n]);
         }
@@ -901,10 +855,7 @@ impl Drop for PgTcpWireStream {
 
 #[async_trait]
 impl WireStream for PgTcpWireStream {
-    async fn poll_packets(
-        &mut self,
-        max_packets: usize,
-    ) -> GatewayResult<Option<Vec<Vec<u8>>>> {
+    async fn poll_packets(&mut self, max_packets: usize) -> GatewayResult<Option<Vec<Vec<u8>>>> {
         if self.done {
             return Ok(None);
         }
@@ -959,7 +910,6 @@ impl WireStream for PgTcpWireStream {
         }
     }
 }
-
 
 /// A08: optional TLS upgrade after TCP connect (PostgreSQL SSLRequest).
 ///
@@ -1016,9 +966,7 @@ fn try_split_frame(buf: &mut BytesMut) -> GatewayResult<Option<Vec<u8>>> {
     }
     let len = u32::from_be_bytes([buf[1], buf[2], buf[3], buf[4]]) as usize;
     if len < 4 {
-        return Err(GatewayError::Protocol(format!(
-            "pg frame: invalid length {len}"
-        )));
+        return Err(GatewayError::Protocol(format!("pg frame: invalid length {len}")));
     }
     let total = 1 + len;
     if buf.len() < total {
@@ -1083,7 +1031,7 @@ mod tests {
         let mut buf = BytesMut::from(&b"D\x00\x00\x00\x10"[..]); // need 1+16 bytes
         assert!(try_split_frame(&mut buf).unwrap().is_none());
         buf.extend_from_slice(&[0u8; 12]); // still short by 0? len=16 means 16 body incl. the 4-byte len field → total 17
-        // body after tag is 16 bytes; we had 4 length bytes + 12 = 16 body → complete
+                                           // body after tag is 16 bytes; we had 4 length bytes + 12 = 16 body → complete
         let frame = try_split_frame(&mut buf).unwrap().expect("complete");
         assert_eq!(frame.len(), 17);
         assert_eq!(frame[0], b'D');
@@ -1139,10 +1087,7 @@ mod tests {
 
     #[test]
     fn a08_idle_pool_ttl_expires_entries() {
-        let rt = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap();
+        let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
         rt.block_on(async {
             async fn dummy_session() -> PgTcpSession {
                 let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -1152,19 +1097,13 @@ mod tests {
                 });
                 let stream = TcpStream::connect(addr).await.unwrap();
                 let _ = accept.await;
-                PgTcpSession {
-                    stream: PgBackendStream::Plain(stream),
-                    read_buf: BytesMut::new(),
-                }
+                PgTcpSession { stream: PgBackendStream::Plain(stream), read_buf: BytesMut::new() }
             }
 
             // Zero TTL: put then take must miss (immediately expired).
             let pool = PgTcpIdlePool::with_ttl(2, Duration::from_secs(0)).without_health_probe();
             pool.put_for_test("k".into(), dummy_session().await, Instant::now());
-            assert!(
-                pool.take("k").is_none(),
-                "zero TTL must not reuse idle sessions"
-            );
+            assert!(pool.take("k").is_none(), "zero TTL must not reuse idle sessions");
 
             // Non-zero TTL: fresh entry is reusable; aged entry is dropped.
             let pool2 = PgTcpIdlePool::with_ttl(2, Duration::from_secs(60)).without_health_probe();
@@ -1174,10 +1113,7 @@ mod tests {
 
             let aged = Instant::now() - Duration::from_secs(120);
             pool2.put_for_test("k".into(), dummy_session().await, aged);
-            assert!(
-                pool2.take("k").is_none(),
-                "entry older than TTL must be discarded"
-            );
+            assert!(pool2.take("k").is_none(), "entry older than TTL must be discarded");
 
             // purge_expired drops without take
             pool2.put_for_test("k".into(), dummy_session().await, aged);
@@ -1188,10 +1124,7 @@ mod tests {
 
     #[test]
     fn a08_health_check_fails_on_dead_socket() {
-        let rt = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap();
+        let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
         rt.block_on(async {
             let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
             let addr = listener.local_addr().unwrap();
@@ -1202,14 +1135,9 @@ mod tests {
             });
             let stream = TcpStream::connect(addr).await.unwrap();
             let _ = accept.await;
-            let sess = PgTcpSession {
-                stream: PgBackendStream::Plain(stream),
-                read_buf: BytesMut::new(),
-            };
-            let err = sess
-                .health_check(Duration::from_millis(200))
-                .await
-                .expect_err("dead peer");
+            let sess =
+                PgTcpSession { stream: PgBackendStream::Plain(stream), read_buf: BytesMut::new() };
+            let err = sess.health_check(Duration::from_millis(200)).await.expect_err("dead peer");
             let msg = err.to_string();
             assert!(
                 msg.contains("health") || msg.contains("closed") || msg.contains("tcp"),
@@ -1272,10 +1200,7 @@ mod tests {
         let pool = PgTcpIdlePool::with_default_cap();
         assert_eq!(pool.idle_ttl(), DEFAULT_TCP_IDLE_TTL);
         assert!(pool.health_probe_enabled());
-        let _ = SessionReturn::Idle {
-            pool,
-            key: "k".into(),
-        };
+        let _ = SessionReturn::Idle { pool, key: "k".into() };
     }
 
     #[test]

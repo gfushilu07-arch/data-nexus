@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
 use gateway_core::{
-    classify_dangerous_sql, Column as GatewayColumn, FrontendProtocolAdapter, GatewayCommand, GatewayError,
-    GatewayResponse, GatewayResult, GatewayValue, ProtocolKind, SessionState, TransactionState,
+    classify_dangerous_sql, Column as GatewayColumn, FrontendProtocolAdapter, GatewayCommand,
+    GatewayError, GatewayResponse, GatewayResult, GatewayValue, ProtocolKind, SessionState,
+    TransactionState,
 };
 use postgresql_protocol::{
     decode_frontend_message, decode_startup_packet, encode_authentication_ok,
@@ -195,15 +196,9 @@ impl FrontendProtocolAdapter for PostgreSqlFrontendProtocol {
                 }
             }
             FrontendMessage::Flush => Ok(vec![]),
-            FrontendMessage::Parse {
-                statement,
-                query,
-                param_types: _,
-            } => {
+            FrontendMessage::Parse { statement, query, param_types: _ } => {
                 session.pg_extended_query = true;
-                if let Some(capability) =
-                    classify_dangerous_sql(&query, ProtocolKind::PostgreSql)
-                {
+                if let Some(capability) = classify_dangerous_sql(&query, ProtocolKind::PostgreSql) {
                     session.pg_extended_error = true;
                     return Err(GatewayError::Unsupported(capability.as_str().into()));
                 }
@@ -219,16 +214,9 @@ impl FrontendProtocolAdapter for PostgreSqlFrontendProtocol {
                     self.prepared_columns.remove(&statement);
                 }
                 self.prepared.insert(statement, query);
-                Ok(vec![GatewayCommand::ClientWire {
-                    packets: vec![encode_parse_complete()],
-                }])
+                Ok(vec![GatewayCommand::ClientWire { packets: vec![encode_parse_complete()] }])
             }
-            FrontendMessage::Bind {
-                portal,
-                statement,
-                parameters,
-                result_formats,
-            } => {
+            FrontendMessage::Bind { portal, statement, parameters, result_formats } => {
                 session.pg_extended_query = true;
                 session.pg_client_extended_frames.push(frame.to_vec());
                 let sql = self.prepared.get(&statement).cloned().ok_or_else(|| {
@@ -271,11 +259,8 @@ impl FrontendProtocolAdapter for PostgreSqlFrontendProtocol {
                 self.portals.insert(portal.clone(), sql);
                 self.portal_args.insert(portal.clone(), params);
                 self.portal_params.insert(portal.clone(), nparams);
-                self.portal_result_formats
-                    .insert(portal, result_formats);
-                Ok(vec![GatewayCommand::ClientWire {
-                    packets: vec![encode_bind_complete()],
-                }])
+                self.portal_result_formats.insert(portal, result_formats);
+                Ok(vec![GatewayCommand::ClientWire { packets: vec![encode_bind_complete()] }])
             }
             FrontendMessage::Describe { target, name } => {
                 // A08: retain original Describe for client-frame TCP relay when present.
@@ -286,9 +271,7 @@ impl FrontendProtocolAdapter for PostgreSqlFrontendProtocol {
                 // backend prepare (DescribeSql) for catalog columns (A10).
                 let nparams = if target == b'S' {
                     self.prepared_params.get(&name).copied().or_else(|| {
-                        self.prepared
-                            .get(&name)
-                            .map(|sql| count_pg_placeholders_frontend(sql))
+                        self.prepared.get(&name).map(|sql| count_pg_placeholders_frontend(sql))
                     })
                 } else {
                     self.portal_params.get(&name).copied()
@@ -307,23 +290,14 @@ impl FrontendProtocolAdapter for PostgreSqlFrontendProtocol {
                 let format_code = if target == b'P' {
                     self.portal_result_formats
                         .get(&name)
-                        .map(|fmts| {
-                            if fmts.iter().any(|f| *f == 1) {
-                                1i16
-                            } else {
-                                0
-                            }
-                        })
+                        .map(|fmts| if fmts.iter().any(|f| *f == 1) { 1i16 } else { 0 })
                         .unwrap_or(0)
                 } else {
                     0
                 };
 
-                let param_desc = if target == b'S' {
-                    Some(encode_parameter_description(&oids))
-                } else {
-                    None
-                };
+                let param_desc =
+                    if target == b'S' { Some(encode_parameter_description(&oids)) } else { None };
 
                 match columns {
                     Some(cols) if !cols.is_empty() => {
@@ -358,12 +332,8 @@ impl FrontendProtocolAdapter for PostgreSqlFrontendProtocol {
                         };
                         match sql {
                             Some(sql) if looks_like_select(&sql) => {
-                                self.pending_describe = Some(PendingDescribe {
-                                    target,
-                                    name,
-                                    param_desc,
-                                    format_code,
-                                });
+                                self.pending_describe =
+                                    Some(PendingDescribe { target, name, param_desc, format_code });
                                 Ok(vec![GatewayCommand::DescribeSql { sql }])
                             }
                             _ => {
@@ -391,11 +361,8 @@ impl FrontendProtocolAdapter for PostgreSqlFrontendProtocol {
                 session.pg_client_extended_frames.push(frame.to_vec());
                 // Client Execute max_rows: 0 = unlimited. When > 0 and stream is
                 // truncated at this page, footer emits PortalSuspended.
-                session.pg_execute_max_rows = if max_rows > 0 {
-                    Some(max_rows as u32)
-                } else {
-                    None
-                };
+                session.pg_execute_max_rows =
+                    if max_rows > 0 { Some(max_rows as u32) } else { None };
                 session.result_truncated = false;
                 // A10 logical portal resume: same portal re-Execute keeps skip_rows;
                 // different portal name starts from offset 0.
@@ -406,15 +373,9 @@ impl FrontendProtocolAdapter for PostgreSqlFrontendProtocol {
                     session.pg_portal_name = Some(portal.clone());
                 }
                 let sql = self.portals.get(&portal).cloned().ok_or_else(|| {
-                    GatewayError::Protocol(format!(
-                        "postgresql Execute: unknown portal '{portal}'"
-                    ))
+                    GatewayError::Protocol(format!("postgresql Execute: unknown portal '{portal}'"))
                 })?;
-                let parameters = self
-                    .portal_args
-                    .get(&portal)
-                    .cloned()
-                    .unwrap_or_default();
+                let parameters = self.portal_args.get(&portal).cloned().unwrap_or_default();
                 // A10: honor Bind result_formats — any binary (1) requests binary rows.
                 let want_binary = self
                     .portal_result_formats
@@ -452,9 +413,7 @@ impl FrontendProtocolAdapter for PostgreSqlFrontendProtocol {
                         session.pg_drop_portal_hold = true;
                     }
                 }
-                Ok(vec![GatewayCommand::ClientWire {
-                    packets: vec![encode_close_complete()],
-                }])
+                Ok(vec![GatewayCommand::ClientWire { packets: vec![encode_close_complete()] }])
             }
         }
     }
@@ -495,11 +454,8 @@ impl FrontendProtocolAdapter for PostgreSqlFrontendProtocol {
             }
             GatewayResponse::Bye => Ok(vec![]),
             GatewayResponse::Error { code, message } => {
-                let mut out = vec![encode_error_response(
-                    "ERROR",
-                    postgresql_sqlstate(&code),
-                    &message,
-                )];
+                let mut out =
+                    vec![encode_error_response("ERROR", postgresql_sqlstate(&code), &message)];
                 if let Some(r) = ready {
                     out.push(r);
                 }
@@ -521,11 +477,7 @@ impl FrontendProtocolAdapter for PostgreSqlFrontendProtocol {
                 encode_resultset_with_tag(columns, rows, ready.unwrap_or_default(), &tag)
             }
             GatewayResponse::Wire { packets } => Ok(packets),
-            GatewayResponse::Prepared {
-                statement_id,
-                parameter_count,
-                columns: _,
-            } => {
+            GatewayResponse::Prepared { statement_id, parameter_count, columns: _ } => {
                 let mut out = vec![encode_command_complete(&format!(
                     "PREPARE {statement_id} params={parameter_count}"
                 ))];
@@ -554,12 +506,10 @@ impl FrontendProtocolAdapter for PostgreSqlFrontendProtocol {
                 } else {
                     // Cache for subsequent portal Bind / Execute suppress.
                     if target == b'S' {
-                        self.prepared_columns
-                            .insert(name.clone(), columns.clone());
+                        self.prepared_columns.insert(name.clone(), columns.clone());
                         self.prepared_row_described.insert(name.clone(), true);
                     } else if target == b'P' {
-                        self.portal_columns
-                            .insert(name.clone(), columns.clone());
+                        self.portal_columns.insert(name.clone(), columns.clone());
                         self.portal_row_described.insert(name, true);
                     }
                     let fields: Vec<FieldDescription> = columns
@@ -570,9 +520,8 @@ impl FrontendProtocolAdapter for PostgreSqlFrontendProtocol {
                             f
                         })
                         .collect();
-                    packets.push(
-                        encode_row_description(&fields).map_err(postgresql_protocol_error)?,
-                    );
+                    packets
+                        .push(encode_row_description(&fields).map_err(postgresql_protocol_error)?);
                 }
                 Ok(packets)
             }
@@ -623,10 +572,7 @@ impl FrontendProtocolAdapter for PostgreSqlFrontendProtocol {
         // A10 PortalSuspended: only when the *client* Execute max_rows page stopped
         // early with more rows remaining. Security max_rows still uses CommandComplete
         // so fetchall() terminates (honest policy cap).
-        let client_page = session
-            .pg_execute_max_rows
-            .map(|m| m as usize)
-            .filter(|m| *m > 0);
+        let client_page = session.pg_execute_max_rows.map(|m| m as usize).filter(|m| *m > 0);
         let portal_suspended = session.pg_extended_query
             && truncated
             && client_page.is_some()
@@ -726,11 +672,7 @@ fn decode_query_command(sql: String, session: &mut SessionState) -> GatewayComma
     }
 
     // Strip trailing semicolons so "COMMIT;" / "BEGIN;" match control keywords.
-    let keyword = sql
-        .trim()
-        .trim_end_matches(';')
-        .trim()
-        .to_ascii_lowercase();
+    let keyword = sql.trim().trim_end_matches(';').trim().to_ascii_lowercase();
     match keyword.as_str() {
         "begin" | "start transaction" => {
             session.transaction_state = TransactionState::Active;
@@ -758,9 +700,7 @@ fn count_pg_placeholders_frontend(sql: &str) -> u16 {
             let mut j = i + 1;
             let mut n: u16 = 0;
             while j < bytes.len() && bytes[j].is_ascii_digit() {
-                n = n
-                    .saturating_mul(10)
-                    .saturating_add((bytes[j] - b'0') as u16);
+                n = n.saturating_mul(10).saturating_add((bytes[j] - b'0') as u16);
                 j += 1;
             }
             if n > max {
@@ -799,7 +739,8 @@ fn infer_select_result_columns(sql: &str) -> Option<Vec<GatewayColumn>> {
     };
 
     // Prefer FROM as list terminator; bare `SELECT 1` has no FROM.
-    let select_list = if let Some(from_idx) = find_top_level_keyword_frontend(after_select, "FROM") {
+    let select_list = if let Some(from_idx) = find_top_level_keyword_frontend(after_select, "FROM")
+    {
         after_select[..from_idx].trim()
     } else if let Some(idx) = find_top_level_keyword_frontend(after_select, "WHERE")
         .or_else(|| find_top_level_keyword_frontend(after_select, "GROUP"))
@@ -862,11 +803,7 @@ fn select_item_output_name(item: &str, index: usize) -> String {
         return alias;
     }
     // bare column / table.column / $n
-    let bare = item
-        .rsplit(|c: char| c == '.' || c == '(')
-        .next()
-        .unwrap_or(item)
-        .trim();
+    let bare = item.rsplit(|c: char| c == '.' || c == '(').next().unwrap_or(item).trim();
     let bare = unquote_ident(bare).unwrap_or(bare);
     if bare.is_empty() || bare == "*" {
         format!("column{}", index + 1)
@@ -929,14 +866,8 @@ fn trailing_bare_alias(item: &str) -> Option<String> {
     {
         return None;
     }
-    if alias_u
-        .chars()
-        .all(|c| c.is_ascii_alphanumeric() || c == '_')
-        && alias_u
-            .chars()
-            .next()
-            .map(|c| c.is_ascii_alphabetic() || c == '_')
-            .unwrap_or(false)
+    if alias_u.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+        && alias_u.chars().next().map(|c| c.is_ascii_alphabetic() || c == '_').unwrap_or(false)
     {
         // Ensure prefix is not empty and not just the same token.
         let prefix = item[..start].trim();
@@ -1163,7 +1094,6 @@ fn unquote(value: &str, quote: char) -> Option<&str> {
     Some(&value[..end])
 }
 
-
 fn encode_pg_resultset_header(columns: &[GatewayColumn]) -> GatewayResult<Vec<Vec<u8>>> {
     encode_pg_resultset_header_formats(columns, 0)
 }
@@ -1180,9 +1110,7 @@ fn encode_pg_resultset_header_formats(
             f
         })
         .collect::<Vec<_>>();
-    Ok(vec![
-        encode_row_description(&fields).map_err(postgresql_protocol_error)?,
-    ])
+    Ok(vec![encode_row_description(&fields).map_err(postgresql_protocol_error)?])
 }
 
 fn encode_pg_resultset_rows(
@@ -1241,11 +1169,7 @@ fn encode_resultset_opts(
     ready: Vec<u8>,
     skip_header: bool,
 ) -> GatewayResult<Vec<Vec<u8>>> {
-    let mut messages = if skip_header {
-        Vec::new()
-    } else {
-        encode_pg_resultset_header(&columns)?
-    };
+    let mut messages = if skip_header { Vec::new() } else { encode_pg_resultset_header(&columns)? };
     messages.extend(encode_pg_resultset_rows(&columns, &rows)?);
     messages.push(encode_command_complete(&format!("SELECT {}", rows.len())));
     if !ready.is_empty() {
@@ -1283,11 +1207,8 @@ fn encode_resultset_binary_opts(
     ready: Vec<u8>,
     skip_header: bool,
 ) -> GatewayResult<Vec<Vec<u8>>> {
-    let mut messages = if skip_header {
-        Vec::new()
-    } else {
-        encode_pg_resultset_header_formats(&columns, 1)?
-    };
+    let mut messages =
+        if skip_header { Vec::new() } else { encode_pg_resultset_header_formats(&columns, 1)? };
     messages.extend(encode_pg_resultset_rows_binary(&columns, &rows)?);
     messages.push(encode_command_complete(&format!("SELECT {}", rows.len())));
     if !ready.is_empty() {
@@ -1391,9 +1312,7 @@ fn gateway_value_to_pg_binary(
             }
             "timestamptz" => {
                 let us = parse_pg_timestamp_us(s, true).ok_or_else(|| {
-                    GatewayError::Protocol(format!(
-                        "invalid postgresql TIMESTAMPTZ value '{s}'"
-                    ))
+                    GatewayError::Protocol(format!("invalid postgresql TIMESTAMPTZ value '{s}'"))
                 })?;
                 Ok(Some(us.to_be_bytes().to_vec()))
             }
@@ -1452,18 +1371,10 @@ fn parse_pg_timestamp_us(s: &str, allow_tz: bool) -> Option<i64> {
 fn parse_pg_time_us(s: &str) -> Option<i64> {
     let s = s.trim();
     // Drop trailing zone if present (timetz text).
-    let body = s
-        .split_once(['+', '-'])
-        .map(|(b, _)| b.trim())
-        .unwrap_or(s);
+    let body = s.split_once(['+', '-']).map(|(b, _)| b.trim()).unwrap_or(s);
     // Avoid stripping leading minus as zone: TIME is non-negative in PG.
     let (h, mi, sec, micro) = parse_hms_micro_pg(body)?;
-    Some(
-        h as i64 * 3_600_000_000
-            + mi as i64 * 60_000_000
-            + sec as i64 * 1_000_000
-            + micro as i64,
-    )
+    Some(h as i64 * 3_600_000_000 + mi as i64 * 60_000_000 + sec as i64 * 1_000_000 + micro as i64)
 }
 
 fn parse_ymd(s: &str) -> Option<(i32, u32, u32)> {
@@ -1553,10 +1464,7 @@ fn split_tz_offset(s: &str, allow_tz: bool) -> Option<(String, i64)> {
     let (hh, mm) = if let Some((h, m)) = rest.split_once(':') {
         (h.parse::<i64>().ok()?, m.parse::<i64>().ok()?)
     } else if rest.len() == 4 && rest.chars().all(|c| c.is_ascii_digit()) {
-        (
-            rest[..2].parse::<i64>().ok()?,
-            rest[2..].parse::<i64>().ok()?,
-        )
+        (rest[..2].parse::<i64>().ok()?, rest[2..].parse::<i64>().ok()?)
     } else if rest.len() <= 2 {
         (rest.parse::<i64>().ok()?, 0)
     } else {
@@ -1762,10 +1670,7 @@ mod tests {
             ..SessionState::default()
         };
 
-        assert_eq!(
-            protocol.decode(&encode_query_message("select 999"), &mut session),
-            Ok(vec![])
-        );
+        assert_eq!(protocol.decode(&encode_query_message("select 999"), &mut session), Ok(vec![]));
         let sync_cmds = protocol.decode(&encode_sync_message(), &mut session).unwrap();
         assert_eq!(sync_cmds.len(), 1);
         assert!(!session.pg_extended_error);
@@ -1817,11 +1722,7 @@ mod tests {
         assert_eq!(packets.len(), 2);
         assert_eq!(packets[0][0], b'C');
         assert_eq!(packets[1], encode_ready_for_query(TransactionStatus::Idle));
-        assert!(
-            String::from_utf8_lossy(&packets[0]).contains("PREPARE 1"),
-            "{:?}",
-            packets[0]
-        );
+        assert!(String::from_utf8_lossy(&packets[0]).contains("PREPARE 1"), "{:?}", packets[0]);
     }
 
     #[test]
@@ -1831,10 +1732,7 @@ mod tests {
         let packets = protocol
             .encode(
                 GatewayResponse::TaggedResultSet {
-                    columns: vec![GatewayColumn {
-                        name: "id".into(),
-                        data_type: "int4".into(),
-                    }],
+                    columns: vec![GatewayColumn { name: "id".into(), data_type: "int4".into() }],
                     rows: vec![vec![GatewayValue::Integer(7)]],
                     tag: "FETCH 1".into(),
                 },
@@ -1881,7 +1779,7 @@ mod tests {
                 assert_eq!(packets.len(), 2);
                 assert_eq!(packets[0][0], b't'); // ParameterDescription
                 assert_eq!(packets[1][0], b'T'); // RowDescription (explicit SELECT list)
-                // nparams = 2 (after 1-byte tag + 4-byte length)
+                                                 // nparams = 2 (after 1-byte tag + 4-byte length)
                 assert_eq!(i16::from_be_bytes([packets[0][5], packets[0][6]]), 2);
                 // ncol = 2 in RowDescription
                 assert_eq!(i16::from_be_bytes([packets[1][5], packets[1][6]]), 2);
@@ -1936,14 +1834,8 @@ mod tests {
             .encode(
                 GatewayResponse::RowDescription {
                     columns: vec![
-                        GatewayColumn {
-                            name: "id".into(),
-                            data_type: "int4".into(),
-                        },
-                        GatewayColumn {
-                            name: "name".into(),
-                            data_type: "text".into(),
-                        },
+                        GatewayColumn { name: "id".into(), data_type: "int4".into() },
+                        GatewayColumn { name: "name".into(), data_type: "text".into() },
                     ],
                 },
                 &session,
@@ -1954,23 +1846,15 @@ mod tests {
         assert_eq!(packets[1][0], b'T'); // RowDescription
         assert_eq!(i16::from_be_bytes([packets[1][5], packets[1][6]]), 2);
         // Cached for later Bind/portal Describe.
-        assert_eq!(
-            protocol.prepared_columns.get("s1").map(|c| c.len()),
-            Some(2)
-        );
+        assert_eq!(protocol.prepared_columns.get("s1").map(|c| c.len()), Some(2));
         assert!(protocol.pending_describe.is_none());
     }
 
     #[test]
     fn a10_extended_execute_footer_omits_ready_for_query() {
         let mut protocol = PostgreSqlFrontendProtocol::new("14.0".into());
-        let session = SessionState {
-            pg_extended_query: true,
-            ..SessionState::default()
-        };
-        let footer = protocol
-            .encode_resultset_footer(&[], 1, &session, false)
-            .unwrap();
+        let session = SessionState { pg_extended_query: true, ..SessionState::default() };
+        let footer = protocol.encode_resultset_footer(&[], 1, &session, false).unwrap();
         assert_eq!(footer.len(), 1);
         assert_eq!(footer[0][0], b'C'); // CommandComplete only
         assert!(!footer.iter().any(|p| p.first() == Some(&b'Z')));
@@ -1980,9 +1864,7 @@ mod tests {
     fn a10_simple_query_footer_includes_ready_for_query() {
         let mut protocol = PostgreSqlFrontendProtocol::new("14.0".into());
         let session = SessionState::default();
-        let footer = protocol
-            .encode_resultset_footer(&[], 2, &session, false)
-            .unwrap();
+        let footer = protocol.encode_resultset_footer(&[], 2, &session, false).unwrap();
         assert_eq!(footer.len(), 2);
         assert_eq!(footer[0][0], b'C');
         assert_eq!(footer[1][0], b'Z');
@@ -1996,9 +1878,7 @@ mod tests {
             pg_execute_max_rows: Some(1),
             ..SessionState::default()
         };
-        let footer = protocol
-            .encode_resultset_footer(&[], 1, &session, true)
-            .unwrap();
+        let footer = protocol.encode_resultset_footer(&[], 1, &session, true).unwrap();
         assert_eq!(footer.len(), 1);
         assert_eq!(footer[0][0], b's'); // PortalSuspended
     }
@@ -2012,9 +1892,7 @@ mod tests {
             pg_execute_max_rows: None,
             ..SessionState::default()
         };
-        let footer = protocol
-            .encode_resultset_footer(&[], 1, &session, true)
-            .unwrap();
+        let footer = protocol.encode_resultset_footer(&[], 1, &session, true).unwrap();
         assert_eq!(footer[0][0], b'C');
     }
 
@@ -2074,9 +1952,7 @@ mod tests {
         assert!(!protocol.suppress_next_row_description);
 
         // Sync clears portal flags
-        protocol
-            .decode(&encode_sync_message(), &mut session)
-            .unwrap();
+        protocol.decode(&encode_sync_message(), &mut session).unwrap();
 
         // Re-bind same portal
         protocol.decode(&bind, &mut session).unwrap();
@@ -2147,18 +2023,10 @@ mod tests {
         assert!(protocol.suppress_next_row_description);
 
         let cols = vec![
-            GatewayColumn {
-                name: "id".into(),
-                data_type: "int4".into(),
-            },
-            GatewayColumn {
-                name: "name".into(),
-                data_type: "text".into(),
-            },
+            GatewayColumn { name: "id".into(), data_type: "int4".into() },
+            GatewayColumn { name: "name".into(), data_type: "text".into() },
         ];
-        let header = protocol
-            .encode_resultset_header(&cols, &session)
-            .unwrap();
+        let header = protocol.encode_resultset_header(&cols, &session).unwrap();
         assert!(header.is_empty(), "Describe already sent RowDescription");
         assert!(!protocol.suppress_next_row_description);
     }
@@ -2273,27 +2141,15 @@ mod tests {
     #[test]
     fn a10_encodes_binary_resultset_when_prefer_binary() {
         let mut protocol = PostgreSqlFrontendProtocol::new("14.0".into());
-        let session = SessionState {
-            prefer_binary_result: true,
-            ..Default::default()
-        };
+        let session = SessionState { prefer_binary_result: true, ..Default::default() };
         let packets = protocol
             .encode(
                 GatewayResponse::ResultSet {
                     columns: vec![
-                        GatewayColumn {
-                            name: "id".into(),
-                            data_type: "int4".into(),
-                        },
-                        GatewayColumn {
-                            name: "flag".into(),
-                            data_type: "bool".into(),
-                        },
+                        GatewayColumn { name: "id".into(), data_type: "int4".into() },
+                        GatewayColumn { name: "flag".into(), data_type: "bool".into() },
                     ],
-                    rows: vec![vec![
-                        GatewayValue::Integer(42),
-                        GatewayValue::Boolean(true),
-                    ]],
+                    rows: vec![vec![GatewayValue::Integer(42), GatewayValue::Boolean(true)]],
                 },
                 &session,
             )
@@ -2324,22 +2180,13 @@ mod tests {
     #[test]
     fn a10_binary_int8_and_null() {
         let mut protocol = PostgreSqlFrontendProtocol::new("14.0".into());
-        let session = SessionState {
-            prefer_binary_result: true,
-            ..Default::default()
-        };
+        let session = SessionState { prefer_binary_result: true, ..Default::default() };
         let packets = protocol
             .encode(
                 GatewayResponse::ResultSet {
                     columns: vec![
-                        GatewayColumn {
-                            name: "big".into(),
-                            data_type: "int8".into(),
-                        },
-                        GatewayColumn {
-                            name: "n".into(),
-                            data_type: "int4".into(),
-                        },
+                        GatewayColumn { name: "big".into(), data_type: "int8".into() },
+                        GatewayColumn { name: "n".into(), data_type: "int4".into() },
                     ],
                     rows: vec![vec![GatewayValue::Integer(0x100000002), GatewayValue::Null]],
                 },
@@ -2354,10 +2201,7 @@ mod tests {
         ]);
         assert_eq!(v, 0x100000002);
         // NULL is -1 length
-        assert_eq!(
-            i32::from_be_bytes([row[19], row[20], row[21], row[22]]),
-            -1
-        );
+        assert_eq!(i32::from_be_bytes([row[19], row[20], row[21], row[22]]), -1);
     }
 
     #[test]
@@ -2377,26 +2221,14 @@ mod tests {
     #[test]
     fn a10_binary_date_timestamp_time() {
         let mut protocol = PostgreSqlFrontendProtocol::new("14.0".into());
-        let session = SessionState {
-            prefer_binary_result: true,
-            ..Default::default()
-        };
+        let session = SessionState { prefer_binary_result: true, ..Default::default() };
         let packets = protocol
             .encode(
                 GatewayResponse::ResultSet {
                     columns: vec![
-                        GatewayColumn {
-                            name: "d".into(),
-                            data_type: "date".into(),
-                        },
-                        GatewayColumn {
-                            name: "ts".into(),
-                            data_type: "timestamp".into(),
-                        },
-                        GatewayColumn {
-                            name: "t".into(),
-                            data_type: "time".into(),
-                        },
+                        GatewayColumn { name: "d".into(), data_type: "date".into() },
+                        GatewayColumn { name: "ts".into(), data_type: "timestamp".into() },
+                        GatewayColumn { name: "t".into(), data_type: "time".into() },
                     ],
                     rows: vec![vec![
                         GatewayValue::String("2000-01-01".into()),
@@ -2430,34 +2262,19 @@ mod tests {
     #[test]
     fn a10_binary_timestamptz_offset() {
         // 2000-01-01 00:00:00+00 → 0; 2000-01-01 01:00:00+01 → 0 UTC
-        assert_eq!(
-            parse_pg_timestamp_us("2000-01-01 00:00:00+00", true),
-            Some(0)
-        );
-        assert_eq!(
-            parse_pg_timestamp_us("2000-01-01 01:00:00+01", true),
-            Some(0)
-        );
-        assert_eq!(
-            parse_pg_timestamp_us("2000-01-01 00:00:00Z", true),
-            Some(0)
-        );
+        assert_eq!(parse_pg_timestamp_us("2000-01-01 00:00:00+00", true), Some(0));
+        assert_eq!(parse_pg_timestamp_us("2000-01-01 01:00:00+01", true), Some(0));
+        assert_eq!(parse_pg_timestamp_us("2000-01-01 00:00:00Z", true), Some(0));
         // Without allow_tz, offset rejected
         assert!(parse_pg_timestamp_us("2000-01-01 00:00:00+00", false).is_none());
         // Fractional
-        assert_eq!(
-            parse_pg_timestamp_us("2000-01-01 00:00:00.5", false),
-            Some(500_000)
-        );
+        assert_eq!(parse_pg_timestamp_us("2000-01-01 00:00:00.5", false), Some(500_000));
     }
 
     #[test]
     fn a10_binary_date_invalid_fail_closed() {
-        let err = gateway_value_to_pg_binary(
-            &GatewayValue::String("not-a-date".into()),
-            "date",
-        )
-        .unwrap_err();
+        let err = gateway_value_to_pg_binary(&GatewayValue::String("not-a-date".into()), "date")
+            .unwrap_err();
         assert!(matches!(err, GatewayError::Protocol(_)));
     }
 

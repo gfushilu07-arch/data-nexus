@@ -115,17 +115,14 @@ impl SecurityTimeRuleConfig {
                 )));
             }
         }
-        if self.effect.eq_ignore_ascii_case("require_ticket")
-            && self.ticket_type.trim().is_empty()
+        if self.effect.eq_ignore_ascii_case("require_ticket") && self.ticket_type.trim().is_empty()
         {
             return Err(GatewayError::Configuration(format!(
                 "security.time_rules[{idx}].ticket_type must not be empty when effect=require_ticket"
             )));
         }
         parse_hhmm(&self.start).map_err(|e| {
-            GatewayError::Configuration(format!(
-                "security.time_rules[{idx}].start invalid: {e}"
-            ))
+            GatewayError::Configuration(format!("security.time_rules[{idx}].start invalid: {e}"))
         })?;
         parse_hhmm(&self.end).map_err(|e| {
             GatewayError::Configuration(format!("security.time_rules[{idx}].end invalid: {e}"))
@@ -138,9 +135,7 @@ impl SecurityTimeRuleConfig {
             }
         }
         parse_timezone_offset_minutes(&self.timezone).map_err(|e| {
-            GatewayError::Configuration(format!(
-                "security.time_rules[{idx}].timezone invalid: {e}"
-            ))
+            GatewayError::Configuration(format!("security.time_rules[{idx}].timezone invalid: {e}"))
         })?;
         Ok(())
     }
@@ -160,11 +155,8 @@ impl SecurityTimeRuleConfig {
         let (weekday, minute_of_day) = civil_parts(now_unix_secs, offset_mins);
 
         if !self.days.is_empty() {
-            let day_ok = self.days.iter().any(|d| {
-                parse_weekday(d)
-                    .map(|w| w == weekday)
-                    .unwrap_or(false)
-            });
+            let day_ok =
+                self.days.iter().any(|d| parse_weekday(d).map(|w| w == weekday).unwrap_or(false));
             if !day_ok {
                 // Outside listed days: treat as "outside window" for outside=true.
                 return self.outside;
@@ -187,12 +179,8 @@ pub fn parse_hhmm(s: &str) -> Result<u32, String> {
     if parts.len() != 2 {
         return Err(format!("expected HH:MM, got '{s}'"));
     }
-    let h: u32 = parts[0]
-        .parse()
-        .map_err(|_| format!("bad hour in '{s}'"))?;
-    let m: u32 = parts[1]
-        .parse()
-        .map_err(|_| format!("bad minute in '{s}'"))?;
+    let h: u32 = parts[0].parse().map_err(|_| format!("bad hour in '{s}'"))?;
+    let m: u32 = parts[1].parse().map_err(|_| format!("bad minute in '{s}'"))?;
     if h > 23 || m > 59 {
         return Err(format!("out of range HH:MM '{s}'"));
     }
@@ -240,10 +228,7 @@ pub fn parse_timezone_offset_minutes(tz: &str) -> Result<i32, String> {
             p[1].parse::<i32>().map_err(|_| format!("bad offset min '{tz}'"))?,
         )
     } else if rest.len() == 4 && rest.chars().all(|c| c.is_ascii_digit()) {
-        (
-            rest[0..2].parse().unwrap_or(0),
-            rest[2..4].parse().unwrap_or(0),
-        )
+        (rest[0..2].parse().unwrap_or(0), rest[2..4].parse().unwrap_or(0))
     } else if rest.len() == 2 && rest.chars().all(|c| c.is_ascii_digit()) {
         (rest.parse().unwrap_or(0), 0)
     } else {
@@ -269,7 +254,8 @@ pub fn is_inside_window(minute_of_day: u32, start: u32, end: u32) -> bool {
 }
 
 fn civil_parts(now_unix_secs: i64, offset_minutes: i32) -> (Weekday, u32) {
-    let offset = FixedOffset::east_opt(offset_minutes * 60).unwrap_or(FixedOffset::east_opt(0).unwrap());
+    let offset =
+        FixedOffset::east_opt(offset_minutes * 60).unwrap_or(FixedOffset::east_opt(0).unwrap());
     let dt = offset.timestamp_opt(now_unix_secs, 0).single().unwrap_or_else(|| {
         Utc.timestamp_opt(now_unix_secs, 0)
             .single()
@@ -302,7 +288,7 @@ mod tests {
         assert!(is_inside_window(10 * 60, 9 * 60, 18 * 60));
         assert!(!is_inside_window(8 * 60, 9 * 60, 18 * 60));
         assert!(!is_inside_window(9 * 60, 9 * 60, 9 * 60)); // empty
-        // overnight
+                                                            // overnight
         assert!(is_inside_window(23 * 60, 22 * 60, 6 * 60));
         assert!(is_inside_window(3 * 60, 22 * 60, 6 * 60));
         assert!(!is_inside_window(12 * 60, 22 * 60, 6 * 60));
@@ -311,15 +297,12 @@ mod tests {
     #[test]
     fn work_hours_outside_utc() {
         // 2026-07-17 is Friday.
-        let fri_10 = chrono::DateTime::parse_from_rfc3339("2026-07-17T10:00:00Z")
-            .unwrap()
-            .timestamp();
-        let fri_20 = chrono::DateTime::parse_from_rfc3339("2026-07-17T20:00:00Z")
-            .unwrap()
-            .timestamp();
-        let sat_10 = chrono::DateTime::parse_from_rfc3339("2026-07-18T10:00:00Z")
-            .unwrap()
-            .timestamp();
+        let fri_10 =
+            chrono::DateTime::parse_from_rfc3339("2026-07-17T10:00:00Z").unwrap().timestamp();
+        let fri_20 =
+            chrono::DateTime::parse_from_rfc3339("2026-07-17T20:00:00Z").unwrap().timestamp();
+        let sat_10 =
+            chrono::DateTime::parse_from_rfc3339("2026-07-18T10:00:00Z").unwrap().timestamp();
 
         let rule = SecurityTimeRuleConfig {
             name: "work".into(),
@@ -346,9 +329,7 @@ mod tests {
             timezone: "UTC".into(),
             ..Default::default()
         };
-        let now = chrono::DateTime::parse_from_rfc3339("2026-07-17T12:00:00Z")
-            .unwrap()
-            .timestamp();
+        let now = chrono::DateTime::parse_from_rfc3339("2026-07-17T12:00:00Z").unwrap().timestamp();
         assert!(rule.matches_now(now));
     }
 

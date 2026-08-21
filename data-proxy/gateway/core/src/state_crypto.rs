@@ -15,9 +15,7 @@ pub fn parse_encrypt_key(hex: &str) -> Result<Option<[u8; 32]>, String> {
         return Ok(None);
     }
     if hex.len() != 64 || !hex.chars().all(|c| c.is_ascii_hexdigit()) {
-        return Err(
-            "encrypt key must be empty or 64 hex characters (32-byte AES key)".into(),
-        );
+        return Err("encrypt key must be empty or 64 hex characters (32-byte AES key)".into());
     }
     let mut out = [0u8; 32];
     for i in 0..32 {
@@ -37,9 +35,7 @@ pub fn encrypt_blob(magic: &str, key: &[u8; 32], plain: &[u8]) -> Result<Vec<u8>
     let mix = simple_nonce(now_ms()).to_le_bytes();
     nonce_bytes[8..].copy_from_slice(&mix[..4]);
     let nonce = Nonce::from_slice(&nonce_bytes);
-    let ct = cipher
-        .encrypt(nonce, plain)
-        .map_err(|e| format!("state encrypt: {e}"))?;
+    let ct = cipher.encrypt(nonce, plain).map_err(|e| format!("state encrypt: {e}"))?;
     let mut out = Vec::with_capacity(magic.len() + 16 + ct.len());
     out.extend_from_slice(magic.as_bytes());
     out.extend_from_slice(B64.encode(nonce_bytes).as_bytes());
@@ -50,23 +46,16 @@ pub fn encrypt_blob(magic: &str, key: &[u8; 32], plain: &[u8]) -> Result<Vec<u8>
 
 /// Decrypt body after magic strip (`base64(nonce):base64(ct)`).
 pub fn decrypt_blob(key: &[u8; 32], body: &str) -> Result<Vec<u8>, String> {
-    let (n_b64, c_b64) = body
-        .split_once(':')
-        .ok_or_else(|| "ciphertext missing nonce separator".to_string())?;
-    let nonce_bytes = B64
-        .decode(n_b64.trim())
-        .map_err(|e| format!("nonce b64: {e}"))?;
+    let (n_b64, c_b64) =
+        body.split_once(':').ok_or_else(|| "ciphertext missing nonce separator".to_string())?;
+    let nonce_bytes = B64.decode(n_b64.trim()).map_err(|e| format!("nonce b64: {e}"))?;
     if nonce_bytes.len() != 12 {
         return Err(format!("nonce must be 12 bytes, got {}", nonce_bytes.len()));
     }
-    let ct = B64
-        .decode(c_b64.trim())
-        .map_err(|e| format!("ciphertext b64: {e}"))?;
+    let ct = B64.decode(c_b64.trim()).map_err(|e| format!("ciphertext b64: {e}"))?;
     let cipher = Aes256Gcm::new_from_slice(key).map_err(|e| e.to_string())?;
     let nonce = Nonce::from_slice(&nonce_bytes);
-    cipher
-        .decrypt(nonce, ct.as_ref())
-        .map_err(|e| format!("decrypt failed (wrong key?): {e}"))
+    cipher.decrypt(nonce, ct.as_ref()).map_err(|e| format!("decrypt failed (wrong key?): {e}"))
 }
 
 /// Decode raw file: if starts with `magic`, decrypt; else treat as plaintext JSON.
@@ -77,9 +66,8 @@ pub fn decode_maybe_encrypted(
 ) -> Result<Vec<u8>, String> {
     let raw = raw.trim();
     if let Some(rest) = raw.strip_prefix(magic) {
-        let key = key.ok_or_else(|| {
-            format!("file is encrypted ({magic}…) but encrypt key is not set")
-        })?;
+        let key =
+            key.ok_or_else(|| format!("file is encrypted ({magic}…) but encrypt key is not set"))?;
         decrypt_blob(key, rest)
     } else {
         Ok(raw.as_bytes().to_vec())
@@ -87,10 +75,7 @@ pub fn decode_maybe_encrypted(
 }
 
 fn now_ms() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_millis() as u64)
-        .unwrap_or(0)
+    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
 }
 
 fn simple_nonce(seed: u64) -> u64 {
@@ -114,11 +99,10 @@ mod tests {
 
     #[test]
     fn h05_encrypt_decrypt_roundtrip() {
-        let key = parse_encrypt_key(
-            "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
-        )
-        .unwrap()
-        .unwrap();
+        let key =
+            parse_encrypt_key("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff")
+                .unwrap()
+                .unwrap();
         let plain = br#"{"tickets":[]}"#;
         let enc = encrypt_blob("DNTICKET1:", &key, plain).unwrap();
         let s = String::from_utf8(enc).unwrap();
@@ -126,11 +110,10 @@ mod tests {
         let dec = decode_maybe_encrypted("DNTICKET1:", &s, Some(&key)).unwrap();
         assert_eq!(dec, plain);
         // Wrong key fails.
-        let bad = parse_encrypt_key(
-            "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-        )
-        .unwrap()
-        .unwrap();
+        let bad =
+            parse_encrypt_key("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+                .unwrap()
+                .unwrap();
         assert!(decode_maybe_encrypted("DNTICKET1:", &s, Some(&bad)).is_err());
         // Missing key fails on encrypted file.
         assert!(decode_maybe_encrypted("DNTICKET1:", &s, None).is_err());

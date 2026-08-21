@@ -79,11 +79,7 @@ impl OpendalArchive {
             bucket = %config.opendal_bucket,
             "audit OpenDAL archive ready"
         );
-        Ok(Some(Self {
-            op,
-            prefix,
-            scheme,
-        }))
+        Ok(Some(Self { op, prefix, scheme }))
     }
 
     pub fn scheme(&self) -> &str {
@@ -101,8 +97,7 @@ impl OpendalArchive {
         } else {
             format!("{}/{}", self.prefix, name)
         };
-        let bytes =
-            std::fs::read(local).map_err(|e| format!("read {}: {e}", local.display()))?;
+        let bytes = std::fs::read(local).map_err(|e| format!("read {}: {e}", local.display()))?;
         self.write_key(&key, &bytes)
     }
 
@@ -198,18 +193,14 @@ fn build_s3(config: &SecurityAuditConfig, root: &str) -> GatewayResult<Operator>
             "security.audit.opendal_bucket is required when opendal_scheme=s3".into(),
         ));
     }
-    let access = env_or(
-        &config.opendal_access_key_id,
-        &["DN_OPENDAL_ACCESS_KEY_ID", "AWS_ACCESS_KEY_ID"],
-    );
+    let access =
+        env_or(&config.opendal_access_key_id, &["DN_OPENDAL_ACCESS_KEY_ID", "AWS_ACCESS_KEY_ID"]);
     let secret = env_or(
         &config.opendal_secret_access_key,
         &["DN_OPENDAL_SECRET_ACCESS_KEY", "AWS_SECRET_ACCESS_KEY"],
     );
-    let token = env_or(
-        &config.opendal_session_token,
-        &["DN_OPENDAL_SESSION_TOKEN", "AWS_SESSION_TOKEN"],
-    );
+    let token =
+        env_or(&config.opendal_session_token, &["DN_OPENDAL_SESSION_TOKEN", "AWS_SESSION_TOKEN"]);
     let region = env_or(&config.opendal_region, &["DN_OPENDAL_REGION", "AWS_REGION"]);
     let endpoint = config.opendal_endpoint.trim();
 
@@ -252,11 +243,7 @@ fn build_oss(config: &SecurityAuditConfig, root: &str) -> GatewayResult<Operator
     }
     let access = env_or(
         &config.opendal_access_key_id,
-        &[
-            "DN_OPENDAL_ACCESS_KEY_ID",
-            "ALIBABA_CLOUD_ACCESS_KEY_ID",
-            "OSS_ACCESS_KEY_ID",
-        ],
+        &["DN_OPENDAL_ACCESS_KEY_ID", "ALIBABA_CLOUD_ACCESS_KEY_ID", "OSS_ACCESS_KEY_ID"],
     );
     let secret = env_or(
         &config.opendal_secret_access_key,
@@ -266,9 +253,7 @@ fn build_oss(config: &SecurityAuditConfig, root: &str) -> GatewayResult<Operator
             "OSS_ACCESS_KEY_SECRET",
         ],
     );
-    let mut builder = services::Oss::default()
-        .bucket(bucket)
-        .endpoint(endpoint);
+    let mut builder = services::Oss::default().bucket(bucket).endpoint(endpoint);
     if !root.is_empty() {
         builder = builder.root(root);
     }
@@ -341,10 +326,7 @@ mod tests {
         std::fs::write(&path, b"{\"decision\":\"deny\"}\n").unwrap();
         let key = arch.archive_local_file(&path).unwrap();
         assert_eq!(key, "audit/events.jsonl.1");
-        let rt = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap();
+        let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
         let data = rt.block_on(arch.op.read(&key)).unwrap();
         assert!(data.to_vec().starts_with(b"{\"decision\""));
         let _ = std::fs::remove_dir_all(dir);

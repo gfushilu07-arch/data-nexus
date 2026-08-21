@@ -27,7 +27,6 @@ use axum::{
     routing::{get, post, put},
     Router,
 };
-use tower_http::cors::{Any, CorsLayer};
 use config::config::{GatewayConfigDocument, GatewayConfigLoadError, PisaProxyConfig};
 use gateway_core::{
     AdminAuthConfig, AdminAuthContext, AuditAction, AuditDecision, ListenerConfig,
@@ -41,6 +40,7 @@ use proxy::factory::{
 };
 use serde::{Deserialize, Serialize};
 use server::server::{start_gateway_server, GatewayFactory};
+use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 use ver::version::get_version;
 
@@ -58,12 +58,7 @@ use admin_auth::{
 /// - Default: allow any origin (local/dev friendly)
 /// - `DATA_NEXUS_ADMIN_CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000`
 fn admin_cors_layer() -> CorsLayer {
-    let methods = [
-        Method::GET,
-        Method::POST,
-        Method::PUT,
-        Method::OPTIONS,
-    ];
+    let methods = [Method::GET, Method::POST, Method::PUT, Method::OPTIONS];
     match std::env::var("DATA_NEXUS_ADMIN_CORS_ORIGINS") {
         Ok(raw) if !raw.trim().is_empty() => {
             let origins: Vec<HeaderValue> = raw
@@ -78,21 +73,12 @@ fn admin_cors_layer() -> CorsLayer {
                 })
                 .collect();
             if origins.is_empty() {
-                CorsLayer::new()
-                    .allow_origin(Any)
-                    .allow_methods(methods)
-                    .allow_headers(Any)
+                CorsLayer::new().allow_origin(Any).allow_methods(methods).allow_headers(Any)
             } else {
-                CorsLayer::new()
-                    .allow_origin(origins)
-                    .allow_methods(methods)
-                    .allow_headers(Any)
+                CorsLayer::new().allow_origin(origins).allow_methods(methods).allow_headers(Any)
             }
         }
-        _ => CorsLayer::new()
-            .allow_origin(Any)
-            .allow_methods(methods)
-            .allow_headers(Any),
+        _ => CorsLayer::new().allow_origin(Any).allow_methods(methods).allow_headers(Any),
     }
 }
 
@@ -779,9 +765,6 @@ struct AdminPortalQueryResponse {
 const PORTAL_MAX_ROWS_CAP: u64 = 10_000;
 const PORTAL_DEFAULT_EXPORT_MAX_ROWS: u64 = 5_000;
 
-
-
-
 #[derive(Debug, Default, Serialize, PartialEq, Eq)]
 struct GatewayConfigDiff {
     admin_changed: bool,
@@ -813,11 +796,10 @@ impl GatewayConfigDiff {
                 &next.gateway.security,
             );
         let security_local_hot_reload = security_changed && !security_requires_listener_rebuild;
-        let mut listeners = diff_named_section(
-            &current.gateway.listeners,
-            &next.gateway.listeners,
-            |item| item.name.as_str(),
-        );
+        let mut listeners =
+            diff_named_section(&current.gateway.listeners, &next.gateway.listeners, |item| {
+                item.name.as_str()
+            });
         // Only force-rebuild listeners when security changes cannot be applied
         // via the process-wide Local PDP snapshot (F28). Rule/mask/time/audit
         // alone hot-swap without tearing down accept loops.
@@ -960,49 +942,22 @@ impl AxumServer {
             .route("/admin/endpoints", get(Self::admin_endpoints))
             .route("/admin/security-policies", get(Self::admin_security_policies))
             .route("/admin/security/cedar", get(Self::admin_cedar_status))
-            .route(
-                "/admin/security/cedar/reload",
-                post(Self::admin_cedar_reload),
-            )
+            .route("/admin/security/cedar/reload", post(Self::admin_cedar_reload))
             .route("/admin/audit/events", get(Self::admin_audit_events))
             .route("/admin/audit/stats", get(Self::admin_audit_stats))
-            .route(
-                "/admin/tickets",
-                get(Self::admin_list_tickets).post(Self::admin_issue_ticket),
-            )
-            .route(
-                "/admin/tickets/:id/approve",
-                post(Self::admin_approve_ticket),
-            )
-            .route(
-                "/admin/tickets/:id/reject",
-                post(Self::admin_reject_ticket),
-            )
+            .route("/admin/tickets", get(Self::admin_list_tickets).post(Self::admin_issue_ticket))
+            .route("/admin/tickets/:id/approve", post(Self::admin_approve_ticket))
+            .route("/admin/tickets/:id/reject", post(Self::admin_reject_ticket))
             .route("/admin/projects", get(Self::admin_list_projects))
             .route(
                 "/admin/vault/leases",
                 get(Self::admin_list_vault_leases).post(Self::admin_issue_vault_lease),
             )
-            .route(
-                "/admin/vault/leases/prune",
-                post(Self::admin_prune_vault_leases),
-            )
-            .route(
-                "/admin/vault/leases/:id/revoke",
-                post(Self::admin_revoke_vault_lease),
-            )
-            .route(
-                "/admin/vault/leases/:id/renew",
-                post(Self::admin_renew_vault_lease),
-            )
-            .route(
-                "/admin/tickets/:id/revoke",
-                post(Self::admin_revoke_ticket),
-            )
-            .route(
-                "/admin/tickets/prune",
-                post(Self::admin_prune_tickets),
-            )
+            .route("/admin/vault/leases/prune", post(Self::admin_prune_vault_leases))
+            .route("/admin/vault/leases/:id/revoke", post(Self::admin_revoke_vault_lease))
+            .route("/admin/vault/leases/:id/renew", post(Self::admin_renew_vault_lease))
+            .route("/admin/tickets/:id/revoke", post(Self::admin_revoke_ticket))
+            .route("/admin/tickets/prune", post(Self::admin_prune_tickets))
             .route("/admin/portal/query", post(Self::admin_portal_query))
             .route("/admin/pools", get(Self::admin_pools))
             .route("/admin/pools/refresh", post(Self::admin_refresh_pools))
@@ -1030,9 +985,7 @@ impl AxumServer {
         path: &str,
     ) -> Result<Option<AdminAuthContext>, Response<Body>> {
         let auth = self.admin_auth_config_snapshot();
-        let authorization = headers
-            .get(header::AUTHORIZATION)
-            .and_then(|v| v.to_str().ok());
+        let authorization = headers.get(header::AUTHORIZATION).and_then(|v| v.to_str().ok());
         match authenticate_request(&auth, authorization, method, path) {
             Ok(ctx) => Ok(ctx),
             Err(err) => Err(admin_auth_error_response(err)),
@@ -1045,10 +998,7 @@ impl AxumServer {
         }
         Response::builder()
             .status(StatusCode::OK)
-            .header(
-                header::CONTENT_TYPE,
-                HeaderValue::from_static("text/html; charset=utf-8"),
-            )
+            .header(header::CONTENT_TYPE, HeaderValue::from_static("text/html; charset=utf-8"))
             .body(Body::from(admin_ui::ADMIN_DASHBOARD_HTML))
             .unwrap_or_else(|_| Response::new(Body::from("admin ui unavailable")))
     }
@@ -1108,17 +1058,13 @@ impl AxumServer {
         if !auth.enabled {
             return json_response(&me_response(None, false));
         }
-        let authorization = headers
-            .get(header::AUTHORIZATION)
-            .and_then(|v| v.to_str().ok());
+        let authorization = headers.get(header::AUTHORIZATION).and_then(|v| v.to_str().ok());
         // When auth is enabled, /admin/me always requires a valid Bearer token.
         match authenticate_request(&auth, authorization, "GET", "/admin/me") {
             Ok(Some(ctx)) => json_response(&me_response(Some(&ctx), true)),
-            Ok(None) | Err(AdminAuthError::Unauthorized(_)) => {
-                admin_auth_error_response(AdminAuthError::Unauthorized(
-                    "authentication required".into(),
-                ))
-            }
+            Ok(None) | Err(AdminAuthError::Unauthorized(_)) => admin_auth_error_response(
+                AdminAuthError::Unauthorized("authentication required".into()),
+            ),
             Err(err) => admin_auth_error_response(err),
         }
     }
@@ -1346,10 +1292,7 @@ impl AxumServer {
         }
     }
 
-    async fn admin_cedar_status(
-        State(state): State<Self>,
-        headers: HeaderMap,
-    ) -> Response<Body> {
+    async fn admin_cedar_status(State(state): State<Self>, headers: HeaderMap) -> Response<Body> {
         if let Err(response) = state.authorize(&headers, "GET", "/admin/security/cedar") {
             return response;
         }
@@ -1394,10 +1337,7 @@ impl AxumServer {
         }
     }
 
-    async fn admin_cedar_reload(
-        State(state): State<Self>,
-        headers: HeaderMap,
-    ) -> Response<Body> {
+    async fn admin_cedar_reload(State(state): State<Self>, headers: HeaderMap) -> Response<Body> {
         let auth_ctx = match state.authorize(&headers, "POST", "/admin/security/cedar/reload") {
             Ok(ctx) => ctx,
             Err(response) => return response,
@@ -1460,11 +1400,9 @@ impl AxumServer {
                     );
                     json_response(&info)
                 }
-                Err(e) => admin_json_error(
-                    StatusCode::BAD_REQUEST,
-                    "cedar_reload_failed",
-                    e.to_string(),
-                ),
+                Err(e) => {
+                    admin_json_error(StatusCode::BAD_REQUEST, "cedar_reload_failed", e.to_string())
+                }
             }
         }
         #[cfg(not(feature = "security-cedar"))]
@@ -1491,7 +1429,9 @@ impl AxumServer {
                 events: vec![],
                 stats: None,
                 source: None,
-                note: Some("audit pipeline not installed (gateway not started with security.audit)".into()),
+                note: Some(
+                    "audit pipeline not installed (gateway not started with security.audit)".into(),
+                ),
             });
         };
         let limit = query.limit.unwrap_or(100).clamp(1, 1000) as usize;
@@ -1511,23 +1451,11 @@ impl AxumServer {
         };
         let events = pipe.query_filter(&filter);
         let stats = pipe.stats();
-        let source = if stats.index_enabled {
-            Some("index".into())
-        } else {
-            Some("recent".into())
-        };
-        json_response(&AdminAuditEventsResponse {
-            events,
-            stats: Some(stats),
-            source,
-            note: None,
-        })
+        let source = if stats.index_enabled { Some("index".into()) } else { Some("recent".into()) };
+        json_response(&AdminAuditEventsResponse { events, stats: Some(stats), source, note: None })
     }
 
-    async fn admin_audit_stats(
-        State(state): State<Self>,
-        headers: HeaderMap,
-    ) -> Response<Body> {
+    async fn admin_audit_stats(State(state): State<Self>, headers: HeaderMap) -> Response<Body> {
         if let Err(response) = state.authorize(&headers, "GET", "/admin/audit/stats") {
             return response;
         }
@@ -1555,7 +1483,6 @@ impl AxumServer {
             })),
         }
     }
-
 
     async fn admin_list_tickets(
         State(state): State<Self>,
@@ -1631,11 +1558,11 @@ impl AxumServer {
         Path(id): Path<String>,
         body: Option<Json<gateway_core::ApproveTicketRequest>>,
     ) -> Response<Body> {
-        let auth_ctx = match state.authorize(&headers, "POST", &format!("/admin/tickets/{id}/approve"))
-        {
-            Ok(ctx) => ctx,
-            Err(response) => return response,
-        };
+        let auth_ctx =
+            match state.authorize(&headers, "POST", &format!("/admin/tickets/{id}/approve")) {
+                Ok(ctx) => ctx,
+                Err(response) => return response,
+            };
         let mut req = body.map(|Json(b)| b).unwrap_or_default();
         if req.approved_by.as_ref().map(|s| s.trim().is_empty()).unwrap_or(true) {
             if let Some(ctx) = auth_ctx.as_ref() {
@@ -1684,11 +1611,11 @@ impl AxumServer {
         Path(id): Path<String>,
         body: Option<Json<gateway_core::RejectTicketRequest>>,
     ) -> Response<Body> {
-        let auth_ctx = match state.authorize(&headers, "POST", &format!("/admin/tickets/{id}/reject"))
-        {
-            Ok(ctx) => ctx,
-            Err(response) => return response,
-        };
+        let auth_ctx =
+            match state.authorize(&headers, "POST", &format!("/admin/tickets/{id}/reject")) {
+                Ok(ctx) => ctx,
+                Err(response) => return response,
+            };
         let mut req = body.map(|Json(b)| b).unwrap_or_default();
         if req.rejected_by.as_ref().map(|s| s.trim().is_empty()).unwrap_or(true) {
             if let Some(ctx) = auth_ctx.as_ref() {
@@ -1731,22 +1658,15 @@ impl AxumServer {
         }
     }
 
-    async fn admin_list_projects(
-        State(state): State<Self>,
-        headers: HeaderMap,
-    ) -> Response<Body> {
+    async fn admin_list_projects(State(state): State<Self>, headers: HeaderMap) -> Response<Body> {
         if let Err(response) = state.authorize(&headers, "GET", "/admin/projects") {
             return response;
         }
         // Seed projects from services if empty.
         if let Some(cfg) = &state.gateway_config {
             if let Ok(guard) = cfg.read() {
-                let services: Vec<String> = guard
-                    .gateway
-                    .services
-                    .iter()
-                    .map(|s| s.name.clone())
-                    .collect();
+                let services: Vec<String> =
+                    guard.gateway.services.iter().map(|s| s.name.clone()).collect();
                 gateway_core::global_vault_store().ensure_default_projects_from_services(&services);
             }
         }
@@ -1786,12 +1706,8 @@ impl AxumServer {
         };
         // Resolve project -> service
         let store = gateway_core::global_vault_store();
-        let services: Vec<String> = config
-            .gateway
-            .services
-            .iter()
-            .map(|s| s.name.clone())
-            .collect();
+        let services: Vec<String> =
+            config.gateway.services.iter().map(|s| s.name.clone()).collect();
         store.ensure_default_projects_from_services(&services);
         let projects = store.list_projects();
         let project = projects.iter().find(|p| {
@@ -1805,12 +1721,7 @@ impl AxumServer {
                 body.project.clone()
             }
         };
-        let service = match config
-            .gateway
-            .services
-            .iter()
-            .find(|s| s.name == service_name)
-        {
+        let service = match config.gateway.services.iter().find(|s| s.name == service_name) {
             Some(s) => s.clone(),
             None => {
                 return admin_json_error(
@@ -1830,12 +1741,7 @@ impl AxumServer {
                 );
             }
         };
-        let endpoint = match config
-            .gateway
-            .endpoints
-            .iter()
-            .find(|e| e.name == endpoint_name)
-        {
+        let endpoint = match config.gateway.endpoints.iter().find(|e| e.name == endpoint_name) {
             Some(e) => e.clone(),
             None => {
                 return admin_json_error(
@@ -1882,23 +1788,18 @@ impl AxumServer {
         Path(id): Path<String>,
         body: Option<Json<gateway_core::RevokeVaultLeaseRequest>>,
     ) -> Response<Body> {
-        let auth_ctx = match state.authorize(
-            &headers,
-            "POST",
-            &format!("/admin/vault/leases/{id}/revoke"),
-        ) {
-            Ok(ctx) => ctx,
-            Err(response) => return response,
-        };
+        let auth_ctx =
+            match state.authorize(&headers, "POST", &format!("/admin/vault/leases/{id}/revoke")) {
+                Ok(ctx) => ctx,
+                Err(response) => return response,
+            };
         let mut req = body.map(|Json(b)| b).unwrap_or_default();
         if req.revoked_by.as_ref().map(|s| s.trim().is_empty()).unwrap_or(true) {
             if let Some(ctx) = auth_ctx.as_ref() {
                 req.revoked_by = Some(ctx.subject.clone());
             }
         }
-        match gateway_core::global_vault_store()
-            .revoke(&id, req.revoked_by.as_deref())
-        {
+        match gateway_core::global_vault_store().revoke(&id, req.revoked_by.as_deref()) {
             Ok(lease) => {
                 audit_admin_write(
                     auth_ctx.as_ref(),
@@ -1928,14 +1829,11 @@ impl AxumServer {
         Path(id): Path<String>,
         body: Option<Json<gateway_core::RenewVaultLeaseRequest>>,
     ) -> Response<Body> {
-        let auth_ctx = match state.authorize(
-            &headers,
-            "POST",
-            &format!("/admin/vault/leases/{id}/renew"),
-        ) {
-            Ok(ctx) => ctx,
-            Err(response) => return response,
-        };
+        let auth_ctx =
+            match state.authorize(&headers, "POST", &format!("/admin/vault/leases/{id}/renew")) {
+                Ok(ctx) => ctx,
+                Err(response) => return response,
+            };
         let req = body.map(|Json(b)| b).unwrap_or_default();
         match gateway_core::global_vault_store().renew(&id, req.ttl_secs) {
             Ok(lease) => {
@@ -1961,13 +1859,7 @@ impl AxumServer {
             Err(response) => return response,
         };
         let removed = gateway_core::global_vault_store().prune_expired();
-        audit_admin_write(
-            auth_ctx.as_ref(),
-            "POST",
-            "/admin/vault/leases/prune",
-            "ok",
-            None,
-        );
+        audit_admin_write(auth_ctx.as_ref(), "POST", "/admin/vault/leases/prune", "ok", None);
         json_response(&serde_json::json!({ "removed": removed }))
     }
 
@@ -1977,14 +1869,11 @@ impl AxumServer {
         Path(id): Path<String>,
         body: Option<Json<gateway_core::RejectTicketRequest>>,
     ) -> Response<Body> {
-        let auth_ctx = match state.authorize(
-            &headers,
-            "POST",
-            &format!("/admin/tickets/{id}/revoke"),
-        ) {
-            Ok(ctx) => ctx,
-            Err(response) => return response,
-        };
+        let auth_ctx =
+            match state.authorize(&headers, "POST", &format!("/admin/tickets/{id}/revoke")) {
+                Ok(ctx) => ctx,
+                Err(response) => return response,
+            };
         let mut req = body.map(|Json(b)| b).unwrap_or_default();
         if req.rejected_by.as_ref().map(|s| s.trim().is_empty()).unwrap_or(true) {
             if let Some(ctx) = auth_ctx.as_ref() {
@@ -2016,22 +1905,13 @@ impl AxumServer {
         }
     }
 
-    async fn admin_prune_tickets(
-        State(state): State<Self>,
-        headers: HeaderMap,
-    ) -> Response<Body> {
+    async fn admin_prune_tickets(State(state): State<Self>, headers: HeaderMap) -> Response<Body> {
         let auth_ctx = match state.authorize(&headers, "POST", "/admin/tickets/prune") {
             Ok(ctx) => ctx,
             Err(response) => return response,
         };
         let removed = gateway_core::global_ticket_store().prune_expired();
-        audit_admin_write(
-            auth_ctx.as_ref(),
-            "POST",
-            "/admin/tickets/prune",
-            "ok",
-            None,
-        );
+        audit_admin_write(auth_ctx.as_ref(), "POST", "/admin/tickets/prune", "ok", None);
         json_response(&serde_json::json!({ "removed": removed }))
     }
 
@@ -2234,21 +2114,11 @@ impl AxumServer {
             }
         }
 
-        match portal_execute_logical(
-            &config,
-            &body.service,
-            &body.sql,
-            &subject_id,
-            Some(max_rows),
-        )
-        .await
+        match portal_execute_logical(&config, &body.service, &body.sql, &subject_id, Some(max_rows))
+            .await
         {
             Ok(resp) => {
-                let outcome = if format == "json" {
-                    "portal_query"
-                } else {
-                    "portal_export"
-                };
+                let outcome = if format == "json" { "portal_query" } else { "portal_export" };
                 gateway_core::try_audit(gateway_core::AuditEvent {
                     action: Some(AuditAction::Query.as_str().into()),
                     decision: Some(AuditDecision::Execute.as_str().into()),
@@ -2280,7 +2150,6 @@ impl AxumServer {
             }
         }
     }
-
 
     async fn admin_add_listener(
         State(state): State<Self>,
@@ -2497,13 +2366,7 @@ impl AxumServer {
         match &state.runtime_state {
             Some(runtime_state) => {
                 let status = runtime_state.refresh_pools();
-                audit_admin_write(
-                    auth_ctx.as_ref(),
-                    "POST",
-                    "/admin/pools/refresh",
-                    "ok",
-                    None,
-                );
+                audit_admin_write(auth_ctx.as_ref(), "POST", "/admin/pools/refresh", "ok", None);
                 json_response(&status)
             }
             None => admin_runtime_not_found("admin runtime state is not available"),
@@ -2546,13 +2409,7 @@ impl AxumServer {
         let diff = GatewayConfigDiff::between(&current_config, &next_config);
         let changed = diff.has_changes();
         if !changed {
-            audit_admin_write(
-                auth_ctx.as_ref(),
-                "POST",
-                "/admin/reload",
-                "validated",
-                None,
-            );
+            audit_admin_write(auth_ctx.as_ref(), "POST", "/admin/reload", "validated", None);
             return json_response(&GatewayReloadResponse {
                 status: "validated",
                 source: config_source.description(),
@@ -2701,12 +2558,8 @@ impl AxumServer {
     }
 }
 
-
 /// F28: swap Local PDP snapshot when security is enabled and changed.
-fn maybe_reload_local_pdp(
-    security: &gateway_core::SecurityPolicyConfig,
-    diff: &GatewayConfigDiff,
-) {
+fn maybe_reload_local_pdp(security: &gateway_core::SecurityPolicyConfig, diff: &GatewayConfigDiff) {
     if !security.enabled || !diff.security_changed {
         return;
     }
@@ -2796,8 +2649,6 @@ fn admin_auth_error_response(error: AdminAuthError) -> Response<Body> {
     admin_json_error(error.status(), error.code(), error.message().to_owned())
 }
 
-
-
 async fn portal_execute_logical(
     config: &gateway_core::GatewayConfig,
     service_name: &str,
@@ -2810,11 +2661,7 @@ async fn portal_execute_logical(
     let prepared = portal_prepare(config, service_name, sql, subject_id, max_rows)?;
     let response = prepared
         .backend
-        .execute_outcome(
-            prepared.command,
-            &mut prepared.session.clone(),
-            prepared.mode,
-        )
+        .execute_outcome(prepared.command, &mut prepared.session.clone(), prepared.mode)
         .await
         .map_err(|e| ("backend".into(), e.to_string()))?;
 
@@ -2865,9 +2712,12 @@ async fn portal_execute_logical(
             loop {
                 if let Some(max) = max_total {
                     if total >= max {
-                        while query.stream.poll_window(window).await.map_err(|e| {
-                            ("backend".into(), e.to_string())
-                        })?.is_some()
+                        while query
+                            .stream
+                            .poll_window(window)
+                            .await
+                            .map_err(|e| ("backend".into(), e.to_string()))?
+                            .is_some()
                         {}
                         truncated = true;
                         break;
@@ -2960,10 +2810,9 @@ async fn portal_execute_logical(
                     decision: "allow".into(),
                     message: Some("ok".into()),
                 }),
-                GatewayResponse::Wire { .. } => Err((
-                    "wire".into(),
-                    "portal expects logical result set".into(),
-                )),
+                GatewayResponse::Wire { .. } => {
+                    Err(("wire".into(), "portal expects logical result set".into()))
+                }
                 other => Err(("unsupported".into(), format!("{other:?}"))),
             }
         }
@@ -3047,7 +2896,6 @@ fn record_portal_http_metrics(
     }
 }
 
-
 fn portal_prepare(
     config: &gateway_core::GatewayConfig,
     service_name: &str,
@@ -3060,17 +2908,11 @@ fn portal_prepare(
     };
     use runtime_gateway::core_engine::CoreGatewayRuntimePlan;
 
-    let plan = CoreGatewayRuntimePlan::from_config(config)
-        .map_err(|e| ("plan".into(), e.to_string()))?;
-    let _listener_ok = plan
-        .listeners()
-        .iter()
-        .any(|l| l.service().name == service_name);
+    let plan =
+        CoreGatewayRuntimePlan::from_config(config).map_err(|e| ("plan".into(), e.to_string()))?;
+    let _listener_ok = plan.listeners().iter().any(|l| l.service().name == service_name);
     if !_listener_ok {
-        return Err((
-            "no_listener".into(),
-            format!("no listener for service '{service_name}'"),
-        ));
+        return Err(("no_listener".into(), format!("no listener for service '{service_name}'")));
     }
 
     let service = config
@@ -3100,10 +2942,8 @@ fn portal_prepare(
         .find(|l| l.service().name == service_name)
         .map(|l| l.listener().protocol.clone())
         .unwrap_or_else(|| service.backend_protocol.clone());
-    let endpoint_name = endpoints
-        .first()
-        .map(|e| e.name.clone())
-        .unwrap_or_else(|| "unknown".into());
+    let endpoint_name =
+        endpoints.first().map(|e| e.name.clone()).unwrap_or_else(|| "unknown".into());
 
     let objects =
         runtime_gateway::object_extract::extract_object_set(sql, frontend_protocol.as_str());
@@ -3116,9 +2956,7 @@ fn portal_prepare(
         match pdp.authorize_command_with_objects(
             &subject,
             service_name,
-            &GatewayCommand::Query {
-                sql: sql_exec.clone(),
-            },
+            &GatewayCommand::Query { sql: sql_exec.clone() },
             &dialect,
             Some(&objects),
         ) {
@@ -3129,10 +2967,7 @@ fn portal_prepare(
             gateway_core::SecurityDecision::Allow { obligations: obl } => {
                 obligations = obl;
             }
-            gateway_core::SecurityDecision::AllowRewrite {
-                sql: rewritten,
-                obligations: obl,
-            } => {
+            gateway_core::SecurityDecision::AllowRewrite { sql: rewritten, obligations: obl } => {
                 sql_exec = rewritten;
                 obligations = obl;
             }
@@ -3141,11 +2976,7 @@ fn portal_prepare(
 
     let mut command = GatewayCommand::Query { sql: sql_exec };
     if let Some(policy_name) = &service.translation_policy {
-        if let Some(policy) = config
-            .translation_policies
-            .iter()
-            .find(|p| p.name == *policy_name)
-        {
+        if let Some(policy) = config.translation_policies.iter().find(|p| p.name == *policy_name) {
             command = gateway_core::prepare_cross_protocol_command(policy, command, &dialect)
                 .map_err(|e| ("translation".into(), e.to_string()))?;
         }
@@ -3516,11 +3347,8 @@ async fn portal_execute_csv_streaming(
 
             tokio::spawn(async move {
                 // Header line first (CSV schema).
-                let mut header = col_names
-                    .iter()
-                    .map(|c| csv_escape(c))
-                    .collect::<Vec<_>>()
-                    .join(",");
+                let mut header =
+                    col_names.iter().map(|c| csv_escape(c)).collect::<Vec<_>>().join(",");
                 header.push('\n');
                 if tx.send_data(Bytes::from(header)).await.is_err() {
                     while query.stream.poll_window(window).await.ok().flatten().is_some() {}
@@ -3570,9 +3398,7 @@ async fn portal_execute_csv_streaming(
                     }
                 }
                 if truncated {
-                    let _ = tx
-                        .send_data(Bytes::from_static(b"# truncated=true\n"))
-                        .await;
+                    let _ = tx.send_data(Bytes::from_static(b"# truncated=true\n")).await;
                 }
             });
 
@@ -3777,9 +3603,7 @@ async fn portal_execute_json_streaming(
                         return;
                     }
                 };
-                let prefix = format!(
-                    "{{\"columns\":{cols_json},\"rows\":["
-                );
+                let prefix = format!("{{\"columns\":{cols_json},\"rows\":[");
                 if tx.send_data(Bytes::from(prefix)).await.is_err() {
                     while query.stream.poll_window(window).await.ok().flatten().is_some() {}
                     return;
@@ -3959,11 +3783,7 @@ fn portal_json_encode_row_array_fragment(
             out.push(b',');
         }
         *first_row = false;
-        let vals: Vec<serde_json::Value> = row
-            .iter()
-            .cloned()
-            .map(gateway_value_to_json)
-            .collect();
+        let vals: Vec<serde_json::Value> = row.iter().cloned().map(gateway_value_to_json).collect();
         match serde_json::to_vec(&vals) {
             Ok(b) => out.extend_from_slice(&b),
             Err(_) => out.extend_from_slice(b"null"),
@@ -4000,14 +3820,8 @@ fn normalize_portal_format(raw: Option<&str>) -> Option<&'static str> {
 }
 
 fn clamp_portal_max_rows(requested: Option<u64>, format: &str) -> u64 {
-    let default = if format == "json" {
-        1_000
-    } else {
-        PORTAL_DEFAULT_EXPORT_MAX_ROWS
-    };
-    requested
-        .unwrap_or(default)
-        .clamp(1, PORTAL_MAX_ROWS_CAP)
+    let default = if format == "json" { 1_000 } else { PORTAL_DEFAULT_EXPORT_MAX_ROWS };
+    requested.unwrap_or(default).clamp(1, PORTAL_MAX_ROWS_CAP)
 }
 
 fn portal_format_response(
@@ -4018,12 +3832,7 @@ fn portal_format_response(
     match format {
         "csv" => {
             let body = portal_to_csv(resp);
-            portal_download_response(
-                body,
-                "text/csv; charset=utf-8",
-                download,
-                "portal-export.csv",
-            )
+            portal_download_response(body, "text/csv; charset=utf-8", download, "portal-export.csv")
         }
         // Buffered NDJSON for tests / callers that already hold `resp`.
         // Live NDJSON uses `portal_execute_ndjson_streaming` (A09 backend window
@@ -4104,10 +3913,8 @@ fn portal_ndjson_chunked_response(
         .header("x-data-nexus-stream", "chunked")
         .header("x-data-nexus-window-rows", window.to_string());
     if download {
-        builder = builder.header(
-            header::CONTENT_DISPOSITION,
-            "attachment; filename=\"portal-export.ndjson\"",
-        );
+        builder = builder
+            .header(header::CONTENT_DISPOSITION, "attachment; filename=\"portal-export.ndjson\"");
     }
     builder.body(body).unwrap_or_else(|error| {
         Response::builder()
@@ -4128,12 +3935,7 @@ fn portal_csv_chunked_response(
     let (mut tx, body) = Body::channel();
     tokio::spawn(async move {
         let truncated = resp.truncated;
-        let mut header = resp
-            .columns
-            .iter()
-            .map(|c| csv_escape(c))
-            .collect::<Vec<_>>()
-            .join(",");
+        let mut header = resp.columns.iter().map(|c| csv_escape(c)).collect::<Vec<_>>().join(",");
         header.push('\n');
         if tx.send_data(Bytes::from(header)).await.is_err() {
             return;
@@ -4171,9 +3973,7 @@ fn portal_csv_chunked_response(
             }
         }
         if truncated {
-            let _ = tx
-                .send_data(Bytes::from_static(b"# truncated=true\n"))
-                .await;
+            let _ = tx.send_data(Bytes::from_static(b"# truncated=true\n")).await;
         }
     });
 
@@ -4183,10 +3983,8 @@ fn portal_csv_chunked_response(
         .header("x-data-nexus-stream", "chunked")
         .header("x-data-nexus-window-rows", window.to_string());
     if download {
-        builder = builder.header(
-            header::CONTENT_DISPOSITION,
-            "attachment; filename=\"portal-export.csv\"",
-        );
+        builder = builder
+            .header(header::CONTENT_DISPOSITION, "attachment; filename=\"portal-export.csv\"");
     }
     builder.body(body).unwrap_or_else(|_| {
         Response::builder()
@@ -4261,10 +4059,8 @@ fn portal_json_chunked_response(
         .header("x-data-nexus-stream", "chunked")
         .header("x-data-nexus-window-rows", window.to_string());
     if download {
-        builder = builder.header(
-            header::CONTENT_DISPOSITION,
-            "attachment; filename=\"portal-export.json\"",
-        );
+        builder = builder
+            .header(header::CONTENT_DISPOSITION, "attachment; filename=\"portal-export.json\"");
     }
     builder.body(body).unwrap_or_else(|_| {
         Response::builder()
@@ -4312,31 +4108,20 @@ fn portal_download_response(
     let bytes = body.into();
     let mut builder = Response::builder().header(header::CONTENT_TYPE, content_type);
     if download {
-        builder = builder.header(
-            header::CONTENT_DISPOSITION,
-            format!("attachment; filename=\"{filename}\""),
-        );
+        builder = builder
+            .header(header::CONTENT_DISPOSITION, format!("attachment; filename=\"{filename}\""));
     }
-    builder
-        .body(Body::from(bytes))
-        .unwrap_or_else(|error| {
-            Response::builder()
-                .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .body(Body::from(error.to_string()))
-                .expect("static internal server error response is valid")
-        })
+    builder.body(Body::from(bytes)).unwrap_or_else(|error| {
+        Response::builder()
+            .status(StatusCode::INTERNAL_SERVER_ERROR)
+            .body(Body::from(error.to_string()))
+            .expect("static internal server error response is valid")
+    })
 }
 
 fn portal_to_csv(resp: &AdminPortalQueryResponse) -> Vec<u8> {
     let mut out = String::new();
-    out.push_str(
-        &resp
-            .columns
-            .iter()
-            .map(|c| csv_escape(c))
-            .collect::<Vec<_>>()
-            .join(","),
-    );
+    out.push_str(&resp.columns.iter().map(|c| csv_escape(c)).collect::<Vec<_>>().join(","));
     out.push('\n');
     for row in &resp.rows {
         let line = resp
@@ -4344,9 +4129,7 @@ fn portal_to_csv(resp: &AdminPortalQueryResponse) -> Vec<u8> {
             .iter()
             .enumerate()
             .map(|(i, _)| {
-                csv_escape(&json_cell_to_string(
-                    row.get(i).unwrap_or(&serde_json::Value::Null),
-                ))
+                csv_escape(&json_cell_to_string(row.get(i).unwrap_or(&serde_json::Value::Null)))
             })
             .collect::<Vec<_>>()
             .join(",");
@@ -4360,10 +4143,7 @@ fn portal_to_csv(resp: &AdminPortalQueryResponse) -> Vec<u8> {
 }
 
 /// A09: encode one window of gateway rows as CSV lines (no header).
-fn portal_csv_encode_rows(
-    columns: &[String],
-    rows: &[Vec<gateway_core::GatewayValue>],
-) -> Vec<u8> {
+fn portal_csv_encode_rows(columns: &[String], rows: &[Vec<gateway_core::GatewayValue>]) -> Vec<u8> {
     let mut out = String::new();
     for row in rows {
         let line = columns
@@ -4702,8 +4482,8 @@ mod tests {
         };
         let viewer = admin_auth::issue_hmac_token(&auth, "viewer1", &[AdminRole::Viewer], 3600)
             .expect("token");
-        let admin =
-            admin_auth::issue_hmac_token(&auth, "admin1", &[AdminRole::Admin], 3600).expect("token");
+        let admin = admin_auth::issue_hmac_token(&auth, "admin1", &[AdminRole::Admin], 3600)
+            .expect("token");
         let server = gateway_server_with_auth(auth);
 
         let response = server
@@ -4778,10 +4558,7 @@ mod tests {
             .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
             .and_then(|v| v.to_str().ok())
             .unwrap_or_default();
-        assert!(
-            acao == "*" || acao == "http://localhost:3000",
-            "missing/invalid ACAO: {acao}"
-        );
+        assert!(acao == "*" || acao == "http://localhost:3000", "missing/invalid ACAO: {acao}");
     }
 
     #[tokio::test]
@@ -5129,9 +4906,7 @@ service = "missing-service"
     fn portal_ndjson_encode_rows_windowed_matches_full() {
         let resp = AdminPortalQueryResponse {
             columns: vec!["id".into(), "name".into()],
-            rows: (0..5)
-                .map(|i| vec![json!(i), json!(format!("n{i}"))])
-                .collect(),
+            rows: (0..5).map(|i| vec![json!(i), json!(format!("n{i}"))]).collect(),
             row_count: 5,
             truncated: false,
             service: "orders".into(),
@@ -5147,15 +4922,9 @@ service = "missing-service"
         for chunk in resp.rows.chunks(2) {
             rebuilt.extend(portal_ndjson_encode_rows(&resp.columns, chunk));
         }
-        assert_eq!(
-            String::from_utf8_lossy(&full),
-            String::from_utf8_lossy(&rebuilt)
-        );
-        let lines: Vec<_> = std::str::from_utf8(&full)
-            .unwrap()
-            .lines()
-            .filter(|l| !l.is_empty())
-            .collect();
+        assert_eq!(String::from_utf8_lossy(&full), String::from_utf8_lossy(&rebuilt));
+        let lines: Vec<_> =
+            std::str::from_utf8(&full).unwrap().lines().filter(|l| !l.is_empty()).collect();
         assert_eq!(lines.len(), 6); // meta + 5 rows
         let meta_v: Value = serde_json::from_str(lines[0]).unwrap();
         assert_eq!(meta_v["_meta"], true);
@@ -5187,10 +4956,7 @@ service = "missing-service"
             .unwrap_or("");
         assert!(ct.contains("ndjson"), "{ct}");
         assert_eq!(
-            response
-                .headers()
-                .get("x-data-nexus-stream")
-                .and_then(|v| v.to_str().ok()),
+            response.headers().get("x-data-nexus-stream").and_then(|v| v.to_str().ok()),
             Some("chunked")
         );
         let cd = response
@@ -5218,18 +4984,9 @@ service = "missing-service"
     #[test]
     fn gateway_value_to_json_covers_variants() {
         assert_eq!(gateway_value_to_json(gateway_core::GatewayValue::Null), json!(null));
-        assert_eq!(
-            gateway_value_to_json(gateway_core::GatewayValue::Boolean(true)),
-            json!(true)
-        );
-        assert_eq!(
-            gateway_value_to_json(gateway_core::GatewayValue::Integer(-3)),
-            json!(-3)
-        );
-        assert_eq!(
-            gateway_value_to_json(gateway_core::GatewayValue::UnsignedInteger(9)),
-            json!(9)
-        );
+        assert_eq!(gateway_value_to_json(gateway_core::GatewayValue::Boolean(true)), json!(true));
+        assert_eq!(gateway_value_to_json(gateway_core::GatewayValue::Integer(-3)), json!(-3));
+        assert_eq!(gateway_value_to_json(gateway_core::GatewayValue::UnsignedInteger(9)), json!(9));
         assert_eq!(
             gateway_value_to_json(gateway_core::GatewayValue::String("x".into())),
             json!("x")
@@ -5302,10 +5059,7 @@ service = "missing-service"
             vec![GatewayValue::Integer(1), GatewayValue::String("a".into())],
             vec![GatewayValue::Integer(2), GatewayValue::String("b".into())],
         ];
-        let w2 = vec![vec![
-            GatewayValue::Integer(3),
-            GatewayValue::String("c".into()),
-        ]];
+        let w2 = vec![vec![GatewayValue::Integer(3), GatewayValue::String("c".into())]];
         let mut body = b"{\"columns\":[\"id\",\"name\"],\"rows\":[".to_vec();
         body.extend(portal_json_encode_row_array_fragment(&w1, &mut first));
         body.extend(portal_json_encode_row_array_fragment(&w2, &mut first));
@@ -5339,10 +5093,7 @@ service = "missing-service"
         };
         let response = portal_json_chunked_response(resp, false, 2);
         assert_eq!(
-            response
-                .headers()
-                .get("x-data-nexus-stream")
-                .and_then(|v| v.to_str().ok()),
+            response.headers().get("x-data-nexus-stream").and_then(|v| v.to_str().ok()),
             Some("chunked")
         );
         // Collect body via hyper Body stream is awkward without runtime helpers;
@@ -5395,10 +5146,7 @@ service = "missing-service"
                     !sql.contains("IFNULL") && !sql.contains("ifnull"),
                     "IFNULL should be rewritten: {sql}"
                 );
-                assert!(
-                    sql.contains("\"id\"") || sql.contains("id"),
-                    "id should remain: {sql}"
-                );
+                assert!(sql.contains("\"id\"") || sql.contains("id"), "id should remain: {sql}");
             }
             other => panic!("expected Query, got {other:?}"),
         }
@@ -5434,10 +5182,7 @@ service = "missing-service"
                     "expected MySQL-style id, got {sql}"
                 );
                 // Double-quoted identifiers should become backticks for MySQL.
-                assert!(
-                    !sql.contains("\"id\""),
-                    "PG double-quoted id should be rewritten: {sql}"
-                );
+                assert!(!sql.contains("\"id\""), "PG double-quoted id should be rewritten: {sql}");
                 assert!(
                     sql.contains("COALESCE") || sql.contains("coalesce"),
                     "COALESCE is portable and should remain: {sql}"

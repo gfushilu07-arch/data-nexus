@@ -72,10 +72,9 @@ impl CommandSummary {
     pub fn rewritten_sql(&self, sql: String) -> Option<GatewayCommand> {
         match self {
             Self::Query { .. } => Some(GatewayCommand::Query { sql }),
-            Self::QueryParams { .. } => Some(GatewayCommand::QueryParams {
-                sql,
-                parameters: vec![],
-            }),
+            Self::QueryParams { .. } => {
+                Some(GatewayCommand::QueryParams { sql, parameters: vec![] })
+            }
             Self::Prepare { .. } => Some(GatewayCommand::Prepare { sql }),
             _ => None,
         }
@@ -138,18 +137,16 @@ mod tests {
 
     #[test]
     fn command_summary_match_text_prefers_sql() {
-        let summary = CommandSummary::from_command(&GatewayCommand::Query {
-            sql: "select 1".into(),
-        });
+        let summary =
+            CommandSummary::from_command(&GatewayCommand::Query { sql: "select 1".into() });
         assert_eq!(summary.match_text(), "select 1");
         assert_eq!(CommandSummary::Begin.match_text(), "BEGIN");
     }
 
     #[test]
     fn rewrite_only_applies_to_query_like_commands() {
-        let summary = CommandSummary::from_command(&GatewayCommand::Query {
-            sql: "select 1".into(),
-        });
+        let summary =
+            CommandSummary::from_command(&GatewayCommand::Query { sql: "select 1".into() });
         assert_eq!(
             summary.rewritten_sql("select 2".into()),
             Some(GatewayCommand::Query { sql: "select 2".into() })

@@ -189,11 +189,9 @@ impl FrontendProtocolAdapter for MySqlFrontendProtocol {
             GatewayResponse::Wire { packets } => Ok(packets),
             // A10: COM_STMT_PREPARE OK + optional parameter column definitions + EOF.
             // Result column defs from backend catalog when `columns` non-empty (A10).
-            GatewayResponse::Prepared {
-                statement_id,
-                parameter_count,
-                columns,
-            } => encode_mysql_prepare_response(&statement_id, parameter_count, &columns),
+            GatewayResponse::Prepared { statement_id, parameter_count, columns } => {
+                encode_mysql_prepare_response(&statement_id, parameter_count, &columns)
+            }
             // A10: catalog describe is a PG extended-protocol concern; MySQL FE ignores.
             GatewayResponse::RowDescription { .. } => Ok(vec![]),
         }
@@ -252,11 +250,7 @@ fn decode_query_command(
 ) -> GatewayResult<GatewayCommand> {
     let sql = decode_text_payload(payload)?;
     let trimmed = sql.trim();
-    let normalized = trimmed
-        .strip_suffix(';')
-        .unwrap_or(trimmed)
-        .trim_end()
-        .to_ascii_lowercase();
+    let normalized = trimmed.strip_suffix(';').unwrap_or(trimmed).trim_end().to_ascii_lowercase();
     match normalized.as_str() {
         "begin" | "start transaction" => {
             session.transaction_state = TransactionState::Active;
@@ -282,8 +276,7 @@ fn decode_query_command(
 /// Keep backend session initialization in sync with MySQL COM_QUERY `SET NAMES`.
 fn parse_set_names(sql: &str) -> Option<String> {
     let mut tokens = sql.trim().trim_end_matches(';').split_ascii_whitespace();
-    if !tokens.next()?.eq_ignore_ascii_case("set")
-        || !tokens.next()?.eq_ignore_ascii_case("names")
+    if !tokens.next()?.eq_ignore_ascii_case("set") || !tokens.next()?.eq_ignore_ascii_case("names")
     {
         return None;
     }
@@ -323,9 +316,7 @@ fn decode_statement_id(payload: &[u8]) -> GatewayResult<String> {
 /// `new_params_bound_flag` must be 1 when parameters are present (client rebinds types).
 fn decode_stmt_execute(payload: &[u8]) -> GatewayResult<GatewayCommand> {
     if payload.len() < 9 {
-        return Err(GatewayError::Protocol(
-            "mysql COM_STMT_EXECUTE payload too short".into(),
-        ));
+        return Err(GatewayError::Protocol("mysql COM_STMT_EXECUTE payload too short".into()));
     }
     let statement_id =
         u32::from_le_bytes([payload[0], payload[1], payload[2], payload[3]]).to_string();
@@ -333,10 +324,7 @@ fn decode_stmt_execute(payload: &[u8]) -> GatewayResult<GatewayCommand> {
     let offset = 9;
     // Heuristic: if nothing left, zero-parameter execute.
     if offset >= payload.len() {
-        return Ok(GatewayCommand::Execute {
-            statement_id,
-            parameters: vec![],
-        });
+        return Ok(GatewayCommand::Execute { statement_id, parameters: vec![] });
     }
     // We do not know param_count from the packet alone; read new_params_bound_flag then
     // infer param count from remaining length when flag==1 via type table size.
@@ -344,10 +332,7 @@ fn decode_stmt_execute(payload: &[u8]) -> GatewayResult<GatewayCommand> {
     // Strategy: try flag at end of null-bitmap for increasing n until types fit.
     let rest = &payload[offset..];
     let (parameters, _) = decode_stmt_execute_params(rest)?;
-    Ok(GatewayCommand::Execute {
-        statement_id,
-        parameters,
-    })
+    Ok(GatewayCommand::Execute { statement_id, parameters })
 }
 
 fn decode_stmt_execute_params(rest: &[u8]) -> GatewayResult<(Vec<GatewayValue>, usize)> {
@@ -360,9 +345,7 @@ fn decode_stmt_execute_params(rest: &[u8]) -> GatewayResult<(Vec<GatewayValue>, 
             return Ok((params, n as usize));
         }
     }
-    Err(GatewayError::Protocol(
-        "mysql COM_STMT_EXECUTE: unable to decode bound parameters".into(),
-    ))
+    Err(GatewayError::Protocol("mysql COM_STMT_EXECUTE: unable to decode bound parameters".into()))
 }
 
 fn try_decode_params_with_count(rest: &[u8], n: usize) -> Option<Vec<GatewayValue>> {
@@ -582,10 +565,7 @@ fn read_lenc_bytes(data: &[u8]) -> Option<(Vec<u8>, usize)> {
             if data.len() < 4 {
                 return None;
             }
-            (
-                u32::from_le_bytes([data[1], data[2], data[3], 0]) as usize,
-                4,
-            )
+            (u32::from_le_bytes([data[1], data[2], data[3], 0]) as usize, 4)
         }
         0xfe => {
             if data.len() < 9 {
@@ -612,9 +592,7 @@ fn encode_mysql_prepare_ok(
     result_column_count: u16,
 ) -> GatewayResult<Vec<u8>> {
     let stmt_id: u32 = statement_id.parse().map_err(|_| {
-        GatewayError::Protocol(format!(
-            "mysql prepared statement_id '{statement_id}' is not a u32"
-        ))
+        GatewayError::Protocol(format!("mysql prepared statement_id '{statement_id}' is not a u32"))
     })?;
     let mut payload = Vec::with_capacity(12);
     payload.push(0); // OK
@@ -634,11 +612,7 @@ fn encode_mysql_prepare_response(
     result_columns: &[GatewayColumn],
 ) -> GatewayResult<Vec<Vec<u8>>> {
     let n_result = result_columns.len() as u16;
-    let mut packets = vec![encode_mysql_prepare_ok(
-        statement_id,
-        parameter_count,
-        n_result,
-    )?];
+    let mut packets = vec![encode_mysql_prepare_ok(statement_id, parameter_count, n_result)?];
     if parameter_count > 0 {
         for i in 0..parameter_count {
             let mut packet = Vec::new();
@@ -668,7 +642,6 @@ fn encode_mysql_prepare_response(
     }
     Ok(packets)
 }
-
 
 fn encode_mysql_resultset_header(columns: &[GatewayColumn]) -> GatewayResult<Vec<Vec<u8>>> {
     let mut packets = Vec::with_capacity(columns.len() + 2);
@@ -804,10 +777,7 @@ fn encode_binary_value(
             Ok(())
         }
         GatewayValue::Float(f) => {
-            if matches!(
-                data_type.to_ascii_lowercase().as_str(),
-                "double" | "float8"
-            ) {
+            if matches!(data_type.to_ascii_lowercase().as_str(), "double" | "float8") {
                 packet.extend_from_slice(&f.to_bits().to_le_bytes());
             } else {
                 packet.extend_from_slice(&(*f as f32).to_bits().to_le_bytes());
@@ -818,9 +788,7 @@ fn encode_binary_value(
             let dt = data_type.to_ascii_lowercase();
             match dt.as_str() {
                 "date" => encode_mysql_binary_date(packet, s),
-                "datetime" | "timestamp" | "timestamptz" => {
-                    encode_mysql_binary_datetime(packet, s)
-                }
+                "datetime" | "timestamp" | "timestamptz" => encode_mysql_binary_datetime(packet, s),
                 "time" => encode_mysql_binary_time(packet, s),
                 _ => {
                     packet.put_lenc_int(s.len() as u64, true);
@@ -872,17 +840,13 @@ fn decode_mysql_binary_datetime_text(payload: &[u8]) -> Option<String> {
     let mi = payload[5];
     let sec = payload[6];
     if payload.len() == 7 {
-        return Some(format!(
-            "{y:04}-{mo:02}-{d:02} {h:02}:{mi:02}:{sec:02}"
-        ));
+        return Some(format!("{y:04}-{mo:02}-{d:02} {h:02}:{mi:02}:{sec:02}"));
     }
     if payload.len() < 11 {
         return None;
     }
     let micro = u32::from_le_bytes([payload[7], payload[8], payload[9], payload[10]]);
-    Some(format!(
-        "{y:04}-{mo:02}-{d:02} {h:02}:{mi:02}:{sec:02}.{micro:06}"
-    ))
+    Some(format!("{y:04}-{mo:02}-{d:02} {h:02}:{mi:02}:{sec:02}.{micro:06}"))
 }
 
 /// A10: TIME payload → `[-][D ]HH:MM:SS[.ffffff]`.
@@ -899,9 +863,7 @@ fn decode_mysql_binary_time_text(payload: &[u8]) -> Option<String> {
     let m = payload[6];
     let sec = payload[7];
     let micro = if payload.len() >= 12 {
-        Some(u32::from_le_bytes([
-            payload[8], payload[9], payload[10], payload[11],
-        ]))
+        Some(u32::from_le_bytes([payload[8], payload[9], payload[10], payload[11]]))
     } else if payload.len() == 8 {
         None
     } else {
@@ -925,9 +887,8 @@ fn decode_mysql_binary_time_text(payload: &[u8]) -> Option<String> {
 
 /// MySQL ProtocolBinary DATE: len(1)=4, year(2 LE), month(1), day(1).
 fn encode_mysql_binary_date(packet: &mut Vec<u8>, s: &str) -> GatewayResult<()> {
-    let (y, m, d) = parse_mysql_date(s).ok_or_else(|| {
-        GatewayError::Protocol(format!("invalid mysql DATE value '{s}'"))
-    })?;
+    let (y, m, d) = parse_mysql_date(s)
+        .ok_or_else(|| GatewayError::Protocol(format!("invalid mysql DATE value '{s}'")))?;
     packet.push(4);
     packet.extend_from_slice(&y.to_le_bytes());
     packet.push(m);
@@ -937,9 +898,8 @@ fn encode_mysql_binary_date(packet: &mut Vec<u8>, s: &str) -> GatewayResult<()> 
 
 /// DATETIME/TIMESTAMP: len=7 (no micros) or 11 (with micros).
 fn encode_mysql_binary_datetime(packet: &mut Vec<u8>, s: &str) -> GatewayResult<()> {
-    let (y, mo, d, h, mi, sec, micro) = parse_mysql_datetime(s).ok_or_else(|| {
-        GatewayError::Protocol(format!("invalid mysql DATETIME value '{s}'"))
-    })?;
+    let (y, mo, d, h, mi, sec, micro) = parse_mysql_datetime(s)
+        .ok_or_else(|| GatewayError::Protocol(format!("invalid mysql DATETIME value '{s}'")))?;
     if micro == 0 {
         packet.push(7);
         packet.extend_from_slice(&y.to_le_bytes());
@@ -963,9 +923,8 @@ fn encode_mysql_binary_datetime(packet: &mut Vec<u8>, s: &str) -> GatewayResult<
 
 /// TIME: len=8 (no micros) or 12; is_negative, days, h, m, s [, micro].
 fn encode_mysql_binary_time(packet: &mut Vec<u8>, s: &str) -> GatewayResult<()> {
-    let (neg, days, h, m, sec, micro) = parse_mysql_time(s).ok_or_else(|| {
-        GatewayError::Protocol(format!("invalid mysql TIME value '{s}'"))
-    })?;
+    let (neg, days, h, m, sec, micro) = parse_mysql_time(s)
+        .ok_or_else(|| GatewayError::Protocol(format!("invalid mysql TIME value '{s}'")))?;
     if micro == 0 {
         packet.push(8);
         packet.push(if neg { 1 } else { 0 });
@@ -1010,11 +969,7 @@ fn parse_mysql_datetime(s: &str) -> Option<(u16, u8, u8, u8, u8, u8, u32)> {
 fn parse_mysql_time(s: &str) -> Option<(bool, u32, u8, u8, u8, u32)> {
     // [-]HH:MM:SS[.ffffff] or [-]D HH:MM:SS
     let s = s.trim();
-    let (neg, rest) = if let Some(r) = s.strip_prefix('-') {
-        (true, r.trim())
-    } else {
-        (false, s)
-    };
+    let (neg, rest) = if let Some(r) = s.strip_prefix('-') { (true, r.trim()) } else { (false, s) };
     let (days, hms) = if let Some((d, t)) = rest.split_once(' ') {
         (d.parse::<u32>().ok()?, t)
     } else {
@@ -1334,16 +1289,13 @@ mod tests {
 
         let commands = adapter.decode(
             &[
-                COM_QUERY, b'S', b'E', b'T', b' ', b'N', b'A', b'M', b'E', b'S', b' ', b'u',
-                b't', b'f', b'8', b'm', b'b', b'4', b';',
+                COM_QUERY, b'S', b'E', b'T', b' ', b'N', b'A', b'M', b'E', b'S', b' ', b'u', b't',
+                b'f', b'8', b'm', b'b', b'4', b';',
             ],
             &mut session,
         );
 
-        assert_eq!(
-            commands,
-            Ok(vec![GatewayCommand::Query { sql: "SET NAMES utf8mb4;".into() }])
-        );
+        assert_eq!(commands, Ok(vec![GatewayCommand::Query { sql: "SET NAMES utf8mb4;".into() }]));
         assert_eq!(session.charset, Some("utf8mb4".into()));
     }
 
@@ -1364,18 +1316,14 @@ mod tests {
         let mut adapter = adapter();
         let mut session = SessionState::default();
 
-        let commands = adapter.decode(
-            &[COM_QUERY, b'b', b'e', b'g', b'i', b'n', b';'],
-            &mut session,
-        );
+        let commands =
+            adapter.decode(&[COM_QUERY, b'b', b'e', b'g', b'i', b'n', b';'], &mut session);
 
         assert_eq!(commands, Ok(vec![GatewayCommand::Begin]));
         assert_eq!(session.transaction_state, TransactionState::Active);
 
-        let commands = adapter.decode(
-            &[COM_QUERY, b'c', b'o', b'm', b'm', b'i', b't', b';'],
-            &mut session,
-        );
+        let commands =
+            adapter.decode(&[COM_QUERY, b'c', b'o', b'm', b'm', b'i', b't', b';'], &mut session);
         assert_eq!(commands, Ok(vec![GatewayCommand::Commit]));
         assert_eq!(session.transaction_state, TransactionState::Idle);
 
@@ -1402,10 +1350,8 @@ mod tests {
             Ok(vec![GatewayCommand::CloseStatement { statement_id: "42".into() }])
         );
         assert_eq!(
-            adapter.encode(
-                GatewayResponse::Ok { affected_rows: 0, last_insert_id: None },
-                &session,
-            ),
+            adapter
+                .encode(GatewayResponse::Ok { affected_rows: 0, last_insert_id: None }, &session,),
             Ok(vec![])
         );
         assert_eq!(
@@ -1432,23 +1378,15 @@ mod tests {
 
         assert_eq!(
             adapter.encode(
-                GatewayResponse::Ok {
-                    affected_rows: 3,
-                    last_insert_id: Some(9),
-                },
+                GatewayResponse::Ok { affected_rows: 3, last_insert_id: Some(9) },
                 &session,
             ),
             Ok(vec![vec![0x00, 0x03, 0x09, 0x02, 0x00, 0x00, 0x00]])
         );
-        let active = SessionState {
-            transaction_state: TransactionState::Active,
-            ..SessionState::default()
-        };
+        let active =
+            SessionState { transaction_state: TransactionState::Active, ..SessionState::default() };
         assert_eq!(
-            adapter.encode(
-                GatewayResponse::CommandComplete { tag: "BEGIN".into() },
-                &active,
-            ),
+            adapter.encode(GatewayResponse::CommandComplete { tag: "BEGIN".into() }, &active,),
             Ok(vec![vec![0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00]])
         );
         assert_eq!(
@@ -1502,10 +1440,7 @@ mod tests {
                     statement_id: "7".into(),
                     parameter_count: 1,
                     columns: vec![
-                        GatewayColumn {
-                            name: "id".into(),
-                            data_type: "MYSQL_TYPE_LONG".into(),
-                        },
+                        GatewayColumn { name: "id".into(), data_type: "MYSQL_TYPE_LONG".into() },
                         GatewayColumn {
                             name: "name".into(),
                             data_type: "MYSQL_TYPE_VAR_STRING".into(),
@@ -1527,22 +1462,13 @@ mod tests {
     #[test]
     fn a10_encodes_binary_resultset_after_execute_flag() {
         let mut adapter = adapter();
-        let session = SessionState {
-            prefer_binary_result: true,
-            ..SessionState::default()
-        };
+        let session = SessionState { prefer_binary_result: true, ..SessionState::default() };
         let packets = adapter
             .encode(
                 GatewayResponse::ResultSet {
                     columns: vec![
-                        GatewayColumn {
-                            name: "id".into(),
-                            data_type: "int".into(),
-                        },
-                        GatewayColumn {
-                            name: "name".into(),
-                            data_type: "varchar".into(),
-                        },
+                        GatewayColumn { name: "id".into(), data_type: "int".into() },
+                        GatewayColumn { name: "name".into(), data_type: "varchar".into() },
                     ],
                     rows: vec![
                         vec![GatewayValue::Integer(1), GatewayValue::String("a".into())],
@@ -1555,7 +1481,7 @@ mod tests {
         // column_count + 2 col defs + col EOF + 2 binary rows + row EOF
         assert_eq!(packets.len(), 7);
         assert_eq!(packets[0], vec![2]); // column count
-        // binary rows start with 0x00 (indices after header packets)
+                                         // binary rows start with 0x00 (indices after header packets)
         assert_eq!(packets[4][0], 0x00);
         assert_eq!(packets[5][0], 0x00);
         // second row has null on col0 → null bitmap bit 2 set
@@ -1584,9 +1510,7 @@ mod tests {
         prep.extend_from_slice(b"SELECT 1");
         assert_eq!(
             adapter.decode(&prep, &mut session),
-            Ok(vec![GatewayCommand::Prepare {
-                sql: "SELECT 1".into()
-            }])
+            Ok(vec![GatewayCommand::Prepare { sql: "SELECT 1".into() }])
         );
 
         let mut exec = vec![COM_STMT_EXECUTE];
@@ -1595,10 +1519,7 @@ mod tests {
         exec.extend_from_slice(&1u32.to_le_bytes()); // iteration
         assert_eq!(
             adapter.decode(&exec, &mut session),
-            Ok(vec![GatewayCommand::Execute {
-                statement_id: "7".into(),
-                parameters: vec![],
-            }])
+            Ok(vec![GatewayCommand::Execute { statement_id: "7".into(), parameters: vec![] }])
         );
     }
 
@@ -1697,12 +1618,8 @@ mod tests {
     #[test]
     fn windowed_encode_matches_full_resultset() {
         use gateway_core::{write_resultset_windowed, CollectingWriter};
-        let mut adapter = MySqlFrontendProtocol::new(
-            "u".into(),
-            "p".into(),
-            "db".into(),
-            "8.0.36".into(),
-        );
+        let mut adapter =
+            MySqlFrontendProtocol::new("u".into(), "p".into(), "db".into(), "8.0.36".into());
         let session = SessionState::default();
         let columns = vec![
             GatewayColumn { name: "id".into(), data_type: "int".into() },
@@ -1715,33 +1632,19 @@ mod tests {
         ];
         let full = adapter
             .encode(
-                GatewayResponse::ResultSet {
-                    columns: columns.clone(),
-                    rows: rows.clone(),
-                },
+                GatewayResponse::ResultSet { columns: columns.clone(), rows: rows.clone() },
                 &session,
             )
             .unwrap();
         let mut writer = CollectingWriter::new();
-        let rt = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap();
+        let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
         rt.block_on(async {
-            write_resultset_windowed(
-                &mut adapter,
-                &session,
-                columns,
-                rows,
-                2,
-                &mut writer,
-            )
-            .await
-            .unwrap();
+            write_resultset_windowed(&mut adapter, &session, columns, rows, 2, &mut writer)
+                .await
+                .unwrap();
         });
         assert_eq!(writer.into_packets(), full);
     }
-
 
     #[test]
     fn a10_encodes_binary_date_datetime_time() {
@@ -1772,8 +1675,9 @@ mod tests {
     #[test]
     fn a10_decodes_binary_date_datetime_time_params() {
         // DATE
-        let (v, n) = decode_binary_param_value(&[4, 0xe8, 0x07, 8, 31], ColumnType::MYSQL_TYPE_DATE as u8)
-            .unwrap();
+        let (v, n) =
+            decode_binary_param_value(&[4, 0xe8, 0x07, 8, 31], ColumnType::MYSQL_TYPE_DATE as u8)
+                .unwrap();
         assert_eq!(v, GatewayValue::String("2024-08-31".into()));
         assert_eq!(n, 5);
         // DATETIME
@@ -1815,10 +1719,7 @@ mod tests {
     #[test]
     fn a10_binary_resultset_uses_native_datetime() {
         let mut adapter = adapter();
-        let session = SessionState {
-            prefer_binary_result: true,
-            ..SessionState::default()
-        };
+        let session = SessionState { prefer_binary_result: true, ..SessionState::default() };
         let packets = adapter
             .encode(
                 GatewayResponse::ResultSet {
@@ -1834,8 +1735,7 @@ mod tests {
         // col_count + coldef + eof + binary row + eof
         let row = &packets[3];
         assert_eq!(row[0], 0x00); // binary header
-        // null bitmap 1 byte, then datetime payload
+                                  // null bitmap 1 byte, then datetime payload
         assert_eq!(&row[2..], &[7, 0xe6, 0x07, 8, 31, 7, 16, 16]);
     }
-
 }

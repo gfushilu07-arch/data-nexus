@@ -89,17 +89,15 @@ impl AuditIndex {
         let path = path.as_ref().to_path_buf();
         if let Some(parent) = path.parent() {
             if !parent.as_os_str().is_empty() {
-                std::fs::create_dir_all(parent).map_err(|e| {
-                    format!("create audit index dir {}: {e}", parent.display())
-                })?;
+                std::fs::create_dir_all(parent)
+                    .map_err(|e| format!("create audit index dir {}: {e}", parent.display()))?;
             }
         }
         let conn = Connection::open(&path)
             .map_err(|e| format!("open audit index {}: {e}", path.display()))?;
         // H05: multi-instance / multi-worker writers on shared disk.
         // WAL allows concurrent readers; busy_timeout backs off on writer locks.
-        conn.busy_timeout(BUSY_TIMEOUT)
-            .map_err(|e| format!("busy_timeout audit index: {e}"))?;
+        conn.busy_timeout(BUSY_TIMEOUT).map_err(|e| format!("busy_timeout audit index: {e}"))?;
         conn.execute_batch(
             "PRAGMA journal_mode=WAL;
              PRAGMA synchronous=NORMAL;
@@ -107,8 +105,7 @@ impl AuditIndex {
              PRAGMA foreign_keys=OFF;",
         )
         .map_err(|e| format!("pragma audit index: {e}"))?;
-        conn.execute_batch(SCHEMA)
-            .map_err(|e| format!("schema audit index: {e}"))?;
+        conn.execute_batch(SCHEMA).map_err(|e| format!("schema audit index: {e}"))?;
         let existing_rows: u64 = conn
             .query_row("SELECT COUNT(*) FROM audit_events", [], |r| r.get::<_, i64>(0))
             .map(|n| n as u64)
@@ -153,13 +150,10 @@ impl AuditIndex {
             .map(|s| s.to_owned())
             .unwrap_or_else(|| format!("ae-missing-{}", now_unix_ms()));
         let ts = event.ts_unix_ms.unwrap_or_else(now_unix_ms) as i64;
-        let payload = serde_json::to_string(event)
-            .map_err(|e| format!("serialize audit event: {e}"))?;
+        let payload =
+            serde_json::to_string(event).map_err(|e| format!("serialize audit event: {e}"))?;
 
-        let conn = self
-            .conn
-            .lock()
-            .map_err(|_| "audit index lock poisoned".to_string())?;
+        let conn = self.conn.lock().map_err(|_| "audit index lock poisoned".to_string())?;
         let existed: bool = with_busy_retry("probe audit index", || {
             conn.query_row(
                 "SELECT 1 FROM audit_events WHERE event_id = ?1",
@@ -214,9 +208,7 @@ impl AuditIndex {
 
     pub fn query(&self, filter: &AuditQueryFilter) -> Result<Vec<AuditEvent>, String> {
         let limit = filter.limit_clamped() as i64;
-        let mut sql = String::from(
-            "SELECT payload FROM audit_events WHERE 1=1",
-        );
+        let mut sql = String::from("SELECT payload FROM audit_events WHERE 1=1");
         let mut binds: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
 
         if let Some(ref id) = filter.event_id {
@@ -261,19 +253,16 @@ impl AuditIndex {
         }
         if let Some(ref lvl) = filter.audit_level {
             // Stored on payload JSON (F32); avoid schema migration for older index files.
-            sql.push_str(" AND lower(coalesce(json_extract(payload, '$.audit_level'), '')) = lower(?)");
+            sql.push_str(
+                " AND lower(coalesce(json_extract(payload, '$.audit_level'), '')) = lower(?)",
+            );
             binds.push(Box::new(lvl.clone()));
         }
         sql.push_str(" ORDER BY ts_unix_ms DESC LIMIT ?");
         binds.push(Box::new(limit));
 
-        let conn = self
-            .conn
-            .lock()
-            .map_err(|_| "audit index lock poisoned".to_string())?;
-        let mut stmt = conn
-            .prepare(&sql)
-            .map_err(|e| format!("prepare audit query: {e}"))?;
+        let conn = self.conn.lock().map_err(|_| "audit index lock poisoned".to_string())?;
+        let mut stmt = conn.prepare(&sql).map_err(|e| format!("prepare audit query: {e}"))?;
         let param_refs: Vec<&dyn rusqlite::ToSql> = binds.iter().map(|b| b.as_ref()).collect();
         let rows = stmt
             .query_map(param_refs.as_slice(), |row| {
@@ -300,10 +289,7 @@ impl AuditIndex {
     }
 
     pub fn get_by_id(&self, event_id: &str) -> Result<Option<AuditEvent>, String> {
-        let conn = self
-            .conn
-            .lock()
-            .map_err(|_| "audit index lock poisoned".to_string())?;
+        let conn = self.conn.lock().map_err(|_| "audit index lock poisoned".to_string())?;
         let payload: Option<String> = conn
             .query_row(
                 "SELECT payload FROM audit_events WHERE event_id = ?1",
@@ -313,9 +299,9 @@ impl AuditIndex {
             .optional()
             .map_err(|e| format!("get audit index: {e}"))?;
         match payload {
-            Some(p) => serde_json::from_str(&p)
-                .map(Some)
-                .map_err(|e| format!("decode audit index: {e}")),
+            Some(p) => {
+                serde_json::from_str(&p).map(Some).map_err(|e| format!("decode audit index: {e}"))
+            }
             None => Ok(None),
         }
     }
@@ -329,10 +315,7 @@ impl AuditIndex {
         let Ok(conn) = self.conn.lock() else {
             return 0;
         };
-        match conn.execute(
-            "DELETE FROM audit_events WHERE ts_unix_ms < ?1",
-            params![cutoff],
-        ) {
+        match conn.execute("DELETE FROM audit_events WHERE ts_unix_ms < ?1", params![cutoff]) {
             Ok(n) => {
                 let n = n as u64;
                 if n > 0 {
@@ -367,10 +350,7 @@ impl AuditIndex {
 }
 
 fn now_unix_ms() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_millis() as u64)
-        .unwrap_or(0)
+    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
 }
 
 /// Retry on SQLITE_BUSY / locked (H05 multi-writer). `busy_timeout` already waits
@@ -408,10 +388,7 @@ mod tests {
     use std::time::{SystemTime, UNIX_EPOCH};
 
     fn tmp_path(tag: &str) -> PathBuf {
-        let ms = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_millis();
+        let ms = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
         std::env::temp_dir().join(format!("dn-audit-idx-{tag}-{ms}.sqlite"))
     }
 
@@ -433,11 +410,9 @@ mod tests {
         let path = tmp_path("filter");
         let idx = AuditIndex::open(&path).unwrap();
         idx.insert(&sample("deny", "alice", "orders", 1000)).unwrap();
-        idx.insert(&sample("execute", "alice", "orders", 1001))
-            .unwrap();
+        idx.insert(&sample("execute", "alice", "orders", 1001)).unwrap();
         idx.insert(&sample("deny", "bob", "orders", 1002)).unwrap();
-        idx.insert(&sample("deny", "alice", "billing", 1003))
-            .unwrap();
+        idx.insert(&sample("deny", "alice", "billing", 1003)).unwrap();
 
         let denies = idx
             .query(&AuditQueryFilter {
@@ -452,10 +427,7 @@ mod tests {
         assert_eq!(denies[0].subject_id.as_deref(), Some("alice"));
         assert_eq!(denies[0].service.as_deref(), Some("orders"));
 
-        let by_id = idx
-            .get_by_id("ae-deny-alice-1000")
-            .unwrap()
-            .expect("row");
+        let by_id = idx.get_by_id("ae-deny-alice-1000").unwrap().expect("row");
         assert_eq!(by_id.decision.as_deref(), Some("deny"));
         assert_eq!(idx.row_count(), 4);
         assert_eq!(idx.inserted(), 4);
@@ -494,8 +466,7 @@ mod tests {
         let idx = AuditIndex::open(&path).unwrap();
         let old_ts = now_unix_ms().saturating_sub(10 * 86_400_000);
         idx.insert(&sample("deny", "old", "s", old_ts)).unwrap();
-        idx.insert(&sample("deny", "new", "s", now_unix_ms()))
-            .unwrap();
+        idx.insert(&sample("deny", "new", "s", now_unix_ms())).unwrap();
         // retain_days=1 drops the 10-day-old row.
         let n = idx.prune_older_than_days(1);
         assert_eq!(n, 1);
@@ -538,18 +509,8 @@ mod tests {
         a.insert(&sample("deny", "a", "svc", 10)).unwrap();
         b.insert(&sample("execute", "b", "svc", 11)).unwrap();
         // Cross-read: each handle sees the other's rows.
-        let from_a = a
-            .query(&AuditQueryFilter {
-                limit: 10,
-                ..Default::default()
-            })
-            .unwrap();
-        let from_b = b
-            .query(&AuditQueryFilter {
-                limit: 10,
-                ..Default::default()
-            })
-            .unwrap();
+        let from_a = a.query(&AuditQueryFilter { limit: 10, ..Default::default() }).unwrap();
+        let from_b = b.query(&AuditQueryFilter { limit: 10, ..Default::default() }).unwrap();
         assert_eq!(from_a.len(), 2);
         assert_eq!(from_b.len(), 2);
         assert!(a.get_by_id("ae-execute-b-11").unwrap().is_some());
@@ -698,9 +659,7 @@ mod tests {
             })
             .unwrap();
         assert_eq!(only_secret.len(), 2, "{only_secret:?}");
-        assert!(only_secret
-            .iter()
-            .all(|e| e.rule.as_deref() == Some("deny-secret-tables")));
+        assert!(only_secret.iter().all(|e| e.rule.as_deref() == Some("deny-secret-tables")));
 
         let only_ddl = idx
             .query(&AuditQueryFilter {
@@ -742,9 +701,7 @@ mod tests {
             })
             .unwrap();
         assert_eq!(only_query.len(), 2, "{only_query:?}");
-        assert!(only_query
-            .iter()
-            .all(|e| e.action.as_deref() == Some("query")));
+        assert!(only_query.iter().all(|e| e.action.as_deref() == Some("query")));
 
         let only_admin = idx
             .query(&AuditQueryFilter {
@@ -760,5 +717,4 @@ mod tests {
         let _ = std::fs::remove_file(format!("{}-wal", path.display()));
         let _ = std::fs::remove_file(format!("{}-shm", path.display()));
     }
-
 }

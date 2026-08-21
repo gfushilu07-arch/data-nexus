@@ -212,12 +212,7 @@ pub struct AuditSamplePolicy {
 
 impl Default for AuditSamplePolicy {
     fn default() -> Self {
-        Self {
-            enabled: false,
-            max_rows: 5,
-            max_bytes: 4096,
-            inline: true,
-        }
+        Self { enabled: false, max_rows: 5, max_bytes: 4096, inline: true }
     }
 }
 
@@ -250,11 +245,8 @@ pub fn apply_audit_level_payload_with_sample(
     max_sql_chars: usize,
     sample: AuditSamplePolicy,
 ) {
-    let event_level = event
-        .audit_level
-        .as_deref()
-        .and_then(AuditLevel::parse)
-        .unwrap_or(configured_level);
+    let event_level =
+        event.audit_level.as_deref().and_then(AuditLevel::parse).unwrap_or(configured_level);
     // Effective level is the *minimum* of event-requested and configured default
     // so a mis-tagged L2 event cannot store more than the deployment allows.
     let effective = min_audit_level(event_level, configured_level);
@@ -331,10 +323,8 @@ pub fn build_result_sample(
         return None;
     }
     let take = rows.len().min(max_rows);
-    let sample_rows: Vec<Vec<serde_json::Value>> = rows[..take]
-        .iter()
-        .map(|r| r.iter().map(gateway_value_to_json).collect())
-        .collect();
+    let sample_rows: Vec<Vec<serde_json::Value>> =
+        rows[..take].iter().map(|r| r.iter().map(gateway_value_to_json).collect()).collect();
     let mut payload = serde_json::json!({
         "columns": columns,
         "rows": sample_rows,
@@ -347,10 +337,8 @@ pub fn build_result_sample(
         let mut n = take;
         while n > 0 && body.len() > max_bytes {
             n -= 1;
-            let fewer: Vec<Vec<serde_json::Value>> = rows[..n]
-                .iter()
-                .map(|r| r.iter().map(gateway_value_to_json).collect())
-                .collect();
+            let fewer: Vec<Vec<serde_json::Value>> =
+                rows[..n].iter().map(|r| r.iter().map(gateway_value_to_json).collect()).collect();
             payload = serde_json::json!({
                 "columns": columns,
                 "rows": fewer,
@@ -517,12 +505,7 @@ mod tests {
             &mut e,
             AuditLevel::L1,
             100,
-            AuditSamplePolicy {
-                enabled: true,
-                max_rows: 5,
-                max_bytes: 4096,
-                inline: true,
-            },
+            AuditSamplePolicy { enabled: true, max_rows: 5, max_bytes: 4096, inline: true },
         );
         assert!(e.sample_body.is_none());
         assert!(e.sql_text.is_some());
@@ -541,12 +524,7 @@ mod tests {
             &mut e,
             AuditLevel::L2,
             100,
-            AuditSamplePolicy {
-                enabled: true,
-                max_rows: 5,
-                max_bytes: 4096,
-                inline: true,
-            },
+            AuditSamplePolicy { enabled: true, max_rows: 5, max_bytes: 4096, inline: true },
         );
         assert!(e.sample_body.as_deref().unwrap().contains("rows"));
         assert_eq!(e.audit_level.as_deref(), Some("L2"));

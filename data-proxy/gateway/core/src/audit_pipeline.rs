@@ -98,11 +98,7 @@ fn maybe_upload_sample(event: &mut AuditEvent, sample_prefix: &str, inline: bool
     #[cfg(feature = "audit-opendal")]
     {
         if let Some(arch) = crate::audit_opendal::global_archive() {
-            let event_id = event
-                .event_id
-                .as_deref()
-                .filter(|s| !s.is_empty())
-                .unwrap_or("unknown");
+            let event_id = event.event_id.as_deref().filter(|s| !s.is_empty()).unwrap_or("unknown");
             let key_name = format!("{event_id}.sample.json");
             match arch.write_bytes(sample_prefix, &key_name, body.as_bytes()) {
                 Ok(key) => {
@@ -246,11 +242,7 @@ impl AuditPipeline {
         let capacity = config.queue_capacity.max(1) as usize;
         let priority_capacity = config.priority_queue_capacity as usize;
         let recent_capacity = capacity.min(4096).max(64);
-        let sinks = config
-            .sinks
-            .iter()
-            .map(|s| s.to_ascii_lowercase())
-            .collect::<Vec<_>>();
+        let sinks = config.sinks.iter().map(|s| s.to_ascii_lowercase()).collect::<Vec<_>>();
         let write_file = sinks.iter().any(|s| s == "file" || s == "jsonl");
         let write_tracing = sinks.is_empty() || sinks.iter().any(|s| s == "tracing");
         let file_path = if config.file_path.trim().is_empty() {
@@ -304,11 +296,7 @@ impl AuditPipeline {
     }
 
     pub fn reconfigure(&self, config: &SecurityAuditConfig, default_audit_level: &str) {
-        let sinks = config
-            .sinks
-            .iter()
-            .map(|s| s.to_ascii_lowercase())
-            .collect::<Vec<_>>();
+        let sinks = config.sinks.iter().map(|s| s.to_ascii_lowercase()).collect::<Vec<_>>();
         let write_file = sinks.iter().any(|s| s == "file" || s == "jsonl");
         let write_tracing = sinks.is_empty() || sinks.iter().any(|s| s == "tracing");
         self.write_file.store(write_file, Ordering::Relaxed);
@@ -384,21 +372,13 @@ impl AuditPipeline {
             event.ts_unix_ms = Some(now_unix_ms());
         }
         // F32/B08: enforce L0/L1/L2 payload policy before ring/queue/index.
-        let level = self
-            .payload_level
-            .lock()
-            .map(|g| *g)
-            .unwrap_or(AuditLevel::L0);
+        let level = self.payload_level.lock().map(|g| *g).unwrap_or(AuditLevel::L0);
         let max_sql = self
             .sql_text_max_chars
             .lock()
             .map(|g| *g)
             .unwrap_or(AuditLevel::DEFAULT_SQL_TEXT_MAX_CHARS);
-        let sample = self
-            .sample_policy
-            .lock()
-            .map(|g| *g)
-            .unwrap_or_default();
+        let sample = self.sample_policy.lock().map(|g| *g).unwrap_or_default();
         apply_audit_level_payload_with_sample(&mut event, level, max_sql, sample);
         {
             let mut state = self.state.lock().expect("audit state");
@@ -408,8 +388,8 @@ impl AuditPipeline {
             state.recent.push_back(event.clone());
         }
 
-        let priority = self.priority_capacity > 0
-            && is_priority_decision(event.decision.as_deref());
+        let priority =
+            self.priority_capacity > 0 && is_priority_decision(event.decision.as_deref());
 
         let mut state = self.state.lock().expect("audit state");
         if state.closed {
@@ -417,12 +397,7 @@ impl AuditPipeline {
         }
 
         if priority {
-            if !self.enqueue(
-                &mut state.priority_queue,
-                self.priority_capacity,
-                event,
-                true,
-            ) {
+            if !self.enqueue(&mut state.priority_queue, self.priority_capacity, event, true) {
                 return;
             }
             self.priority_accepted.fetch_add(1, Ordering::Relaxed);
@@ -549,24 +524,14 @@ impl AuditPipeline {
                         .as_deref()
                         .map(|l| e.listener.as_deref() == Some(l))
                         .unwrap_or(true)
-                    && filter
-                        .rule
-                        .as_deref()
-                        .map(|r| e.rule.as_deref() == Some(r))
-                        .unwrap_or(true)
+                    && filter.rule.as_deref().map(|r| e.rule.as_deref() == Some(r)).unwrap_or(true)
                     && filter
                         .action
                         .as_deref()
                         .map(|a| e.action.as_deref() == Some(a))
                         .unwrap_or(true)
-                    && filter
-                        .from_ms
-                        .map(|from| e.ts_unix_ms.unwrap_or(0) >= from)
-                        .unwrap_or(true)
-                    && filter
-                        .to_ms
-                        .map(|to| e.ts_unix_ms.unwrap_or(u64::MAX) <= to)
-                        .unwrap_or(true)
+                    && filter.from_ms.map(|from| e.ts_unix_ms.unwrap_or(0) >= from).unwrap_or(true)
+                    && filter.to_ms.map(|to| e.ts_unix_ms.unwrap_or(u64::MAX) <= to).unwrap_or(true)
                     && filter
                         .audit_level
                         .as_deref()
@@ -587,23 +552,11 @@ impl AuditPipeline {
         let (recent_len, queue_len, priority_queue_len) = self
             .state
             .lock()
-            .map(|s| {
-                (
-                    s.recent.len() as u64,
-                    s.queue.len() as u64,
-                    s.priority_queue.len() as u64,
-                )
-            })
+            .map(|s| (s.recent.len() as u64, s.queue.len() as u64, s.priority_queue.len() as u64))
             .unwrap_or((0, 0, 0));
         let (index_enabled, index_rows, index_inserted, index_errors, index_pruned) =
             match self.index() {
-                Some(idx) => (
-                    true,
-                    idx.row_count(),
-                    idx.inserted(),
-                    idx.errors(),
-                    idx.pruned(),
-                ),
+                Some(idx) => (true, idx.row_count(), idx.inserted(), idx.errors(), idx.pruned()),
                 None => (false, 0, 0, 0, 0),
             };
         AuditPipelineStats {
@@ -653,20 +606,14 @@ impl AuditPipeline {
         loop {
             let event = {
                 let mut state = self.state.lock().expect("audit state");
-                while state.queue.is_empty()
-                    && state.priority_queue.is_empty()
-                    && !state.closed
-                {
+                while state.queue.is_empty() && state.priority_queue.is_empty() && !state.closed {
                     state = self.cv.wait(state).expect("audit wait");
                 }
                 if state.queue.is_empty() && state.priority_queue.is_empty() && state.closed {
                     break;
                 }
                 // Drain priority first so deny/require_approval write ahead of allow floods.
-                state
-                    .priority_queue
-                    .pop_front()
-                    .or_else(|| state.queue.pop_front())
+                state.priority_queue.pop_front().or_else(|| state.queue.pop_front())
             };
             let Some(event) = event else {
                 continue;
@@ -690,16 +637,9 @@ impl AuditPipeline {
         // B08: worker-side sample upload (never on try_send / hot path).
         let event_owned: Option<AuditEvent> = if event.sample_body.is_some() {
             let mut e = event.clone();
-            let prefix = self
-                .sample_prefix
-                .lock()
-                .map(|g| g.clone())
-                .unwrap_or_else(|_| "samples".into());
-            let inline = self
-                .sample_policy
-                .lock()
-                .map(|g| g.inline)
-                .unwrap_or(true);
+            let prefix =
+                self.sample_prefix.lock().map(|g| g.clone()).unwrap_or_else(|_| "samples".into());
+            let inline = self.sample_policy.lock().map(|g| g.inline).unwrap_or(true);
             maybe_upload_sample(&mut e, &prefix, inline);
             Some(e)
         } else {
@@ -724,11 +664,8 @@ impl AuditPipeline {
         if self.write_file.load(Ordering::Relaxed) {
             if let Ok(guard) = self.file_path.lock() {
                 if let Some(path) = guard.as_ref() {
-                    let policy = self
-                        .file_policy
-                        .lock()
-                        .map(|g| g.clone())
-                        .unwrap_or(FileSinkPolicy {
+                    let policy =
+                        self.file_policy.lock().map(|g| g.clone()).unwrap_or(FileSinkPolicy {
                             max_file_bytes: 0,
                             retain_days: 0,
                             rotate_keep: 0,
@@ -811,11 +748,7 @@ fn append_jsonl_with_rotate(
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
     file.write_all(line.as_bytes())?;
     file.write_all(b"\n")?;
-    Ok(if rotated {
-        RotateOutcome::Rotated
-    } else {
-        RotateOutcome::Appended
-    })
+    Ok(if rotated { RotateOutcome::Rotated } else { RotateOutcome::Appended })
 }
 
 fn rotate_active_file(path: &Path, policy: &FileSinkPolicy) -> std::io::Result<()> {
@@ -823,10 +756,7 @@ fn rotate_active_file(path: &Path, policy: &FileSinkPolicy) -> std::io::Result<(
         return Ok(());
     }
     let ts = now_unix_ms();
-    let file_name = path
-        .file_name()
-        .and_then(|s| s.to_str())
-        .unwrap_or("events.jsonl");
+    let file_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("events.jsonl");
     let rotated_name = format!("{file_name}.{ts}");
     let dest_dir = policy
         .archive_dir
@@ -853,10 +783,7 @@ fn prune_rotated_files(active: &Path, policy: &FileSinkPolicy) -> u64 {
         .clone()
         .or_else(|| active.parent().map(|p| p.to_path_buf()))
         .unwrap_or_else(|| PathBuf::from("."));
-    let prefix = active
-        .file_name()
-        .and_then(|s| s.to_str())
-        .unwrap_or("events.jsonl");
+    let prefix = active.file_name().and_then(|s| s.to_str()).unwrap_or("events.jsonl");
     let Ok(rd) = fs::read_dir(&dir) else {
         return 0;
     };
@@ -881,10 +808,8 @@ fn prune_rotated_files(active: &Path, policy: &FileSinkPolicy) -> u64 {
         if suffix.is_empty() || !suffix.chars().all(|c| c.is_ascii_digit()) {
             continue;
         }
-        let modified = entry
-            .metadata()
-            .and_then(|m| m.modified())
-            .unwrap_or(SystemTime::UNIX_EPOCH);
+        let modified =
+            entry.metadata().and_then(|m| m.modified()).unwrap_or(SystemTime::UNIX_EPOCH);
         candidates.push((path, modified));
     }
     candidates.sort_by_key(|(_, t)| *t);
@@ -919,12 +844,7 @@ fn append_jsonl(path: &Path, event: &AuditEvent) -> std::io::Result<()> {
     append_jsonl_with_rotate(
         path,
         event,
-        &FileSinkPolicy {
-            max_file_bytes: 0,
-            retain_days: 0,
-            rotate_keep: 0,
-            archive_dir: None,
-        },
+        &FileSinkPolicy { max_file_bytes: 0, retain_days: 0, rotate_keep: 0, archive_dir: None },
     )
     .map(|_| ())
 }
@@ -956,10 +876,7 @@ fn open_index(path: &str) -> Option<Arc<AuditIndex>> {
 }
 
 fn now_unix_ms() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_millis() as u64)
-        .unwrap_or(0)
+    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
 }
 
 fn new_event_id() -> String {
@@ -1110,18 +1027,10 @@ mod tests {
 
         // Manually exercise drain order the worker uses.
         let mut state = pipe.state.lock().unwrap();
-        let first = state
-            .priority_queue
-            .pop_front()
-            .or_else(|| state.queue.pop_front())
-            .unwrap();
+        let first = state.priority_queue.pop_front().or_else(|| state.queue.pop_front()).unwrap();
         assert_eq!(first.decision.as_deref(), Some("deny"));
         assert_eq!(first.message.as_deref(), Some("critical"));
-        let second = state
-            .priority_queue
-            .pop_front()
-            .or_else(|| state.queue.pop_front())
-            .unwrap();
+        let second = state.priority_queue.pop_front().or_else(|| state.queue.pop_front()).unwrap();
         assert_eq!(second.decision.as_deref(), Some("execute"));
     }
 
@@ -1190,11 +1099,7 @@ mod tests {
             .map(|x| x.path())
             .filter(|p| p != &path)
             .collect();
-        assert!(
-            rotated_after.len() <= 2,
-            "keep=2 but got {}",
-            rotated_after.len()
-        );
+        assert!(rotated_after.len() <= 2, "keep=2 but got {}", rotated_after.len());
         let _ = fs::remove_dir_all(dir);
     }
 
@@ -1353,5 +1258,4 @@ mod tests {
         assert_eq!(recent.len(), 1);
         assert_eq!(recent[0].sql_text.as_deref(), Some("12345678…"));
     }
-
 }

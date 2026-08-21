@@ -60,10 +60,7 @@ impl PluginPhase {
         let input = ctx.match_text().to_owned();
 
         if let Err(error) = self.circuit_break.handle(input.clone()) {
-            return Ok(PluginDecision::reject(
-                "circuit_break",
-                error.to_string(),
-            ));
+            return Ok(PluginDecision::reject("circuit_break", error.to_string()));
         }
 
         match self.concurrency_control.handle(input) {

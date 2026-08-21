@@ -121,10 +121,7 @@ pub struct ReadWriteSplittingDynamic {
 impl Route for ReadWriteSplittingDynamic {
     type Error = BoxError;
 
-    fn dispatch(
-        &mut self,
-        input: &RouteInput,
-    ) -> Result<crate::route::DispatchPlan, Self::Error> {
+    fn dispatch(&mut self, input: &RouteInput) -> Result<crate::route::DispatchPlan, Self::Error> {
         let v: Vec<_> = self.rx.try_iter().collect();
         let b = match v.last() {
             Some(rw_endpoint) => {

@@ -11,10 +11,10 @@
 //! file on a throttled interval and hot-swap if mtime changed (cross-process).
 
 use crate::object_set::{ColumnAclOutcome, ObjectSet, StarPolicy};
-use crate::obligations::{inject_row_filter, MaskAlgorithm, MaskSpec, Obligations, WatermarkMode, WatermarkSpec};
-use crate::policy_file::{
-    load_local_pdp_policy_file, policy_file_mtime_ns, LocalPdpPolicyFile,
+use crate::obligations::{
+    inject_row_filter, MaskAlgorithm, MaskSpec, Obligations, WatermarkMode, WatermarkSpec,
 };
+use crate::policy_file::{load_local_pdp_policy_file, policy_file_mtime_ns, LocalPdpPolicyFile};
 use crate::ticket::{
     extract_ticket_id, global_ticket_store, is_write_without_where, strip_ticket_comment,
 };
@@ -39,15 +39,9 @@ impl Subject {
     /// Bind from protocol session user (source: `protocol_user`).
     pub fn from_protocol_user(user: Option<&str>, database: Option<&str>) -> Self {
         let db_user = user.map(|u| u.to_owned());
-        let subject_id = db_user
-            .clone()
-            .filter(|u| !u.is_empty())
-            .unwrap_or_else(|| "anonymous".into());
-        Self {
-            subject_id,
-            db_user,
-            database: database.map(|d| d.to_owned()),
-        }
+        let subject_id =
+            db_user.clone().filter(|u| !u.is_empty()).unwrap_or_else(|| "anonymous".into());
+        Self { subject_id, db_user, database: database.map(|d| d.to_owned()) }
     }
 }
 
@@ -109,7 +103,9 @@ pub struct AccessRequest<'a> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SecurityDecision {
     /// Allow without rewrite; may still carry result-path obligations (mask).
-    Allow { obligations: Obligations },
+    Allow {
+        obligations: Obligations,
+    },
     /// Allow with SQL rewrite (column strip and/or row filter) + optional result obligations.
     AllowRewrite {
         sql: String,
@@ -121,7 +117,10 @@ pub enum SecurityDecision {
         ticket_type: String,
         message: String,
     },
-    Deny { rule: String, message: String },
+    Deny {
+        rule: String,
+        message: String,
+    },
 }
 
 impl SecurityDecision {
@@ -139,9 +138,7 @@ impl SecurityDecision {
     }
 
     pub fn allow_empty() -> Self {
-        Self::Allow {
-            obligations: Obligations::default(),
-        }
+        Self::Allow { obligations: Obligations::default() }
     }
 }
 
@@ -315,8 +312,7 @@ impl LocalPdpStore {
         }
         self.policy_poll_ms.store(poll_ms, Ordering::Relaxed);
         self.policy_mtime_ns.store(mtime_ns, Ordering::Relaxed);
-        self.policy_last_check_ms
-            .store(now_unix_ms(), Ordering::Relaxed);
+        self.policy_last_check_ms.store(now_unix_ms(), Ordering::Relaxed);
     }
 
     fn load(&self) -> Arc<LocalPdpInner> {
@@ -356,11 +352,7 @@ impl LocalPdpStore {
         }
         match load_local_pdp_policy_file(&path) {
             Ok(Some(file)) => {
-                let previous = self
-                    .current
-                    .read()
-                    .unwrap_or_else(|e| e.into_inner())
-                    .clone();
+                let previous = self.current.read().unwrap_or_else(|e| e.into_inner()).clone();
                 let mut next = (*previous).clone();
                 next.apply_policy_file(&file);
                 let info = self.swap(next);
@@ -388,30 +380,18 @@ impl LocalPdpStore {
     }
 
     fn swap(&self, inner: LocalPdpInner) -> LocalPdpReloadInfo {
-        let previous = self
-            .current
-            .read()
-            .unwrap_or_else(|e| e.into_inner())
-            .clone();
+        let previous = self.current.read().unwrap_or_else(|e| e.into_inner()).clone();
         let previous_rule_count = previous.rules.len();
         let epoch = self.epoch.fetch_add(1, Ordering::Relaxed) + 1;
         let next = Arc::new(inner);
         let rule_count = next.rules.len();
         *self.current.write().unwrap_or_else(|e| e.into_inner()) = next;
-        LocalPdpReloadInfo {
-            epoch,
-            swapped: true,
-            previous_rule_count,
-            rule_count,
-        }
+        LocalPdpReloadInfo { epoch, swapped: true, previous_rule_count, rule_count }
     }
 }
 
 fn now_unix_ms() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_millis() as u64)
-        .unwrap_or(0)
+    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
 }
 
 /// Result of a Local PDP hot-reload (F28).
@@ -426,9 +406,7 @@ pub struct LocalPdpReloadInfo {
 static GLOBAL_LOCAL_PDP: OnceLock<Arc<LocalPdpStore>> = OnceLock::new();
 
 fn global_store() -> Arc<LocalPdpStore> {
-    GLOBAL_LOCAL_PDP
-        .get_or_init(|| Arc::new(LocalPdpStore::new()))
-        .clone()
+    GLOBAL_LOCAL_PDP.get_or_init(|| Arc::new(LocalPdpStore::new())).clone()
 }
 
 /// Process-wide store after first install.
@@ -478,11 +456,7 @@ pub fn reload_global_local_pdp(config: &SecurityPolicyConfig) -> Option<LocalPdp
     let store = global_store();
     let previous = {
         // Bypass mtime refresh while applying admin-driven config.
-        store
-            .current
-            .read()
-            .unwrap_or_else(|e| e.into_inner())
-            .clone()
+        store.current.read().unwrap_or_else(|e| e.into_inner()).clone()
     };
     let inner = LocalPdpInner::from_config_preserving_cedar(config, &previous);
     let info = store.swap(inner);
@@ -628,16 +602,12 @@ impl LocalPdp {
                     };
                 }
                 "allow" => {
-                    return SecurityDecision::Allow {
-                        obligations: Obligations::default(),
-                    };
+                    return SecurityDecision::Allow { obligations: Obligations::default() };
                 }
                 _ => continue,
             }
         }
-        SecurityDecision::Allow {
-            obligations: Obligations::default(),
-        }
+        SecurityDecision::Allow { obligations: Obligations::default() }
     }
 
     /// Table/statement authorize using heuristic table extraction (S1 path).
@@ -786,8 +756,7 @@ impl LocalPdp {
                 }
 
                 // S5: high-risk gates (ticket required) before rewrite/mask.
-                if let Some(hr) = self.match_high_risk(subject, action, sql, objects, &tables)
-                {
+                if let Some(hr) = self.match_high_risk(subject, action, sql, objects, &tables) {
                     match self.try_consume_ticket(subject, sql, &hr) {
                         Ok(_ticket_id) => {
                             // Ticket OK — continue with allow path.
@@ -916,11 +885,7 @@ impl LocalPdp {
                 let matched = if let Some(set) = objects {
                     set.objects.iter().any(|obj| table_matches_rule(rule, obj))
                 } else {
-                    tables.iter().any(|t| {
-                        rule.tables
-                            .iter()
-                            .any(|p| table_glob_match(p, t))
-                    })
+                    tables.iter().any(|t| rule.tables.iter().any(|p| table_glob_match(p, t)))
                 };
                 if !matched {
                     continue;
@@ -935,13 +900,7 @@ impl LocalPdp {
         } else if filters.len() == 1 {
             Some(filters.remove(0))
         } else {
-            Some(
-                filters
-                    .into_iter()
-                    .map(|f| format!("({f})"))
-                    .collect::<Vec<_>>()
-                    .join(" AND "),
-            )
+            Some(filters.into_iter().map(|f| format!("({f})")).collect::<Vec<_>>().join(" AND "))
         }
     }
 
@@ -957,11 +916,8 @@ impl LocalPdp {
             return Vec::new();
         }
         let mut out = Vec::new();
-        let mask_by_name: std::collections::BTreeMap<String, &SecurityMaskRuleConfig> = __p
-            .mask_rules
-            .iter()
-            .map(|m| (m.name.to_ascii_lowercase(), m))
-            .collect();
+        let mask_by_name: std::collections::BTreeMap<String, &SecurityMaskRuleConfig> =
+            __p.mask_rules.iter().map(|m| (m.name.to_ascii_lowercase(), m)).collect();
 
         let candidate_columns: Vec<(String, String)> = if let Some(set) = objects {
             let mut pairs = Vec::new();
@@ -999,12 +955,7 @@ impl LocalPdp {
         } else {
             columns
                 .iter()
-                .map(|c| {
-                    (
-                        tables.first().cloned().unwrap_or_default(),
-                        c.to_ascii_lowercase(),
-                    )
-                })
+                .map(|c| (tables.first().cloned().unwrap_or_default(), c.to_ascii_lowercase()))
                 .collect()
         };
 
@@ -1017,10 +968,7 @@ impl LocalPdp {
                     }
                 }
                 if !tag.tables.is_empty()
-                    && !tag
-                        .tables
-                        .iter()
-                        .any(|p| table_glob_match(p, &table) || table.is_empty())
+                    && !tag.tables.iter().any(|p| table_glob_match(p, &table) || table.is_empty())
                 {
                     continue;
                 }
@@ -1033,10 +981,7 @@ impl LocalPdp {
                 let Some(algo) = MaskAlgorithm::parse(&mask_cfg.algorithm) else {
                     continue;
                 };
-                if out
-                    .iter()
-                    .any(|m: &MaskSpec| m.column.eq_ignore_ascii_case(&col))
-                {
+                if out.iter().any(|m: &MaskSpec| m.column.eq_ignore_ascii_case(&col)) {
                     continue;
                 }
                 let mut spec = MaskSpec::new(col.clone(), algo, tag.mask_rule.clone());
@@ -1050,8 +995,6 @@ impl LocalPdp {
         }
         out
     }
-
-
 
     fn build_watermark(&self, subject: &Subject, service: &str) -> Option<WatermarkSpec> {
         let __p = self.inner();
@@ -1100,10 +1043,7 @@ impl LocalPdp {
             };
             match engine.authorize_tables(&subject.subject_id, action, tables) {
                 Ok(()) => None,
-                Err(message) => Some(SecurityDecision::Deny {
-                    rule: "cedar".into(),
-                    message,
-                }),
+                Err(message) => Some(SecurityDecision::Deny { rule: "cedar".into(), message }),
             }
         }
         #[cfg(not(feature = "security-cedar"))]
@@ -1137,10 +1077,7 @@ impl LocalPdp {
             Ok(()) => None,
             Err(message) => {
                 if client.fail_closed() {
-                    Some(SecurityDecision::Deny {
-                        rule: "remote".into(),
-                        message,
-                    })
+                    Some(SecurityDecision::Deny { rule: "remote".into(), message })
                 } else {
                     tracing::warn!(
                         target: "data_nexus::security",
@@ -1176,12 +1113,7 @@ impl LocalPdp {
             }
             let actions = if tr.actions.is_empty() {
                 // Default: writes only (not SELECT).
-                vec![
-                    "insert".into(),
-                    "update".into(),
-                    "delete".into(),
-                    "ddl".into(),
-                ]
+                vec!["insert".into(), "update".into(), "delete".into(), "ddl".into()]
             } else {
                 tr.actions.clone()
             };
@@ -1197,9 +1129,7 @@ impl LocalPdp {
                         })
                     })
                 } else {
-                    tables
-                        .iter()
-                        .any(|t| tr.tables.iter().any(|p| table_glob_match(p, t)))
+                    tables.iter().any(|t| tr.tables.iter().any(|p| table_glob_match(p, t)))
                 };
                 if !table_hit {
                     continue;
@@ -1232,10 +1162,7 @@ impl LocalPdp {
                         },
                     }
                 }
-                _ => SecurityDecision::Deny {
-                    rule: tr.name.clone(),
-                    message: msg,
-                },
+                _ => SecurityDecision::Deny { rule: tr.name.clone(), message: msg },
             });
         }
         None
@@ -1260,12 +1187,7 @@ impl LocalPdp {
             ));
         };
         global_ticket_store()
-            .consume(
-                &ticket_id,
-                &subject.subject_id,
-                sql,
-                Some(tr.ticket_type.as_str()),
-            )
+            .consume(&ticket_id, &subject.subject_id, sql, Some(tr.ticket_type.as_str()))
             .map(|t| t.id)
             .map_err(|e| format!("security time policy '{}' ticket rejected: {e}", tr.name))
     }
@@ -1324,9 +1246,7 @@ impl LocalPdp {
                             })
                         })
                     } else {
-                        tables.iter().any(|t| {
-                            hr.tables.iter().any(|p| table_glob_match(p, t))
-                        })
+                        tables.iter().any(|t| hr.tables.iter().any(|p| table_glob_match(p, t)))
                     }
                 }
                 _ => false,
@@ -1359,19 +1279,9 @@ impl LocalPdp {
             return Err(hint);
         };
         global_ticket_store()
-            .consume(
-                &ticket_id,
-                &subject.subject_id,
-                sql,
-                Some(hr.ticket_type.as_str()),
-            )
+            .consume(&ticket_id, &subject.subject_id, sql, Some(hr.ticket_type.as_str()))
             .map(|t| t.id)
-            .map_err(|e| {
-                format!(
-                    "security policy '{}' ticket rejected: {e}",
-                    hr.name
-                )
-            })
+            .map_err(|e| format!("security policy '{}' ticket rejected: {e}", hr.name))
     }
 
     /// Apply column deny rules: strip columns from SELECT when possible, else deny.
@@ -1490,9 +1400,7 @@ fn subject_matches(rule: &SecurityRuleConfig, subject: &Subject) -> bool {
         return true;
     }
     let sid = subject.subject_id.as_str();
-    rule.subjects
-        .iter()
-        .any(|pattern| glob_match(pattern, sid))
+    rule.subjects.iter().any(|pattern| glob_match(pattern, sid))
 }
 
 fn action_matches_actions(actions: &[String], action: StatementAction) -> bool {
@@ -1547,10 +1455,7 @@ fn action_matches(rule: &SecurityRuleConfig, action: StatementAction) -> bool {
     })
 }
 
-fn table_matches_rule(
-    rule: &SecurityRuleConfig,
-    obj: &crate::object_set::ObjectAccess,
-) -> bool {
+fn table_matches_rule(rule: &SecurityRuleConfig, obj: &crate::object_set::ObjectAccess) -> bool {
     if rule.tables.is_empty() {
         return true;
     }
@@ -1568,8 +1473,7 @@ fn column_matches_rule(rule: &SecurityRuleConfig, bare_col: &str, table: &str) -
             let mut parts = p.rsplitn(2, '.');
             let col_pat = parts.next().unwrap_or("");
             let tbl_pat = parts.next().unwrap_or("*");
-            glob_match(col_pat, bare_col)
-                && (tbl_pat == "*" || glob_match(tbl_pat, table))
+            glob_match(col_pat, bare_col) && (tbl_pat == "*" || glob_match(tbl_pat, table))
         } else {
             glob_match(p, bare_col)
         }
@@ -1601,11 +1505,10 @@ fn rule_matches(rule: &SecurityRuleConfig, request: &AccessRequest<'_>) -> bool 
             // Rule requires tables but none extracted → no match (avoid false deny on SELECT 1).
             return false;
         }
-        let matched = request.tables.iter().any(|table| {
-            rule.tables
-                .iter()
-                .any(|pattern| table_glob_match(pattern, table))
-        });
+        let matched = request
+            .tables
+            .iter()
+            .any(|table| rule.tables.iter().any(|pattern| table_glob_match(pattern, table)));
         if !matched {
             return false;
         }
@@ -1705,18 +1608,12 @@ pub fn extract_table_names(sql: &str) -> Vec<String> {
 
     let trimmed = sql.trim_start();
     let trimmed_upper = trimmed.to_ascii_uppercase();
-    for prefix in [
-        "UPDATE ",
-        "INSERT INTO ",
-        "DELETE FROM ",
-        "TRUNCATE TABLE ",
-        "TRUNCATE ",
-    ] {
+    for prefix in ["UPDATE ", "INSERT INTO ", "DELETE FROM ", "TRUNCATE TABLE ", "TRUNCATE "] {
         if let Some(rest) = trimmed_upper.strip_prefix(prefix) {
             let offset = prefix.len();
-            if let Some(name) = next_sql_ident(
-                &trimmed[offset..offset + rest.len().min(trimmed.len() - offset)],
-            ) {
+            if let Some(name) =
+                next_sql_ident(&trimmed[offset..offset + rest.len().min(trimmed.len() - offset)])
+            {
                 push_unique(&mut tables, name);
             }
         }
@@ -2146,7 +2043,10 @@ pub fn sql_from_command(command: &GatewayCommand) -> Option<&str> {
     }
 }
 
-pub fn action_from_command(command: &GatewayCommand, dialect: &dyn DialectParser) -> StatementAction {
+pub fn action_from_command(
+    command: &GatewayCommand,
+    dialect: &dyn DialectParser,
+) -> StatementAction {
     match command {
         GatewayCommand::Begin | GatewayCommand::Commit | GatewayCommand::Rollback => {
             StatementAction::Tcl
@@ -2211,12 +2111,8 @@ mod tests {
         }]);
         let sub = subject("app");
         let dialect = HeuristicDialectParser::new(ProtocolKind::MySql);
-        let cmd = GatewayCommand::Query {
-            sql: "SELECT * FROM secret_tokens WHERE id=1".into(),
-        };
-        assert!(pdp
-            .authorize_command(&sub, "orders", &cmd, &dialect)
-            .is_deny());
+        let cmd = GatewayCommand::Query { sql: "SELECT * FROM secret_tokens WHERE id=1".into() };
+        assert!(pdp.authorize_command(&sub, "orders", &cmd, &dialect).is_deny());
     }
 
     #[test]
@@ -2232,12 +2128,8 @@ mod tests {
         }]);
         let sub = subject("app");
         let dialect = HeuristicDialectParser::new(ProtocolKind::MySql);
-        let cmd = GatewayCommand::Query {
-            sql: "SELECT 1".into(),
-        };
-        assert!(!pdp
-            .authorize_command(&sub, "orders", &cmd, &dialect)
-            .is_deny());
+        let cmd = GatewayCommand::Query { sql: "SELECT 1".into() };
+        assert!(!pdp.authorize_command(&sub, "orders", &cmd, &dialect).is_deny());
     }
 
     #[test]
@@ -2253,23 +2145,16 @@ mod tests {
         }]);
         let sub = subject("analyst");
         let dialect = HeuristicDialectParser::new(ProtocolKind::PostgreSql);
-        let cmd = GatewayCommand::Query {
-            sql: "CREATE TABLE t (id int)".into(),
-        };
-        assert!(pdp
-            .authorize_command(&sub, "analytics", &cmd, &dialect)
-            .is_deny());
+        let cmd = GatewayCommand::Query { sql: "CREATE TABLE t (id int)".into() };
+        assert!(pdp.authorize_command(&sub, "analytics", &cmd, &dialect).is_deny());
         let app = subject("app");
-        assert!(!pdp
-            .authorize_command(&app, "analytics", &cmd, &dialect)
-            .is_deny());
+        assert!(!pdp.authorize_command(&app, "analytics", &cmd, &dialect).is_deny());
     }
 
     #[test]
     fn extract_from_join() {
-        let tables = extract_table_names(
-            "SELECT a.id FROM orders a JOIN order_items b ON a.id=b.order_id",
-        );
+        let tables =
+            extract_table_names("SELECT a.id FROM orders a JOIN order_items b ON a.id=b.order_id");
         assert!(tables.iter().any(|t| t.eq_ignore_ascii_case("orders")));
         assert!(tables.iter().any(|t| t.eq_ignore_ascii_case("order_items")));
     }
@@ -2310,9 +2195,7 @@ mod tests {
 
         let sub = subject("app");
         let dialect = HeuristicDialectParser::mysql();
-        let cmd = GatewayCommand::Query {
-            sql: "SELECT id, name, salary FROM employees".into(),
-        };
+        let cmd = GatewayCommand::Query { sql: "SELECT id, name, salary FROM employees".into() };
         match pdp.authorize_command_with_objects(&sub, "hr", &cmd, &dialect, Some(&set)) {
             SecurityDecision::AllowRewrite { sql, .. } => {
                 assert!(sql.to_ascii_lowercase().contains("id"));
@@ -2340,9 +2223,7 @@ mod tests {
         set.objects.push(obj);
         let sub = subject("app");
         let dialect = HeuristicDialectParser::mysql();
-        let cmd = GatewayCommand::Query {
-            sql: "SELECT * FROM employees".into(),
-        };
+        let cmd = GatewayCommand::Query { sql: "SELECT * FROM employees".into() };
         assert!(pdp
             .authorize_command_with_objects(&sub, "hr", &cmd, &dialect, Some(&set))
             .is_deny());
@@ -2366,10 +2247,7 @@ mod tests {
         set.objects.push(obj);
         let sub = subject("app");
         let dialect = HeuristicDialectParser::mysql();
-        for sql in [
-            "SELECT employees.* FROM employees",
-            "SELECT e.* FROM employees e",
-        ] {
+        for sql in ["SELECT employees.* FROM employees", "SELECT e.* FROM employees e"] {
             let cmd = GatewayCommand::Query { sql: sql.into() };
             assert!(
                 pdp.authorize_command_with_objects(&sub, "hr", &cmd, &dialect, Some(&set))
@@ -2416,9 +2294,7 @@ mod tests {
         let sub = subject("app");
         let dialect = HeuristicDialectParser::mysql();
         let sql = "SELECT * FROM employees";
-        let cmd = GatewayCommand::Query {
-            sql: sql.into(),
-        };
+        let cmd = GatewayCommand::Query { sql: sql.into() };
         let dec = pdp.authorize_command_with_objects(&sub, "hr", &cmd, &dialect, Some(&set));
         match dec {
             SecurityDecision::Allow { .. } => {}
@@ -2434,15 +2310,10 @@ mod tests {
         let mut obj2 = ObjectAccess::new("employees", StatementAction::Select);
         obj2.columns = vec!["id".into(), "salary".into()];
         set2.objects.push(obj2);
-        let cmd2 = GatewayCommand::Query {
-            sql: "SELECT id, salary FROM employees".into(),
-        };
+        let cmd2 = GatewayCommand::Query { sql: "SELECT id, salary FROM employees".into() };
         let dec2 = pdp.authorize_command_with_objects(&sub, "hr", &cmd2, &dialect, Some(&set2));
         assert!(
-            matches!(
-                dec2,
-                SecurityDecision::AllowRewrite { .. } | SecurityDecision::Deny { .. }
-            ),
+            matches!(dec2, SecurityDecision::AllowRewrite { .. } | SecurityDecision::Deny { .. }),
             "explicit salary must still be rewritten or denied, got {dec2:?}"
         );
     }
@@ -2461,9 +2332,7 @@ mod tests {
         let set = ObjectSet::parse_failed();
         let sub = subject("app");
         let dialect = HeuristicDialectParser::mysql();
-        let cmd = GatewayCommand::Query {
-            sql: "SELECT !!!".into(),
-        };
+        let cmd = GatewayCommand::Query { sql: "SELECT !!!".into() };
         assert!(pdp
             .authorize_command_with_objects(&sub, "orders", &cmd, &dialect, Some(&set))
             .is_deny());
@@ -2526,14 +2395,11 @@ mod tests {
             row_filter: None,
         }]);
         let mut set = ObjectSet::parse_failed();
-        set.objects
-            .push(ObjectAccess::new("secret_tokens", StatementAction::Select));
+        set.objects.push(ObjectAccess::new("secret_tokens", StatementAction::Select));
         // Non-empty objects with parse_failed: PDP uses set.tables() path.
         let sub = subject("app");
         let dialect = HeuristicDialectParser::mysql();
-        let cmd = GatewayCommand::Query {
-            sql: "SELECT id FROM secret_tokens /* broken */".into(),
-        };
+        let cmd = GatewayCommand::Query { sql: "SELECT id FROM secret_tokens /* broken */".into() };
         assert!(
             pdp.authorize_command_with_objects(&sub, "orders", &cmd, &dialect, Some(&set))
                 .is_deny(),
@@ -2560,18 +2426,13 @@ mod tests {
         let set = ObjectSet::parse_failed(); // empty objects
         let sub = subject("app");
         let dialect = HeuristicDialectParser::mysql();
-        let cmd = GatewayCommand::Query {
-            sql: "SELECT !!!".into(),
-        };
+        let cmd = GatewayCommand::Query { sql: "SELECT !!!".into() };
         // fail_closed=false + empty parse_failed → do not hard-deny solely on parse_failed.
         let decision =
             pdp.authorize_command_with_objects(&sub, "orders", &cmd, &dialect, Some(&set));
         match decision {
             SecurityDecision::Deny { rule, .. } => {
-                assert_ne!(
-                    rule, "fail_closed",
-                    "must not hard fail_closed when fail_closed=false"
-                );
+                assert_ne!(rule, "fail_closed", "must not hard fail_closed when fail_closed=false");
             }
             SecurityDecision::Allow { .. }
             | SecurityDecision::AllowRewrite { .. }
@@ -2628,10 +2489,7 @@ mod tests {
 
     #[test]
     fn rewrite_strips_multiple_columns() {
-        let denied = vec![
-            ("r".into(), "salary".into()),
-            ("r".into(), "ssn".into()),
-        ];
+        let denied = vec![("r".into(), "salary".into()), ("r".into(), "ssn".into())];
         let sql = "SELECT id, salary, name, ssn FROM employees WHERE id=1";
         let out = rewrite_select_strip_columns(sql, &denied).unwrap();
         let lower = out.to_ascii_lowercase();
@@ -2675,9 +2533,7 @@ mod tests {
         set.objects.push(obj);
         let sub = subject("app");
         let dialect = HeuristicDialectParser::mysql();
-        let cmd = GatewayCommand::Query {
-            sql: "SELECT id, name FROM employees".into(),
-        };
+        let cmd = GatewayCommand::Query { sql: "SELECT id, name FROM employees".into() };
         match pdp.authorize_command_with_objects(&sub, "hr", &cmd, &dialect, Some(&set)) {
             SecurityDecision::AllowRewrite { sql, obligations } => {
                 assert!(sql.to_ascii_lowercase().contains("tenant_id = 1"));
@@ -2725,9 +2581,7 @@ mod tests {
         set.objects.push(obj);
         let sub = subject("app");
         let dialect = HeuristicDialectParser::mysql();
-        let cmd = GatewayCommand::Query {
-            sql: "SELECT id, phone FROM employees".into(),
-        };
+        let cmd = GatewayCommand::Query { sql: "SELECT id, phone FROM employees".into() };
         match pdp.authorize_command_with_objects(&sub, "hr", &cmd, &dialect, Some(&set)) {
             SecurityDecision::Allow { obligations } => {
                 assert_eq!(obligations.column_masks.len(), 1);
@@ -2787,10 +2641,7 @@ mod tests {
         });
         let tagged = format!("/*dn_ticket:{}*/ {sql}", tkt.id);
         let cmd2 = GatewayCommand::Query { sql: tagged };
-        assert!(
-            !pdp.authorize_command(&sub, "orders", &cmd2, &dialect)
-                .is_deny()
-        );
+        assert!(!pdp.authorize_command(&sub, "orders", &cmd2, &dialect).is_deny());
     }
 
     #[test]
@@ -2800,12 +2651,10 @@ mod tests {
         // Serialize env mutation for this test process.
         static LOCK: Mutex<()> = Mutex::new(());
         let _g = LOCK.lock().unwrap();
-        let ts_out = chrono::DateTime::parse_from_rfc3339("2026-07-17T20:00:00Z")
-            .unwrap()
-            .timestamp();
-        let ts_in = chrono::DateTime::parse_from_rfc3339("2026-07-17T10:00:00Z")
-            .unwrap()
-            .timestamp();
+        let ts_out =
+            chrono::DateTime::parse_from_rfc3339("2026-07-17T20:00:00Z").unwrap().timestamp();
+        let ts_in =
+            chrono::DateTime::parse_from_rfc3339("2026-07-17T10:00:00Z").unwrap().timestamp();
         std::env::set_var("DATA_NEXUS_SECURITY_NOW_UNIX", ts_out.to_string());
 
         let pdp = LocalPdp::from_inner(LocalPdpInner {
@@ -2819,22 +2668,11 @@ mod tests {
                 name: "work-hours-writes".into(),
                 effect: "deny".into(),
                 outside: true,
-                days: vec![
-                    "mon".into(),
-                    "tue".into(),
-                    "wed".into(),
-                    "thu".into(),
-                    "fri".into(),
-                ],
+                days: vec!["mon".into(), "tue".into(), "wed".into(), "thu".into(), "fri".into()],
                 start: "09:00".into(),
                 end: "18:00".into(),
                 timezone: "UTC".into(),
-                actions: vec![
-                    "insert".into(),
-                    "update".into(),
-                    "delete".into(),
-                    "ddl".into(),
-                ],
+                actions: vec!["insert".into(), "update".into(), "delete".into(), "ddl".into()],
                 subjects: vec![],
                 tables: vec![],
                 ticket_type: "high_risk".into(),
@@ -2851,17 +2689,9 @@ mod tests {
         });
         let sub = subject("root");
         let dialect = HeuristicDialectParser::mysql();
-        let sel = GatewayCommand::Query {
-            sql: "SELECT 1".into(),
-        };
-        assert!(
-            !pdp
-                .authorize_command(&sub, "orders", &sel, &dialect)
-                .is_deny()
-        );
-        let ins = GatewayCommand::Query {
-            sql: "INSERT INTO t VALUES (1)".into(),
-        };
+        let sel = GatewayCommand::Query { sql: "SELECT 1".into() };
+        assert!(!pdp.authorize_command(&sub, "orders", &sel, &dialect).is_deny());
+        let ins = GatewayCommand::Query { sql: "INSERT INTO t VALUES (1)".into() };
         match pdp.authorize_command(&sub, "orders", &ins, &dialect) {
             SecurityDecision::Deny { rule, message } => {
                 assert_eq!(rule, "work-hours-writes");
@@ -2874,14 +2704,9 @@ mod tests {
             other => panic!("expected Deny, got {other:?}"),
         }
         std::env::set_var("DATA_NEXUS_SECURITY_NOW_UNIX", ts_in.to_string());
-        assert!(
-            !pdp
-                .authorize_command(&sub, "orders", &ins, &dialect)
-                .is_deny()
-        );
+        assert!(!pdp.authorize_command(&sub, "orders", &ins, &dialect).is_deny());
         std::env::remove_var("DATA_NEXUS_SECURITY_NOW_UNIX");
     }
-
 
     #[test]
     fn local_pdp_hot_reload_swaps_rules_for_existing_handle() {
@@ -2911,9 +2736,7 @@ mod tests {
         });
         let sub = subject("app");
         let dialect = HeuristicDialectParser::new(ProtocolKind::MySql);
-        let cmd = GatewayCommand::Query {
-            sql: "SELECT * FROM secret_tokens".into(),
-        };
+        let cmd = GatewayCommand::Query { sql: "SELECT * FROM secret_tokens".into() };
         assert!(pdp.authorize_command(&sub, "orders", &cmd, &dialect).is_deny());
         let epoch_before = pdp.epoch();
         let _ = pdp.store.swap(LocalPdpInner {
@@ -2969,10 +2792,7 @@ mod tests {
         use crate::policy_file::{save_local_pdp_policy_file, LocalPdpPolicyFile};
         use std::time::{SystemTime, UNIX_EPOCH};
 
-        let ms = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_millis();
+        let ms = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
         let path = std::env::temp_dir().join(format!("dn-h05-mtime-{ms}.json"));
         let path_s = path.to_string_lossy().to_string();
 
@@ -3000,9 +2820,7 @@ mod tests {
             db_user: Some("u".into()),
             database: Some("db".into()),
         };
-        let cmd = GatewayCommand::Query {
-            sql: "SELECT 1 FROM t".into(),
-        };
+        let cmd = GatewayCommand::Query { sql: "SELECT 1 FROM t".into() };
         assert!(
             pdp.authorize_command(&sub, "svc", &cmd, &dialect).is_deny(),
             "initial should deny"
@@ -3074,9 +2892,7 @@ mod tests {
         });
         let sub = subject("alice");
         let dialect = HeuristicDialectParser::mysql();
-        let cmd = GatewayCommand::Query {
-            sql: "SELECT id FROM employees".into(),
-        };
+        let cmd = GatewayCommand::Query { sql: "SELECT id FROM employees".into() };
         let dec = pdp.authorize_command(&sub, "orders", &cmd, &dialect);
         assert!(dec.is_deny(), "{dec:?}");
         match dec {
@@ -3112,15 +2928,11 @@ mod tests {
             cedar: None,
             #[cfg(feature = "security-cedar")]
             cedar_required: false,
-            remote: Some(crate::RemotePdpClient::transport_error_for_test(
-                "timeout", true,
-            )),
+            remote: Some(crate::RemotePdpClient::transport_error_for_test("timeout", true)),
         });
         let sub = subject("alice");
         let dialect = HeuristicDialectParser::mysql();
-        let cmd = GatewayCommand::Query {
-            sql: "SELECT 1".into(),
-        };
+        let cmd = GatewayCommand::Query { sql: "SELECT 1".into() };
         let dec = pdp.authorize_command(&sub, "orders", &cmd, &dialect);
         assert!(dec.is_deny(), "fail_closed must deny on timeout: {dec:?}");
     }
@@ -3149,15 +2961,11 @@ mod tests {
             cedar: None,
             #[cfg(feature = "security-cedar")]
             cedar_required: false,
-            remote: Some(crate::RemotePdpClient::transport_error_for_test(
-                "timeout", false,
-            )),
+            remote: Some(crate::RemotePdpClient::transport_error_for_test("timeout", false)),
         });
         let sub = subject("alice");
         let dialect = HeuristicDialectParser::mysql();
-        let cmd = GatewayCommand::Query {
-            sql: "SELECT 1".into(),
-        };
+        let cmd = GatewayCommand::Query { sql: "SELECT 1".into() };
         let dec = pdp.authorize_command(&sub, "orders", &cmd, &dialect);
         assert!(!dec.is_deny(), "fail_closed=false should allow: {dec:?}");
     }
@@ -3192,10 +3000,7 @@ mod tests {
         });
         let sub = subject("alice");
         let dialect = HeuristicDialectParser::mysql();
-        let cmd = GatewayCommand::Execute {
-            statement_id: "1".into(),
-            parameters: vec![],
-        };
+        let cmd = GatewayCommand::Execute { statement_id: "1".into(), parameters: vec![] };
         let dec = pdp.authorize_command(&sub, "orders", &cmd, &dialect);
         match dec {
             SecurityDecision::Allow { obligations } => {

@@ -48,9 +48,7 @@ pub fn global_cedar_store() -> Option<Arc<CedarPolicyStore>> {
 
 /// Install store if missing, then load `policy_dir` (keep-old if already loaded and load fails).
 pub fn install_cedar_store(policy_dir: &str) -> GatewayResult<Arc<CedarPolicyStore>> {
-    let store = GLOBAL
-        .get_or_init(|| Arc::new(CedarPolicyStore::empty()))
-        .clone();
+    let store = GLOBAL.get_or_init(|| Arc::new(CedarPolicyStore::empty())).clone();
     store.reload_from_dir(policy_dir)?;
     Ok(store)
 }
@@ -58,9 +56,7 @@ pub fn install_cedar_store(policy_dir: &str) -> GatewayResult<Arc<CedarPolicySto
 /// Force reload of the global store from `policy_dir`. Keep-old on failure if a
 /// previous snapshot exists.
 pub fn reload_global_cedar(policy_dir: &str) -> GatewayResult<CedarReloadInfo> {
-    let store = GLOBAL
-        .get_or_init(|| Arc::new(CedarPolicyStore::empty()))
-        .clone();
+    let store = GLOBAL.get_or_init(|| Arc::new(CedarPolicyStore::empty())).clone();
     store.reload_from_dir(policy_dir)
 }
 
@@ -282,22 +278,11 @@ impl CedarPolicyStore {
         let principal = entity_uid("User", &sanitize_id(subject_id))?;
         let action_uid = entity_uid("Action", action.as_str())?;
         let resource = entity_uid("Table", &sanitize_id(table))?;
-        let request = Request::new(
-            principal.clone(),
-            action_uid,
-            resource.clone(),
-            Context::empty(),
-            None,
-        )
-        .map_err(|e| format!("cedar request: {e}"))?;
-        let entities = build_entities(
-            subject_id,
-            table,
-            &principal,
-            &resource,
-            subject_attrs,
-            table_attrs,
-        )?;
+        let request =
+            Request::new(principal.clone(), action_uid, resource.clone(), Context::empty(), None)
+                .map_err(|e| format!("cedar request: {e}"))?;
+        let entities =
+            build_entities(subject_id, table, &principal, &resource, subject_attrs, table_attrs)?;
         self.with_policies(|policies| {
             let response = self.authorizer.is_authorized(&request, policies, &entities);
             response.decision() == Decision::Allow
@@ -339,13 +324,7 @@ impl CedarPolicyStore {
         }
         for table in tables {
             let bare = bare_table_name(table);
-            if !self.is_allowed_with_attrs(
-                subject_id,
-                action,
-                bare,
-                subject_attrs,
-                table_attrs,
-            )? {
+            if !self.is_allowed_with_attrs(subject_id, action, bare, subject_attrs, table_attrs)? {
                 return Err(format!(
                     "cedar deny: subject '{subject_id}' action '{}' on table '{bare}'",
                     action.as_str()
@@ -367,11 +346,7 @@ pub struct CedarEngine {
 
 impl CedarEngine {
     pub fn from_store(store: Arc<CedarPolicyStore>) -> Self {
-        Self {
-            store,
-            subject_attrs: Arc::new(Vec::new()),
-            table_attrs: Arc::new(Vec::new()),
-        }
+        Self { store, subject_attrs: Arc::new(Vec::new()), table_attrs: Arc::new(Vec::new()) }
     }
 
     pub fn with_attr_dirs(
@@ -481,9 +456,7 @@ fn load_dir_snapshot(policy_dir: &str) -> GatewayResult<CedarSnapshot> {
         )));
     }
     let policies = PolicySet::from_str(&merged).map_err(|e| {
-        GatewayError::Configuration(format!(
-            "invalid Cedar policies in '{policy_dir}': {e}"
-        ))
+        GatewayError::Configuration(format!("invalid Cedar policies in '{policy_dir}': {e}"))
     })?;
     let policy_count = policies.policies().count();
     let content_fp = fnv1a64(merged.as_bytes());
@@ -532,19 +505,11 @@ fn sanitize_id(raw: &str) -> String {
 }
 
 fn bare_table_name(qualified: &str) -> &str {
-    qualified
-        .rsplit(['.', '/'])
-        .next()
-        .unwrap_or(qualified)
-        .trim_matches('`')
-        .trim_matches('"')
+    qualified.rsplit(['.', '/']).next().unwrap_or(qualified).trim_matches('`').trim_matches('"')
 }
 
 fn now_unix_ms() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_millis() as u64)
-        .unwrap_or(0)
+    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
 }
 
 fn fnv1a64(bytes: &[u8]) -> u64 {
@@ -614,8 +579,7 @@ fn find_subject_attrs<'a>(
     subject_id: &str,
     dirs: &'a [SecuritySubjectAttrConfig],
 ) -> Option<&'a SecuritySubjectAttrConfig> {
-    dirs.iter()
-        .find(|s| s.subject_id.eq_ignore_ascii_case(subject_id))
+    dirs.iter().find(|s| s.subject_id.eq_ignore_ascii_case(subject_id))
 }
 
 fn find_table_attrs<'a>(
@@ -623,8 +587,7 @@ fn find_table_attrs<'a>(
     dirs: &'a [SecurityTableAttrConfig],
 ) -> Option<&'a SecurityTableAttrConfig> {
     let bare = bare_table_name(table);
-    dirs.iter()
-        .find(|t| t.table.eq_ignore_ascii_case(bare) || t.table.eq_ignore_ascii_case(table))
+    dirs.iter().find(|t| t.table.eq_ignore_ascii_case(bare) || t.table.eq_ignore_ascii_case(table))
 }
 
 fn string_attr(value: &str) -> Result<RestrictedExpression, String> {
@@ -685,9 +648,7 @@ permit (principal, action == Action::"select", resource == Table::"__none__");
     #[test]
     fn select_allowed_on_orders() {
         let eng = CedarEngine::from_str_policies("fixture", FIXTURE).unwrap();
-        assert!(eng
-            .is_allowed("alice", StatementAction::Select, "orders")
-            .unwrap());
+        assert!(eng.is_allowed("alice", StatementAction::Select, "orders").unwrap());
     }
 
     /// F29: clearance / tenant attributes gate select on secret classification tables.
@@ -731,87 +692,72 @@ when { resource == Table::"secret_tokens" };
 
     #[test]
     fn f29_attr_allow_same_tenant_secret_clearance() {
-        let eng = CedarEngine::from_str_policies("attrs", FIXTURE_ATTRS)
-            .unwrap()
-            .with_attr_dirs(
-                vec![SecuritySubjectAttrConfig {
-                    subject_id: "alice".into(),
-                    tenant: "acme".into(),
-                    clearance: "secret".into(),
-                    roles: vec!["analyst".into()],
-                }],
-                vec![SecurityTableAttrConfig {
-                    table: "payroll".into(),
-                    tenant: "acme".into(),
-                    clearance: "secret".into(),
-                    classification: "pii".into(),
-                }],
-            );
+        let eng = CedarEngine::from_str_policies("attrs", FIXTURE_ATTRS).unwrap().with_attr_dirs(
+            vec![SecuritySubjectAttrConfig {
+                subject_id: "alice".into(),
+                tenant: "acme".into(),
+                clearance: "secret".into(),
+                roles: vec!["analyst".into()],
+            }],
+            vec![SecurityTableAttrConfig {
+                table: "payroll".into(),
+                tenant: "acme".into(),
+                clearance: "secret".into(),
+                classification: "pii".into(),
+            }],
+        );
         assert!(
-            eng.is_allowed("alice", StatementAction::Select, "payroll")
-                .unwrap(),
+            eng.is_allowed("alice", StatementAction::Select, "payroll").unwrap(),
             "same tenant + secret clearance should allow"
         );
         assert!(
-            eng.is_allowed("alice", StatementAction::Select, "orders")
-                .unwrap(),
+            eng.is_allowed("alice", StatementAction::Select, "orders").unwrap(),
             "non-attr tables still allowed"
         );
     }
 
     #[test]
     fn f29_attr_deny_low_clearance_or_wrong_tenant() {
-        let eng = CedarEngine::from_str_policies("attrs", FIXTURE_ATTRS)
-            .unwrap()
-            .with_attr_dirs(
-                vec![
-                    SecuritySubjectAttrConfig {
-                        subject_id: "bob".into(),
-                        tenant: "acme".into(),
-                        clearance: "internal".into(),
-                        roles: vec![],
-                    },
-                    SecuritySubjectAttrConfig {
-                        subject_id: "carol".into(),
-                        tenant: "other".into(),
-                        clearance: "secret".into(),
-                        roles: vec![],
-                    },
-                ],
-                vec![SecurityTableAttrConfig {
-                    table: "payroll".into(),
+        let eng = CedarEngine::from_str_policies("attrs", FIXTURE_ATTRS).unwrap().with_attr_dirs(
+            vec![
+                SecuritySubjectAttrConfig {
+                    subject_id: "bob".into(),
                     tenant: "acme".into(),
+                    clearance: "internal".into(),
+                    roles: vec![],
+                },
+                SecuritySubjectAttrConfig {
+                    subject_id: "carol".into(),
+                    tenant: "other".into(),
                     clearance: "secret".into(),
-                    classification: "pii".into(),
-                }],
-            );
+                    roles: vec![],
+                },
+            ],
+            vec![SecurityTableAttrConfig {
+                table: "payroll".into(),
+                tenant: "acme".into(),
+                clearance: "secret".into(),
+                classification: "pii".into(),
+            }],
+        );
         assert!(
-            !eng.is_allowed("bob", StatementAction::Select, "payroll")
-                .unwrap(),
+            !eng.is_allowed("bob", StatementAction::Select, "payroll").unwrap(),
             "internal clearance must not read secret table"
         );
         assert!(
-            !eng.is_allowed("carol", StatementAction::Select, "payroll")
-                .unwrap(),
+            !eng.is_allowed("carol", StatementAction::Select, "payroll").unwrap(),
             "wrong tenant must not read even with secret clearance"
         );
         // Unknown subject (no attrs) also denied by attr policy.
-        assert!(
-            !eng.is_allowed("nobody", StatementAction::Select, "payroll")
-                .unwrap()
-        );
+        assert!(!eng.is_allowed("nobody", StatementAction::Select, "payroll").unwrap());
     }
 
     #[test]
     fn f29_uid_only_policies_still_work_without_attr_dirs() {
         // Empty attr dirs → Entities::empty(); FIXTURE uid-only policies unchanged.
         let eng = CedarEngine::from_str_policies("fixture", FIXTURE).unwrap();
-        assert!(eng
-            .is_allowed("alice", StatementAction::Select, "orders")
-            .unwrap());
-        assert!(!eng
-            .is_allowed("alice", StatementAction::Select, "secret_tokens")
-            .unwrap());
+        assert!(eng.is_allowed("alice", StatementAction::Select, "orders").unwrap());
+        assert!(!eng.is_allowed("alice", StatementAction::Select, "secret_tokens").unwrap());
     }
 
     /// F29 vs Local: same intent expressed two ways — Local deny-table vs Cedar attr gate.
@@ -846,35 +792,27 @@ when { resource == Table::"secret_tokens" };
         let local = LocalPdp::from_config_isolated(&local_cfg).expect("local pdp");
         let subject = Subject::from_protocol_user(Some("bob"), Some("orders"));
         let dialect = HeuristicDialectParser::mysql();
-        let cmd = GatewayCommand::Query {
-            sql: "SELECT id FROM payroll".into(),
-        };
+        let cmd = GatewayCommand::Query { sql: "SELECT id FROM payroll".into() };
         let local_dec = local.authorize_command(&subject, "orders", &cmd, &dialect);
-        assert!(
-            local_dec.is_deny(),
-            "local should deny payroll: {local_dec:?}"
-        );
+        assert!(local_dec.is_deny(), "local should deny payroll: {local_dec:?}");
 
         // Cedar attr path: bob lacks secret clearance → deny payroll (same outcome).
-        let eng = CedarEngine::from_str_policies("attrs", FIXTURE_ATTRS)
-            .unwrap()
-            .with_attr_dirs(
-                vec![SecuritySubjectAttrConfig {
-                    subject_id: "bob".into(),
-                    tenant: "acme".into(),
-                    clearance: "internal".into(),
-                    roles: vec![],
-                }],
-                vec![SecurityTableAttrConfig {
-                    table: "payroll".into(),
-                    tenant: "acme".into(),
-                    clearance: "secret".into(),
-                    classification: "pii".into(),
-                }],
-            );
+        let eng = CedarEngine::from_str_policies("attrs", FIXTURE_ATTRS).unwrap().with_attr_dirs(
+            vec![SecuritySubjectAttrConfig {
+                subject_id: "bob".into(),
+                tenant: "acme".into(),
+                clearance: "internal".into(),
+                roles: vec![],
+            }],
+            vec![SecurityTableAttrConfig {
+                table: "payroll".into(),
+                tenant: "acme".into(),
+                clearance: "secret".into(),
+                classification: "pii".into(),
+            }],
+        );
         assert!(
-            !eng.is_allowed("bob", StatementAction::Select, "payroll")
-                .unwrap(),
+            !eng.is_allowed("bob", StatementAction::Select, "payroll").unwrap(),
             "cedar attr path should deny like Local table deny"
         );
     }
@@ -882,15 +820,9 @@ when { resource == Table::"secret_tokens" };
     #[test]
     fn select_denied_on_secret() {
         let eng = CedarEngine::from_str_policies("fixture", FIXTURE).unwrap();
-        assert!(!eng
-            .is_allowed("alice", StatementAction::Select, "secret_tokens")
-            .unwrap());
+        assert!(!eng.is_allowed("alice", StatementAction::Select, "secret_tokens").unwrap());
         let err = eng
-            .authorize_tables(
-                "alice",
-                StatementAction::Select,
-                &["secret_tokens".into()],
-            )
+            .authorize_tables("alice", StatementAction::Select, &["secret_tokens".into()])
             .unwrap_err();
         assert!(err.contains("secret_tokens"), "{err}");
     }
@@ -898,19 +830,14 @@ when { resource == Table::"secret_tokens" };
     #[test]
     fn empty_tables_select_allowed() {
         let eng = CedarEngine::from_str_policies("fixture", FIXTURE).unwrap();
-        eng.authorize_tables("alice", StatementAction::Select, &[])
-            .unwrap();
+        eng.authorize_tables("alice", StatementAction::Select, &[]).unwrap();
     }
 
     #[test]
     fn insert_only_orders() {
         let eng = CedarEngine::from_str_policies("fixture", FIXTURE).unwrap();
-        assert!(eng
-            .is_allowed("bob", StatementAction::Insert, "orders")
-            .unwrap());
-        assert!(!eng
-            .is_allowed("bob", StatementAction::Insert, "employees")
-            .unwrap());
+        assert!(eng.is_allowed("bob", StatementAction::Insert, "orders").unwrap());
+        assert!(!eng.is_allowed("bob", StatementAction::Insert, "employees").unwrap());
     }
 
     #[test]
@@ -920,31 +847,19 @@ when { resource == Table::"secret_tokens" };
         let info1 = store.reload_from_str("t1", FIXTURE).unwrap();
         assert!(info1.swapped);
         assert_eq!(info1.epoch, 1);
-        assert!(!eng
-            .is_allowed("alice", StatementAction::Select, "secret_tokens")
-            .unwrap());
+        assert!(!eng.is_allowed("alice", StatementAction::Select, "secret_tokens").unwrap());
 
         // Bad policy text → keep-old
-        let err = store
-            .reload_from_str("bad", "this is not cedar {{{")
-            .unwrap_err()
-            .to_string();
-        assert!(
-            err.contains("kept previous") || err.contains("invalid"),
-            "{err}"
-        );
+        let err = store.reload_from_str("bad", "this is not cedar {{{").unwrap_err().to_string();
+        assert!(err.contains("kept previous") || err.contains("invalid"), "{err}");
         assert_eq!(store.epoch(), 1);
-        assert!(!eng
-            .is_allowed("alice", StatementAction::Select, "secret_tokens")
-            .unwrap());
+        assert!(!eng.is_allowed("alice", StatementAction::Select, "secret_tokens").unwrap());
 
         // Good more-permissive swap
         let info2 = store.reload_from_str("t2", FIXTURE_ALLOW_SECRET).unwrap();
         assert!(info2.swapped);
         assert_eq!(info2.epoch, 2);
-        assert!(eng
-            .is_allowed("alice", StatementAction::Select, "secret_tokens")
-            .unwrap());
+        assert!(eng.is_allowed("alice", StatementAction::Select, "secret_tokens").unwrap());
     }
 
     #[test]

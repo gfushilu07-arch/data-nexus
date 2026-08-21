@@ -196,9 +196,7 @@ pub fn authenticate_request(
     }
     // Authenticated but no mapped roles → forbid protected routes that need any permission.
     if ctx.roles.is_empty() && required_permission(method, path).is_some() {
-        return Err(AdminAuthError::Forbidden(
-            "no mapped admin role in token claims".into(),
-        ));
+        return Err(AdminAuthError::Forbidden("no mapped admin role in token claims".into()));
     }
     Ok(Some(ctx))
 }
@@ -224,11 +222,14 @@ fn extract_bearer(authorization: Option<&str>) -> Option<&str> {
     }
 }
 
-fn validate_token(config: &AdminAuthConfig, token: &str) -> Result<AdminAuthContext, AdminAuthError> {
+fn validate_token(
+    config: &AdminAuthConfig,
+    token: &str,
+) -> Result<AdminAuthContext, AdminAuthError> {
     match config.mode {
-        AdminAuthMode::None => Err(AdminAuthError::Misconfigured(
-            "admin auth enabled with mode=none".into(),
-        )),
+        AdminAuthMode::None => {
+            Err(AdminAuthError::Misconfigured("admin auth enabled with mode=none".into()))
+        }
         AdminAuthMode::JwtHmac => validate_with_key(
             config,
             token,
@@ -299,11 +300,7 @@ fn validate_with_key(
         .map_err(|e| AdminAuthError::Unauthorized(format!("invalid token: {e}")))?;
 
     let claims = data.claims;
-    let subject = claims
-        .get("sub")
-        .and_then(|v| v.as_str())
-        .unwrap_or("")
-        .to_owned();
+    let subject = claims.get("sub").and_then(|v| v.as_str()).unwrap_or("").to_owned();
     if subject.is_empty() {
         return Err(AdminAuthError::Unauthorized("token missing sub".into()));
     }
@@ -370,11 +367,7 @@ pub fn me_response(ctx: Option<&AdminAuthContext>, auth_enabled: bool) -> AdminM
         },
         None => AdminMeResponse {
             subject: "anonymous".into(),
-            roles: if auth_enabled {
-                vec![]
-            } else {
-                vec![AdminRole::Admin.as_str()]
-            },
+            roles: if auth_enabled { vec![] } else { vec![AdminRole::Admin.as_str()] },
             permissions: if auth_enabled {
                 vec![]
             } else {
@@ -383,11 +376,7 @@ pub fn me_response(ctx: Option<&AdminAuthContext>, auth_enabled: bool) -> AdminM
                     .map(|p| p.as_str())
                     .collect()
             },
-            auth_method: if auth_enabled {
-                "none".into()
-            } else {
-                "disabled".into()
-            },
+            auth_method: if auth_enabled { "none".into() } else { "disabled".into() },
             auth_enabled,
         },
     }
@@ -444,13 +433,9 @@ mod tests {
             &EncodingKey::from_secret(cfg.jwt_secret.as_bytes()),
         )
         .expect("encode token");
-        let err = authenticate_request(
-            &cfg,
-            Some(&format!("Bearer {token}")),
-            "POST",
-            "/admin/reload",
-        )
-        .unwrap_err();
+        let err =
+            authenticate_request(&cfg, Some(&format!("Bearer {token}")), "POST", "/admin/reload")
+                .unwrap_err();
         assert!(matches!(err, AdminAuthError::Unauthorized(_)));
     }
 
@@ -476,13 +461,9 @@ mod tests {
             &EncodingKey::from_secret(cfg.jwt_secret.as_bytes()),
         )
         .expect("encode token");
-        let err = authenticate_request(
-            &cfg,
-            Some(&format!("Bearer {token}")),
-            "POST",
-            "/admin/reload",
-        )
-        .unwrap_err();
+        let err =
+            authenticate_request(&cfg, Some(&format!("Bearer {token}")), "POST", "/admin/reload")
+                .unwrap_err();
         assert!(matches!(err, AdminAuthError::Unauthorized(_)));
     }
 
@@ -490,24 +471,16 @@ mod tests {
     fn viewer_cannot_reload_admin_can() {
         let cfg = enabled_hmac();
         let viewer = issue_hmac_token(&cfg, "u1", &[AdminRole::Viewer], 3600).unwrap();
-        let err = authenticate_request(
-            &cfg,
-            Some(&format!("Bearer {viewer}")),
-            "POST",
-            "/admin/reload",
-        )
-        .unwrap_err();
+        let err =
+            authenticate_request(&cfg, Some(&format!("Bearer {viewer}")), "POST", "/admin/reload")
+                .unwrap_err();
         assert!(matches!(err, AdminAuthError::Forbidden(_)));
 
         let admin = issue_hmac_token(&cfg, "u2", &[AdminRole::Admin], 3600).unwrap();
-        let ctx = authenticate_request(
-            &cfg,
-            Some(&format!("Bearer {admin}")),
-            "POST",
-            "/admin/reload",
-        )
-        .unwrap()
-        .unwrap();
+        let ctx =
+            authenticate_request(&cfg, Some(&format!("Bearer {admin}")), "POST", "/admin/reload")
+                .unwrap()
+                .unwrap();
         assert_eq!(ctx.subject, "u2");
         assert!(ctx.allows(AdminPermission::ConfigReload));
     }
@@ -516,14 +489,10 @@ mod tests {
     fn viewer_can_read_listeners() {
         let cfg = enabled_hmac();
         let token = issue_hmac_token(&cfg, "reader", &[AdminRole::Viewer], 3600).unwrap();
-        let ctx = authenticate_request(
-            &cfg,
-            Some(&format!("Bearer {token}")),
-            "GET",
-            "/admin/listeners",
-        )
-        .unwrap()
-        .unwrap();
+        let ctx =
+            authenticate_request(&cfg, Some(&format!("Bearer {token}")), "GET", "/admin/listeners")
+                .unwrap()
+                .unwrap();
         assert!(ctx.allows(AdminPermission::TopologyRead));
     }
 
@@ -585,10 +554,9 @@ mod tests {
         let der = private.to_pkcs1_der().expect("pkcs1 der");
         let mut header = Header::new(Algorithm::RS256);
         header.kid = Some("kid-1".into());
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs() as i64;
+        let now =
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()
+                as i64;
         let claims = serde_json::json!({
             "sub": "oidc-user",
             "iss": "https://idp.example.com",
@@ -597,12 +565,8 @@ mod tests {
             "iat": now,
             "groups": ["data-nexus-operators"],
         });
-        let token = encode(
-            &header,
-            &claims,
-            &EncodingKey::from_rsa_der(der.as_bytes()),
-        )
-        .expect("sign");
+        let token =
+            encode(&header, &claims, &EncodingKey::from_rsa_der(der.as_bytes())).expect("sign");
 
         let cfg = AdminAuthConfig {
             enabled: true,

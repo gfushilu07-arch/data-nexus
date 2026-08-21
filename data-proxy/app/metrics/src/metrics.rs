@@ -45,40 +45,20 @@ impl MetricsManager {
         registry.register(Box::new(SQL_PROCESSED_DURATION.clone())).unwrap();
         registry.register(Box::new(SQL_UNDER_PROCESSING.clone())).unwrap();
         // A05: execute_path hit-rate + passthrough wire bytes.
-        registry
-            .register(Box::new(GATEWAY_EXECUTE_PATH_TOTAL.clone()))
-            .unwrap();
-        registry
-            .register(Box::new(GATEWAY_PASSTHROUGH_BYTES_TOTAL.clone()))
-            .unwrap();
+        registry.register(Box::new(GATEWAY_EXECUTE_PATH_TOTAL.clone())).unwrap();
+        registry.register(Box::new(GATEWAY_PASSTHROUGH_BYTES_TOTAL.clone())).unwrap();
         // O01: Secure path + audit queue/latency.
-        registry
-            .register(Box::new(GATEWAY_MASK_ROWS_TOTAL.clone()))
-            .unwrap();
-        registry
-            .register(Box::new(GATEWAY_ENCODE_WINDOWS_TOTAL.clone()))
-            .unwrap();
-        registry
-            .register(Box::new(GATEWAY_ENCODE_BYTES_TOTAL.clone()))
-            .unwrap();
+        registry.register(Box::new(GATEWAY_MASK_ROWS_TOTAL.clone())).unwrap();
+        registry.register(Box::new(GATEWAY_ENCODE_WINDOWS_TOTAL.clone())).unwrap();
+        registry.register(Box::new(GATEWAY_ENCODE_BYTES_TOTAL.clone())).unwrap();
         // A06: logical peak encode window rows (high-water gauge).
-        registry
-            .register(Box::new(GATEWAY_ENCODE_PEAK_WINDOW_ROWS.clone()))
-            .unwrap();
+        registry.register(Box::new(GATEWAY_ENCODE_PEAK_WINDOW_ROWS.clone())).unwrap();
         // A06: logical peak encode window bytes (high-water gauge; not process RSS).
-        registry
-            .register(Box::new(GATEWAY_ENCODE_PEAK_WINDOW_BYTES.clone()))
-            .unwrap();
+        registry.register(Box::new(GATEWAY_ENCODE_PEAK_WINDOW_BYTES.clone())).unwrap();
         // A10: PortalSuspended multi-Execute resume strategy (hold vs logical_skip).
-        registry
-            .register(Box::new(GATEWAY_PORTAL_RESUME_TOTAL.clone()))
-            .unwrap();
-        registry
-            .register(Box::new(GATEWAY_AUDIT_QUEUE_LEN.clone()))
-            .unwrap();
-        registry
-            .register(Box::new(GATEWAY_AUDIT_PROCESS_DURATION.clone()))
-            .unwrap();
+        registry.register(Box::new(GATEWAY_PORTAL_RESUME_TOTAL.clone())).unwrap();
+        registry.register(Box::new(GATEWAY_AUDIT_QUEUE_LEN.clone())).unwrap();
+        registry.register(Box::new(GATEWAY_AUDIT_PROCESS_DURATION.clone())).unwrap();
         install_audit_metrics_hooks();
     }
 

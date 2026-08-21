@@ -89,11 +89,20 @@ pub enum FrontendMessage {
         result_formats: Vec<i16>,
     },
     /// Extended query: Describe statement ('S') or portal ('P').
-    Describe { target: u8, name: String },
+    Describe {
+        target: u8,
+        name: String,
+    },
     /// Extended query: Execute portal.
-    Execute { portal: String, max_rows: i32 },
+    Execute {
+        portal: String,
+        max_rows: i32,
+    },
     /// Extended query: Close statement ('S') or portal ('P').
-    Close { target: u8, name: String },
+    Close {
+        target: u8,
+        name: String,
+    },
     /// Extended query: Flush (no-op for gateway; treated like empty).
     Flush,
 }
@@ -173,10 +182,7 @@ fn decode_parse_body(body: &[u8]) -> Result<FrontendMessage, ProtocolError> {
     let (statement, rest) = split_cstring(body)?;
     let (query, rest) = split_cstring(rest)?;
     if rest.len() < 2 {
-        return Err(ProtocolError::InvalidLength {
-            expected: Some(2),
-            actual: rest.len(),
-        });
+        return Err(ProtocolError::InvalidLength { expected: Some(2), actual: rest.len() });
     }
     let nparams = BigEndian::read_i16(&rest[0..2]) as usize;
     let mut offset = 2;
@@ -192,26 +198,16 @@ fn decode_parse_body(body: &[u8]) -> Result<FrontendMessage, ProtocolError> {
         offset += 4;
     }
     if offset != rest.len() {
-        return Err(ProtocolError::InvalidLength {
-            expected: Some(offset),
-            actual: rest.len(),
-        });
+        return Err(ProtocolError::InvalidLength { expected: Some(offset), actual: rest.len() });
     }
-    Ok(FrontendMessage::Parse {
-        statement,
-        query,
-        param_types,
-    })
+    Ok(FrontendMessage::Parse { statement, query, param_types })
 }
 
 fn decode_bind_body(body: &[u8]) -> Result<FrontendMessage, ProtocolError> {
     let (portal, rest) = split_cstring(body)?;
     let (statement, rest) = split_cstring(rest)?;
     if rest.len() < 2 {
-        return Err(ProtocolError::InvalidLength {
-            expected: Some(2),
-            actual: rest.len(),
-        });
+        return Err(ProtocolError::InvalidLength { expected: Some(2), actual: rest.len() });
     }
     let nformats = BigEndian::read_i16(&rest[0..2]) as usize;
     let mut offset = 2;
@@ -313,17 +309,9 @@ fn decode_bind_body(body: &[u8]) -> Result<FrontendMessage, ProtocolError> {
         offset += 2;
     }
     if offset != rest.len() {
-        return Err(ProtocolError::InvalidLength {
-            expected: Some(offset),
-            actual: rest.len(),
-        });
+        return Err(ProtocolError::InvalidLength { expected: Some(offset), actual: rest.len() });
     }
-    Ok(FrontendMessage::Bind {
-        portal,
-        statement,
-        parameters,
-        result_formats,
-    })
+    Ok(FrontendMessage::Bind { portal, statement, parameters, result_formats })
 }
 
 /// A10: turn common binary Bind values into text for QueryParams IR.
@@ -352,18 +340,12 @@ fn decode_describe_or_close_body(
     is_describe: bool,
 ) -> Result<FrontendMessage, ProtocolError> {
     if body.is_empty() {
-        return Err(ProtocolError::InvalidLength {
-            expected: Some(1),
-            actual: 0,
-        });
+        return Err(ProtocolError::InvalidLength { expected: Some(1), actual: 0 });
     }
     let target = body[0];
     let (name, rest) = split_cstring(&body[1..])?;
     if !rest.is_empty() {
-        return Err(ProtocolError::InvalidLength {
-            expected: Some(0),
-            actual: rest.len(),
-        });
+        return Err(ProtocolError::InvalidLength { expected: Some(0), actual: rest.len() });
     }
     if is_describe {
         Ok(FrontendMessage::Describe { target, name })
@@ -375,20 +357,14 @@ fn decode_describe_or_close_body(
 fn decode_execute_body(body: &[u8]) -> Result<FrontendMessage, ProtocolError> {
     let (portal, rest) = split_cstring(body)?;
     if rest.len() != 4 {
-        return Err(ProtocolError::InvalidLength {
-            expected: Some(4),
-            actual: rest.len(),
-        });
+        return Err(ProtocolError::InvalidLength { expected: Some(4), actual: rest.len() });
     }
     let max_rows = BigEndian::read_i32(rest);
     Ok(FrontendMessage::Execute { portal, max_rows })
 }
 
 fn split_cstring(input: &[u8]) -> Result<(String, &[u8]), ProtocolError> {
-    let nul = input
-        .iter()
-        .position(|&b| b == 0)
-        .ok_or(ProtocolError::MalformedCString)?;
+    let nul = input.iter().position(|&b| b == 0).ok_or(ProtocolError::MalformedCString)?;
     let s = std::str::from_utf8(&input[..nul])
         .map_err(|e| ProtocolError::InvalidUtf8(e.to_string()))?
         .to_string();

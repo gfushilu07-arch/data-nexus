@@ -24,9 +24,9 @@ use std::str::FromStr;
 
 use ::server::server::{start_gateway_server, GatewayFactory};
 use tokio::runtime::{Builder, Runtime};
-use tracing::{error, info, log::debug};
 #[cfg(not(feature = "otel"))]
 use tracing::Level;
+use tracing::{error, info, log::debug};
 #[cfg(not(feature = "otel"))]
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 

@@ -53,23 +53,19 @@ pub fn decoding_key_for(
     cache_ttl: Duration,
 ) -> Result<DecodingKey, AdminAuthError> {
     let entry = get_or_fetch(jwks_url, cache_ttl)?;
-    let (n, e) = if let Some(kid) = kid {
-        entry
-            .keys
-            .get(kid)
-            .cloned()
-            .or_else(|| entry.default.clone())
-            .ok_or_else(|| {
+    let (n, e) =
+        if let Some(kid) = kid {
+            entry.keys.get(kid).cloned().or_else(|| entry.default.clone()).ok_or_else(|| {
                 AdminAuthError::Unauthorized(format!("no JWKS key for kid '{kid}'"))
             })?
-    } else {
-        entry.default.clone().ok_or_else(|| {
-            AdminAuthError::Unauthorized("JWKS has no usable RSA key".into())
-        })?
-    };
-    DecodingKey::from_rsa_components(&n, &e).map_err(|err| {
-        AdminAuthError::Unauthorized(format!("invalid RSA JWK components: {err}"))
-    })
+        } else {
+            entry
+                .default
+                .clone()
+                .ok_or_else(|| AdminAuthError::Unauthorized("JWKS has no usable RSA key".into()))?
+        };
+    DecodingKey::from_rsa_components(&n, &e)
+        .map_err(|err| AdminAuthError::Unauthorized(format!("invalid RSA JWK components: {err}")))
 }
 
 /// Test helper: inject RSA n/e for a fake JWKS URL without network.
@@ -146,10 +142,7 @@ fn fetch_jwks_blocking(jwks_url: &str) -> Result<JwksDocument, AdminAuthError> {
         .send()
         .map_err(|e| AdminAuthError::Unauthorized(format!("JWKS fetch failed: {e}")))?;
     if !response.status().is_success() {
-        return Err(AdminAuthError::Unauthorized(format!(
-            "JWKS fetch HTTP {}",
-            response.status()
-        )));
+        return Err(AdminAuthError::Unauthorized(format!("JWKS fetch HTTP {}", response.status())));
     }
     response
         .json::<JwksDocument>()
@@ -192,11 +185,7 @@ fn document_to_entry(doc: JwksDocument) -> CacheEntry {
             keys.insert(kid, (n, e));
         }
     }
-    CacheEntry {
-        fetched_at: Instant::now(),
-        keys,
-        default,
-    }
+    CacheEntry { fetched_at: Instant::now(), keys, default }
 }
 
 fn normalize_b64url(value: &str) -> String {
@@ -213,11 +202,7 @@ fn normalize_b64url(value: &str) -> String {
 
 impl Clone for CacheEntry {
     fn clone(&self) -> Self {
-        Self {
-            fetched_at: self.fetched_at,
-            keys: self.keys.clone(),
-            default: self.default.clone(),
-        }
+        Self { fetched_at: self.fetched_at, keys: self.keys.clone(), default: self.default.clone() }
     }
 }
 

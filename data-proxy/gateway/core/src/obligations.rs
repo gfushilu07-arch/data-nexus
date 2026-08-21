@@ -75,7 +75,11 @@ fn default_suffix_len() -> usize {
 }
 
 impl MaskSpec {
-    pub fn new(column: impl Into<String>, algorithm: MaskAlgorithm, rule: impl Into<String>) -> Self {
+    pub fn new(
+        column: impl Into<String>,
+        algorithm: MaskAlgorithm,
+        rule: impl Into<String>,
+    ) -> Self {
         Self {
             column: column.into(),
             algorithm,
@@ -86,7 +90,6 @@ impl MaskSpec {
         }
     }
 }
-
 
 /// Visible result watermark for leak tracing (F14).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -126,11 +129,7 @@ pub struct WatermarkSpec {
 
 impl WatermarkSpec {
     pub fn column_token(column: impl Into<String>, token: impl Into<String>) -> Self {
-        Self {
-            mode: WatermarkMode::Column,
-            column: column.into(),
-            token: token.into(),
-        }
+        Self { mode: WatermarkMode::Column, column: column.into(), token: token.into() }
     }
 }
 
@@ -160,11 +159,7 @@ impl Obligations {
 
     pub fn merge(&mut self, other: Obligations) {
         for m in other.column_masks {
-            if !self
-                .column_masks
-                .iter()
-                .any(|x| x.column.eq_ignore_ascii_case(&m.column))
-            {
+            if !self.column_masks.iter().any(|x| x.column.eq_ignore_ascii_case(&m.column)) {
                 self.column_masks.push(m);
             }
         }
@@ -198,11 +193,7 @@ pub fn mask_gateway_value(value: &GatewayValue, spec: &MaskSpec) -> GatewayValue
     match spec.algorithm {
         MaskAlgorithm::Nullify => GatewayValue::Null,
         MaskAlgorithm::Replace => {
-            let rep = if spec.replace_with.is_empty() {
-                "***"
-            } else {
-                spec.replace_with.as_str()
-            };
+            let rep = if spec.replace_with.is_empty() { "***" } else { spec.replace_with.as_str() };
             GatewayValue::String(rep.to_owned())
         }
         MaskAlgorithm::Hash => {
@@ -294,10 +285,7 @@ pub fn inject_row_filter(sql: &str, predicate: &str) -> Option<String> {
     if let Some(where_idx) = find_top_level_keyword(trimmed, "WHERE") {
         let after_where_kw = where_idx + 5;
         let where_body_start = after_where_kw
-            + trimmed[after_where_kw..]
-                .chars()
-                .take_while(|c| c.is_whitespace())
-                .count();
+            + trimmed[after_where_kw..].chars().take_while(|c| c.is_whitespace()).count();
         let rest = &trimmed[where_body_start..];
         let boundary = find_post_where_boundary(rest).unwrap_or(rest.len());
         let body = rest[..boundary].trim_end();
@@ -334,9 +322,8 @@ pub fn inject_row_filter(sql: &str, predicate: &str) -> Option<String> {
 }
 
 fn find_post_where_boundary(sql: &str) -> Option<usize> {
-    const KEYS: &[&str] = &[
-        "GROUP", "HAVING", "ORDER", "LIMIT", "FOR", "WINDOW", "FETCH", "OFFSET",
-    ];
+    const KEYS: &[&str] =
+        &["GROUP", "HAVING", "ORDER", "LIMIT", "FOR", "WINDOW", "FETCH", "OFFSET"];
     let mut best: Option<usize> = None;
     for key in KEYS {
         if let Some(idx) = find_top_level_keyword(sql, key) {
@@ -347,9 +334,8 @@ fn find_post_where_boundary(sql: &str) -> Option<usize> {
 }
 
 fn find_post_from_boundary(sql: &str) -> Option<usize> {
-    const KEYS: &[&str] = &[
-        "WHERE", "GROUP", "HAVING", "ORDER", "LIMIT", "FOR", "WINDOW", "FETCH", "OFFSET",
-    ];
+    const KEYS: &[&str] =
+        &["WHERE", "GROUP", "HAVING", "ORDER", "LIMIT", "FOR", "WINDOW", "FETCH", "OFFSET"];
     let mut best: Option<usize> = None;
     for key in KEYS {
         if let Some(idx) = find_top_level_keyword(sql, key) {
@@ -442,11 +428,7 @@ pub fn apply_obligations_to_response(
             }
             GatewayResponse::ResultSet { columns, rows }
         }
-        GatewayResponse::TaggedResultSet {
-            columns,
-            rows,
-            tag,
-        } => {
+        GatewayResponse::TaggedResultSet { columns, rows, tag } => {
             // Cursor FETCH responses carry a PostgreSQL command tag. Apply the
             // same result obligations as an ordinary result set, then restore
             // the tag so protocol encoding cannot bypass policy or semantics.
@@ -551,17 +533,11 @@ pub fn apply_watermark_to_resultset(
 ) {
     match wm.mode {
         WatermarkMode::Column => {
-            let name = if wm.column.trim().is_empty() {
-                "_dn_wm".to_owned()
-            } else {
-                wm.column.clone()
-            };
+            let name =
+                if wm.column.trim().is_empty() { "_dn_wm".to_owned() } else { wm.column.clone() };
             // Avoid duplicate column if re-applied.
             if !columns.iter().any(|c| c.name.eq_ignore_ascii_case(&name)) {
-                columns.push(Column {
-                    name,
-                    data_type: "varchar".into(),
-                });
+                columns.push(Column { name, data_type: "varchar".into() });
                 for row in rows.iter_mut() {
                     row.push(GatewayValue::String(wm.token.clone()));
                 }
@@ -614,10 +590,7 @@ mod tests {
     #[test]
     fn nullify_and_replace() {
         let n = MaskSpec::new("x", MaskAlgorithm::Nullify, "r");
-        assert_eq!(
-            mask_gateway_value(&GatewayValue::Integer(9), &n),
-            GatewayValue::Null
-        );
+        assert_eq!(mask_gateway_value(&GatewayValue::Integer(9), &n), GatewayValue::Null);
         let mut r = MaskSpec::new("x", MaskAlgorithm::Replace, "r");
         r.replace_with = "[redacted]".into();
         assert_eq!(
@@ -637,8 +610,8 @@ mod tests {
 
     #[test]
     fn inject_and_existing_where() {
-        let out =
-            inject_row_filter("SELECT id FROM employees WHERE active = 1", "tenant_id = 1").unwrap();
+        let out = inject_row_filter("SELECT id FROM employees WHERE active = 1", "tenant_id = 1")
+            .unwrap();
         let u = out.to_ascii_uppercase();
         assert!(u.contains("ACTIVE = 1"));
         assert!(u.contains("TENANT_ID = 1"));
@@ -648,18 +621,11 @@ mod tests {
     #[test]
     fn apply_masks_to_resultset() {
         let mut obl = Obligations::default();
-        obl.column_masks
-            .push(MaskSpec::new("salary", MaskAlgorithm::Nullify, "m"));
+        obl.column_masks.push(MaskSpec::new("salary", MaskAlgorithm::Nullify, "m"));
         let resp = GatewayResponse::ResultSet {
             columns: vec![
-                Column {
-                    name: "id".into(),
-                    data_type: "int".into(),
-                },
-                Column {
-                    name: "salary".into(),
-                    data_type: "int".into(),
-                },
+                Column { name: "id".into(), data_type: "int".into() },
+                Column { name: "salary".into(), data_type: "int".into() },
             ],
             rows: vec![vec![GatewayValue::Integer(1), GatewayValue::Integer(90000)]],
         };
@@ -676,18 +642,11 @@ mod tests {
     #[test]
     fn apply_obligations_windowed_masks_and_truncates() {
         let mut obl = Obligations::default();
-        obl.column_masks
-            .push(MaskSpec::new("salary", MaskAlgorithm::Nullify, "m"));
+        obl.column_masks.push(MaskSpec::new("salary", MaskAlgorithm::Nullify, "m"));
         obl.max_rows = Some(2);
         let columns = vec![
-            Column {
-                name: "id".into(),
-                data_type: "int".into(),
-            },
-            Column {
-                name: "salary".into(),
-                data_type: "int".into(),
-            },
+            Column { name: "id".into(), data_type: "int".into() },
+            Column { name: "salary".into(), data_type: "int".into() },
         ];
         let rows = vec![
             vec![GatewayValue::Integer(1), GatewayValue::Integer(10)],
@@ -712,10 +671,7 @@ mod tests {
         let mut obl = Obligations::default();
         obl.watermark = Some(WatermarkSpec::column_token("_dn_wm", "abc123"));
         let resp = GatewayResponse::ResultSet {
-            columns: vec![Column {
-                name: "id".into(),
-                data_type: "int".into(),
-            }],
+            columns: vec![Column { name: "id".into(), data_type: "int".into() }],
             rows: vec![vec![GatewayValue::Integer(1)]],
         };
         let out = apply_obligations_to_response(resp, &obl);
@@ -738,10 +694,7 @@ mod tests {
             token: "t9".into(),
         });
         let resp = GatewayResponse::ResultSet {
-            columns: vec![Column {
-                name: "name".into(),
-                data_type: "varchar".into(),
-            }],
+            columns: vec![Column { name: "name".into(), data_type: "varchar".into() }],
             rows: vec![vec![GatewayValue::String("alice".into())]],
         };
         let out = apply_obligations_to_response(resp, &obl);
@@ -757,8 +710,7 @@ mod tests {
     #[test]
     fn tagged_resultset_keeps_command_tag_while_applying_obligations() {
         let mut obl = Obligations::default();
-        obl.column_masks
-            .push(MaskSpec::new("secret", MaskAlgorithm::Nullify, "cursor-mask"));
+        obl.column_masks.push(MaskSpec::new("secret", MaskAlgorithm::Nullify, "cursor-mask"));
         let out = apply_obligations_to_response(
             GatewayResponse::TaggedResultSet {
                 columns: vec![

@@ -152,11 +152,7 @@ impl ClientAuth {
 
         if self.capability & CLIENT_SSL == 0 && self.tls_config.is_some() {
             // A08: prefer → plain fallback; require → hard fail (like PG ssl_mode).
-            let require = self
-                .tls_config
-                .as_ref()
-                .map(|t| t.require_tls)
-                .unwrap_or(true);
+            let require = self.tls_config.as_ref().map(|t| t.require_tls).unwrap_or(true);
             if require {
                 return Err(ProtocolError::Tls);
             }
@@ -626,21 +622,14 @@ pub async fn handshake(
             Some(Ok(HandshakeDecoderReturn::WriteSslRequest(req))) => {
                 // SSLRequest is the first 32 bytes of the handshake body (capability..reserved).
                 // Framed codec will add the 4-byte packet header.
-                let ssl_req = if req.len() >= 32 {
-                    bytes::BytesMut::from(&req[..32])
-                } else {
-                    req.clone()
-                };
+                let ssl_req =
+                    if req.len() >= 32 { bytes::BytesMut::from(&req[..32]) } else { req.clone() };
                 framed.send(ssl_req).await?;
 
                 let mut parts = framed.into_parts();
 
                 // Create tls connection (A08: use connector + SNI from tls_opts).
-                let opts = parts
-                    .codec
-                    .tls_config
-                    .clone()
-                    .ok_or(ProtocolError::Tls)?;
+                let opts = parts.codec.tls_config.clone().ok_or(ProtocolError::Tls)?;
                 let connector = opts.build_connector()?;
                 parts.io.make_tls(connector, &opts.server_name).await?;
                 framed = Framed::new(parts.io, parts.codec);
@@ -774,7 +763,7 @@ mod test {
         data.extend_from_slice(&7u32.to_le_bytes()); // connection id
         data.extend_from_slice(&[1, 2, 3, 4, 5, 6, 7, 8]); // auth-plugin-data-part-1
         data.extend_from_slice(&[0]); // filler
-        // lower capability: PROTOCOL_41 only (no CLIENT_SSL)
+                                      // lower capability: PROTOCOL_41 only (no CLIENT_SSL)
         data.extend_from_slice(&(CLIENT_PROTOCOL_41 as u16).to_le_bytes());
         data
     }
@@ -790,10 +779,7 @@ mod test {
         });
         let mut data = minimal_handshake_no_ssl();
         let out = auth.read_initial_handshake(&mut data).expect("prefer ok");
-        assert!(
-            out.tls_config.is_none(),
-            "prefer must clear tls_config and continue plain"
-        );
+        assert!(out.tls_config.is_none(), "prefer must clear tls_config and continue plain");
     }
 
     #[test]
@@ -806,13 +792,8 @@ mod test {
             require_tls: true,
         });
         let mut data = minimal_handshake_no_ssl();
-        let err = auth
-            .read_initial_handshake(&mut data)
-            .expect_err("require must fail");
-        assert!(
-            matches!(err, ProtocolError::Tls),
-            "expected ProtocolError::Tls, got {err:?}"
-        );
+        let err = auth.read_initial_handshake(&mut data).expect_err("require must fail");
+        assert!(matches!(err, ProtocolError::Tls), "expected ProtocolError::Tls, got {err:?}");
     }
 
     async fn test_handshake_resp(codec: ClientAuth) -> bool {
