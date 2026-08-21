@@ -1,0 +1,154 @@
+{
+  "schema_version": 1,
+  "matrix_id": "SQLT-4B3",
+  "policy": "security_off",
+  "expected_cases": 13,
+  "expected_paths": 26,
+  "expected_success_paths": 16,
+  "expected_reject_paths": 10,
+  "directions": {
+    "mysql_binary_to_postgres": {
+      "frontend": "mysql_binary",
+      "frontend_dialect": "mysql",
+      "backend": "postgres",
+      "backend_dialect": "postgres",
+      "protocol": "mysql_binary",
+      "backend_control_protocol": "pg_extended",
+      "backend_control_port": 25432,
+      "listener": "sqlt-mysql-to-postgres-boundary",
+      "port": 29112,
+      "state_query": "fixtures/postgres/oracle-cross-boundary-state.sql"
+    },
+    "pg_extended_to_mysql": {
+      "frontend": "pg_extended",
+      "frontend_dialect": "postgres",
+      "backend": "mysql",
+      "backend_dialect": "mysql",
+      "protocol": "pg_extended",
+      "backend_control_protocol": "mysql_binary",
+      "backend_control_port": 23306,
+      "listener": "sqlt-postgres-to-mysql-boundary",
+      "port": 29113,
+      "state_query": "fixtures/mysql/oracle-cross-boundary-state.sql"
+    }
+  },
+  "cases": [
+    {
+      "id": "SQLT-XBND-001",
+      "name": "zero_parameter_lifecycle",
+      "outcome": "success",
+      "sql": {
+        "mysql_binary_to_postgres": "cross-boundary/mysql-001-zero-parameter-lifecycle.sql",
+        "pg_extended_to_mysql": "cross-boundary/postgres-001-zero-parameter-lifecycle.sql"
+      }
+    },
+    {
+      "id": "SQLT-XBND-002",
+      "name": "single_parameter_select",
+      "outcome": "success",
+      "sql": {
+        "mysql_binary_to_postgres": "cross-boundary/mysql-002-single-parameter-select.sql",
+        "pg_extended_to_mysql": "cross-boundary/postgres-002-single-parameter-select.sql"
+      }
+    },
+    {
+      "id": "SQLT-XBND-003",
+      "name": "typed_parameter_roundtrip",
+      "outcome": "success",
+      "sql": {
+        "mysql_binary_to_postgres": "cross-boundary/mysql-003-typed-parameter-roundtrip.sql",
+        "pg_extended_to_mysql": "cross-boundary/postgres-003-typed-parameter-roundtrip.sql"
+      }
+    },
+    {
+      "id": "SQLT-XBND-004",
+      "name": "repeated_placeholder_reorder",
+      "outcome": "success",
+      "sql": {
+        "mysql_binary_to_postgres": "cross-boundary/mysql-004-repeated-placeholder-reorder.sql",
+        "pg_extended_to_mysql": "cross-boundary/postgres-004-repeated-placeholder-reorder.sql"
+      }
+    },
+    {
+      "id": "SQLT-XBND-005",
+      "name": "repeat_execute_rebind",
+      "outcome": "success",
+      "sql": {
+        "mysql_binary_to_postgres": "cross-boundary/mysql-005-repeat-execute-rebind.sql",
+        "pg_extended_to_mysql": "cross-boundary/postgres-005-repeat-execute-rebind.sql"
+      }
+    },
+    {
+      "id": "SQLT-XBND-006",
+      "name": "close_recreate_statement",
+      "outcome": "success",
+      "sql": {
+        "mysql_binary_to_postgres": "cross-boundary/mysql-006-close-recreate-statement.sql",
+        "pg_extended_to_mysql": "cross-boundary/postgres-006-close-recreate-statement.sql"
+      }
+    },
+    {
+      "id": "SQLT-XBND-007",
+      "name": "catalog_describe_binary",
+      "outcome": "success",
+      "sql": {
+        "mysql_binary_to_postgres": "cross-boundary/mysql-007-catalog-describe-binary.sql",
+        "pg_extended_to_mysql": "cross-boundary/postgres-007-catalog-describe-binary.sql"
+      }
+    },
+    {
+      "id": "SQLT-XBND-008",
+      "name": "transactional_param_dml",
+      "outcome": "success",
+      "sql": {
+        "mysql_binary_to_postgres": "cross-boundary/mysql-008-transactional-param-dml.sql",
+        "pg_extended_to_mysql": "cross-boundary/postgres-008-transactional-param-dml.sql"
+      }
+    },
+    {
+      "id": "SQLT-XBND-009",
+      "name": "prepared_ddl_reject",
+      "outcome": "reject",
+      "sql": {
+        "mysql_binary_to_postgres": "cross-boundary/mysql-009-prepared-ddl-reject.sql",
+        "pg_extended_to_mysql": "cross-boundary/postgres-009-prepared-ddl-reject.sql"
+      }
+    },
+    {
+      "id": "SQLT-XBND-010",
+      "name": "vendor_construct_reject",
+      "outcome": "reject",
+      "sql": {
+        "mysql_binary_to_postgres": "cross-boundary/mysql-010-vendor-construct-reject.sql",
+        "pg_extended_to_mysql": "cross-boundary/postgres-010-vendor-construct-reject.sql"
+      }
+    },
+    {
+      "id": "SQLT-XBND-011",
+      "name": "policy_statement_reject",
+      "outcome": "reject",
+      "sql": {
+        "mysql_binary_to_postgres": "cross-boundary/mysql-011-policy-statement-reject.sql",
+        "pg_extended_to_mysql": "cross-boundary/postgres-011-policy-statement-reject.sql"
+      }
+    },
+    {
+      "id": "SQLT-XBND-012",
+      "name": "parameter_boundary_reject",
+      "outcome": "reject",
+      "sql": {
+        "mysql_binary_to_postgres": "cross-boundary/mysql-012-parameter-boundary-reject.sql",
+        "pg_extended_to_mysql": "cross-boundary/postgres-012-parameter-boundary-reject.sql"
+      }
+    },
+    {
+      "id": "SQLT-XBND-013",
+      "name": "unknown_statement_reject",
+      "outcome": "reject",
+      "sql": {
+        "mysql_binary_to_postgres": "cross-boundary/mysql-013-unknown-statement-reject.sql",
+        "pg_extended_to_mysql": "cross-boundary/postgres-013-unknown-statement-reject.sql"
+      }
+    }
+  ]
+}

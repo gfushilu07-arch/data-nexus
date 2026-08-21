@@ -1,0 +1,1034 @@
+{
+  "schema_version": 1,
+  "matrix_id": "SQLT-4B3",
+  "results": {
+    "SQLT-XBND-001": {
+      "mysql_binary_to_postgres": {
+        "parameters": {},
+        "steps": [
+          {
+            "name": "select",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "1001",
+                "12.50",
+                "paid"
+              ],
+              [
+                "1002",
+                "99.99",
+                "paid"
+              ]
+            ]
+          },
+          {
+            "name": "canary",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ]
+            ]
+          }
+        ]
+      },
+      "pg_extended_to_mysql": {
+        "parameters": {},
+        "steps": [
+          {
+            "name": "select",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "1001",
+                "12.50",
+                "paid"
+              ],
+              [
+                "1002",
+                "99.99",
+                "paid"
+              ]
+            ],
+            "wire": "1 2 D D C Z"
+          },
+          {
+            "name": "canary",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ]
+            ],
+            "wire": "1 2 D C Z"
+          }
+        ]
+      },
+      "before_state": "baseline",
+      "after_state": "baseline"
+    },
+    "SQLT-XBND-002": {
+      "mysql_binary_to_postgres": {
+        "parameters": {
+          "select": [
+            101
+          ]
+        },
+        "steps": [
+          {
+            "name": "select",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "Ada"
+              ]
+            ]
+          },
+          {
+            "name": "canary",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ]
+            ]
+          }
+        ]
+      },
+      "pg_extended_to_mysql": {
+        "parameters": {
+          "select": [
+            "101"
+          ]
+        },
+        "steps": [
+          {
+            "name": "select",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "Ada"
+              ]
+            ],
+            "wire": "1 2 D C Z"
+          },
+          {
+            "name": "canary",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ]
+            ],
+            "wire": "1 2 D C Z"
+          }
+        ]
+      },
+      "before_state": "baseline",
+      "after_state": "baseline"
+    },
+    "SQLT-XBND-003": {
+      "mysql_binary_to_postgres": {
+        "parameters": {
+          "select": [
+            null,
+            7,
+            {
+              "decimal": "12.30"
+            },
+            "he'llo",
+            {
+              "datetime": "2026-08-15 10:20:30"
+            }
+          ]
+        },
+        "steps": [
+          {
+            "name": "select",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                null,
+                "7",
+                "12.30",
+                "he'llo",
+                "2026-08-15 10:20:30"
+              ]
+            ]
+          }
+        ]
+      },
+      "pg_extended_to_mysql": {
+        "parameters": {
+          "select": [
+            null,
+            "7",
+            "12.30",
+            "he'llo",
+            "2026-08-15 10:20:30"
+          ]
+        },
+        "steps": [
+          {
+            "name": "select",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                null,
+                "7",
+                "12.30",
+                "he'llo",
+                "2026-08-15 10:20:30"
+              ]
+            ],
+            "wire": "1 2 D C Z"
+          }
+        ]
+      },
+      "before_state": "baseline",
+      "after_state": "baseline"
+    },
+    "SQLT-XBND-004": {
+      "mysql_binary_to_postgres": {
+        "parameters": {
+          "select": [
+            7,
+            8,
+            7
+          ]
+        },
+        "steps": [
+          {
+            "name": "select",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "7",
+                "8",
+                "7"
+              ]
+            ]
+          }
+        ]
+      },
+      "pg_extended_to_mysql": {
+        "parameters": {
+          "select": [
+            "7",
+            "8"
+          ]
+        },
+        "steps": [
+          {
+            "name": "select",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "7",
+                "8",
+                "7"
+              ]
+            ],
+            "wire": "1 2 D C Z"
+          }
+        ]
+      },
+      "before_state": "baseline",
+      "after_state": "baseline"
+    },
+    "SQLT-XBND-005": {
+      "mysql_binary_to_postgres": {
+        "parameters": {
+          "execute_tenant_10": [
+            10
+          ],
+          "execute_tenant_20": [
+            20
+          ],
+          "execute_tenant_10_again": [
+            10
+          ]
+        },
+        "steps": [
+          {
+            "name": "execute_tenant_10",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "Ada"
+              ],
+              [
+                "Lin"
+              ]
+            ]
+          },
+          {
+            "name": "execute_tenant_20",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "Grace"
+              ],
+              [
+                "Edsger"
+              ]
+            ]
+          },
+          {
+            "name": "execute_tenant_10_again",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "Ada"
+              ],
+              [
+                "Lin"
+              ]
+            ]
+          }
+        ]
+      },
+      "pg_extended_to_mysql": {
+        "parameters": {
+          "execute_tenant_10": [
+            "10"
+          ],
+          "execute_tenant_20": [
+            "20"
+          ],
+          "execute_tenant_10_again": [
+            "10"
+          ]
+        },
+        "steps": [
+          {
+            "name": "execute_tenant_10",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "Ada"
+              ],
+              [
+                "Lin"
+              ]
+            ],
+            "wire": "1 2 D D C Z"
+          },
+          {
+            "name": "execute_tenant_20",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "Grace"
+              ],
+              [
+                "Edsger"
+              ]
+            ],
+            "wire": "2 D D C Z"
+          },
+          {
+            "name": "execute_tenant_10_again",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "Ada"
+              ],
+              [
+                "Lin"
+              ]
+            ],
+            "wire": "2 D D C Z"
+          }
+        ]
+      },
+      "before_state": "baseline",
+      "after_state": "baseline"
+    },
+    "SQLT-XBND-006": {
+      "mysql_binary_to_postgres": {
+        "parameters": {
+          "execute_paid": [
+            "paid"
+          ],
+          "execute_refunded_after_recreate": [
+            "refunded"
+          ]
+        },
+        "steps": [
+          {
+            "name": "execute_paid",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "4"
+              ]
+            ]
+          },
+          {
+            "name": "close",
+            "expected_error": false,
+            "kind": "closed"
+          },
+          {
+            "name": "execute_refunded_after_recreate",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ]
+            ]
+          }
+        ]
+      },
+      "pg_extended_to_mysql": {
+        "parameters": {
+          "execute_paid": [
+            "paid"
+          ],
+          "execute_refunded_after_recreate": [
+            "refunded"
+          ]
+        },
+        "steps": [
+          {
+            "name": "execute_paid",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "4"
+              ]
+            ],
+            "wire": "1 2 D C Z"
+          },
+          {
+            "name": "close",
+            "expected_error": false,
+            "kind": "closed",
+            "wire": "3 Z"
+          },
+          {
+            "name": "execute_refunded_after_recreate",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ]
+            ],
+            "wire": "1 2 D C Z"
+          }
+        ]
+      },
+      "before_state": "baseline",
+      "after_state": "baseline"
+    },
+    "SQLT-XBND-007": {
+      "mysql_binary_to_postgres": {
+        "parameters": {
+          "execute": [
+            4001
+          ]
+        },
+        "steps": [
+          {
+            "name": "execute",
+            "expected_error": false,
+            "kind": "rows",
+            "columns": [
+              "target_id",
+              "customer_id",
+              "tenant_id",
+              "description",
+              "amount",
+              "status"
+            ],
+            "rows": [
+              [
+                "4001",
+                "101",
+                "10",
+                "alpha",
+                "10.00",
+                "new"
+              ]
+            ]
+          }
+        ]
+      },
+      "pg_extended_to_mysql": {
+        "parameters": {
+          "execute": [
+            "4001"
+          ]
+        },
+        "steps": [
+          {
+            "name": "describe",
+            "expected_error": false,
+            "kind": "describe",
+            "columns": [
+              "target_id",
+              "customer_id",
+              "tenant_id",
+              "description",
+              "amount",
+              "status"
+            ],
+            "wire": "t T Z"
+          },
+          {
+            "name": "execute",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "4001",
+                "101",
+                "10",
+                "alpha",
+                "10.00",
+                "new"
+              ]
+            ],
+            "wire": "2 D C Z"
+          }
+        ]
+      },
+      "before_state": "baseline",
+      "after_state": "baseline"
+    },
+    "SQLT-XBND-008": {
+      "mysql_binary_to_postgres": {
+        "parameters": {
+          "insert": [
+            9410,
+            "txn committed",
+            {
+              "decimal": "66.00"
+            },
+            "new"
+          ],
+          "verify": [
+            9410
+          ],
+          "update": [
+            {
+              "decimal": "99.99"
+            },
+            9410
+          ],
+          "verify_rollback": [
+            9410
+          ]
+        },
+        "steps": [
+          {
+            "name": "begin",
+            "expected_error": false,
+            "kind": "ok",
+            "transaction_status": "T"
+          },
+          {
+            "name": "insert",
+            "expected_error": false,
+            "kind": "ok",
+            "affected_rows": 1,
+            "transaction_status": "T"
+          },
+          {
+            "name": "commit",
+            "expected_error": false,
+            "kind": "ok",
+            "transaction_status": "I"
+          },
+          {
+            "name": "verify",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "9410",
+                "txn committed",
+                "66.00",
+                "new"
+              ]
+            ],
+            "transaction_status": "I"
+          },
+          {
+            "name": "begin_rollback",
+            "expected_error": false,
+            "kind": "ok",
+            "transaction_status": "T"
+          },
+          {
+            "name": "update",
+            "expected_error": false,
+            "kind": "ok",
+            "affected_rows": 1,
+            "transaction_status": "T"
+          },
+          {
+            "name": "rollback",
+            "expected_error": false,
+            "kind": "ok",
+            "transaction_status": "I"
+          },
+          {
+            "name": "verify_rollback",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "66.00"
+              ]
+            ],
+            "transaction_status": "I"
+          }
+        ]
+      },
+      "pg_extended_to_mysql": {
+        "parameters": {
+          "insert": [
+            "9410",
+            "txn committed",
+            "66.00",
+            "new"
+          ],
+          "verify": [
+            "9410"
+          ],
+          "update": [
+            "99.99",
+            "9410"
+          ],
+          "verify_rollback": [
+            "9410"
+          ]
+        },
+        "steps": [
+          {
+            "name": "begin",
+            "expected_error": false,
+            "kind": "ok",
+            "command_tag": "BEGIN",
+            "transaction_status": "T",
+            "wire": "C Z"
+          },
+          {
+            "name": "insert",
+            "expected_error": false,
+            "kind": "ok",
+            "command_tag": "INSERT 0 1",
+            "affected_rows": 1,
+            "transaction_status": "T",
+            "wire": "1 2 C Z"
+          },
+          {
+            "name": "commit",
+            "expected_error": false,
+            "kind": "ok",
+            "command_tag": "COMMIT",
+            "transaction_status": "I",
+            "wire": "C Z"
+          },
+          {
+            "name": "verify",
+            "expected_error": false,
+            "kind": "rows",
+            "command_tag": "SELECT 1",
+            "rows": [
+              [
+                "9410",
+                "txn committed",
+                "66.00",
+                "new"
+              ]
+            ],
+            "transaction_status": "I",
+            "wire": "1 2 D C Z"
+          },
+          {
+            "name": "begin_rollback",
+            "expected_error": false,
+            "kind": "ok",
+            "command_tag": "BEGIN",
+            "transaction_status": "T",
+            "wire": "C Z"
+          },
+          {
+            "name": "update",
+            "expected_error": false,
+            "kind": "ok",
+            "command_tag": "UPDATE 1",
+            "affected_rows": 1,
+            "transaction_status": "T",
+            "wire": "1 2 C Z"
+          },
+          {
+            "name": "rollback",
+            "expected_error": false,
+            "kind": "ok",
+            "command_tag": "ROLLBACK",
+            "transaction_status": "I",
+            "wire": "C Z"
+          },
+          {
+            "name": "verify_rollback",
+            "expected_error": false,
+            "kind": "rows",
+            "command_tag": "SELECT 1",
+            "rows": [
+              [
+                "66.00"
+              ]
+            ],
+            "transaction_status": "I",
+            "wire": "1 2 D C Z"
+          }
+        ]
+      },
+      "before_state": "baseline",
+      "after_state": "mutation_9410"
+    },
+    "SQLT-XBND-009": {
+      "mysql_binary_to_postgres": {
+        "parameters": {},
+        "steps": [
+          {
+            "name": "ddl",
+            "expected_error": true,
+            "kind": "error",
+            "error_code": "1105",
+            "sqlstate": "HY000",
+            "classification": "translation_error"
+          },
+          {
+            "name": "canary",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ]
+            ]
+          }
+        ]
+      },
+      "pg_extended_to_mysql": {
+        "parameters": {},
+        "steps": [
+          {
+            "name": "ddl",
+            "expected_error": true,
+            "kind": "error",
+            "sqlstate": "XX000",
+            "classification": "translation_error",
+            "transaction_status": "I",
+            "wire": "1 2 E Z"
+          },
+          {
+            "name": "canary",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ]
+            ],
+            "wire": "1 2 D C Z"
+          }
+        ]
+      },
+      "before_state": "baseline",
+      "after_state": "baseline"
+    },
+    "SQLT-XBND-010": {
+      "mysql_binary_to_postgres": {
+        "parameters": {},
+        "steps": [
+          {
+            "name": "vendor",
+            "expected_error": true,
+            "kind": "error",
+            "error_code": "1105",
+            "sqlstate": "HY000",
+            "classification": "translation_error"
+          },
+          {
+            "name": "canary",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ]
+            ]
+          }
+        ]
+      },
+      "pg_extended_to_mysql": {
+        "parameters": {},
+        "steps": [
+          {
+            "name": "vendor",
+            "expected_error": true,
+            "kind": "error",
+            "sqlstate": "XX000",
+            "classification": "translation_error",
+            "transaction_status": "I",
+            "wire": "1 2 E Z"
+          },
+          {
+            "name": "canary",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ]
+            ],
+            "wire": "1 2 D C Z"
+          }
+        ]
+      },
+      "before_state": "baseline",
+      "after_state": "baseline"
+    },
+    "SQLT-XBND-011": {
+      "mysql_binary_to_postgres": {
+        "parameters": {},
+        "steps": [
+          {
+            "name": "call",
+            "expected_error": true,
+            "kind": "error",
+            "error_code": "1105",
+            "sqlstate": "HY000",
+            "classification": "translation_error"
+          },
+          {
+            "name": "canary",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ]
+            ]
+          }
+        ]
+      },
+      "pg_extended_to_mysql": {
+        "parameters": {},
+        "steps": [
+          {
+            "name": "call",
+            "expected_error": true,
+            "kind": "error",
+            "sqlstate": "XX000",
+            "classification": "translation_error",
+            "transaction_status": "I",
+            "wire": "1 2 E Z"
+          },
+          {
+            "name": "canary",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ]
+            ],
+            "wire": "1 2 D C Z"
+          }
+        ]
+      },
+      "before_state": "baseline",
+      "after_state": "baseline"
+    },
+    "SQLT-XBND-012": {
+      "mysql_binary_to_postgres": {
+        "parameters": {
+          "recovered": [
+            5
+          ]
+        },
+        "steps": [
+          {
+            "name": "missing_binding",
+            "expected_error": true,
+            "kind": "error",
+            "error_code": "1105",
+            "sqlstate": "HY000",
+            "classification": "gateway_error"
+          },
+          {
+            "name": "recovered",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "5"
+              ]
+            ]
+          }
+        ]
+      },
+      "pg_extended_to_mysql": {
+        "parameters": {
+          "gap": [
+            "1",
+            "2",
+            "3"
+          ],
+          "recovered": [
+            "5",
+            "6"
+          ]
+        },
+        "steps": [
+          {
+            "name": "gap",
+            "expected_error": true,
+            "kind": "error",
+            "sqlstate": "XX000",
+            "classification": "translation_error",
+            "transaction_status": "I",
+            "wire": "1 2 E Z"
+          },
+          {
+            "name": "recovered",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "5",
+                "6"
+              ]
+            ],
+            "wire": "1 2 D C Z"
+          }
+        ]
+      },
+      "before_state": "baseline",
+      "after_state": "baseline"
+    },
+    "SQLT-XBND-013": {
+      "mysql_binary_to_postgres": {
+        "parameters": {},
+        "steps": [
+          {
+            "name": "execute",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ]
+            ]
+          },
+          {
+            "name": "closed_reuse",
+            "expected_error": true,
+            "kind": "error",
+            "classification": "client_closed_statement"
+          },
+          {
+            "name": "recovered",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ]
+            ]
+          }
+        ]
+      },
+      "pg_extended_to_mysql": {
+        "parameters": {},
+        "steps": [
+          {
+            "name": "execute",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ]
+            ],
+            "wire": "1 2 D C Z"
+          },
+          {
+            "name": "closed_reuse",
+            "expected_error": true,
+            "kind": "error",
+            "sqlstate": "08P01",
+            "classification": "unknown_statement",
+            "transaction_status": "I",
+            "wire": "3 E Z"
+          },
+          {
+            "name": "recovered",
+            "expected_error": false,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ]
+            ],
+            "wire": "1 2 D C Z"
+          }
+        ]
+      },
+      "before_state": "baseline",
+      "after_state": "baseline"
+    }
+  },
+  "state_profiles": {
+    "baseline": [
+      [
+        "customers",
+        "4"
+      ],
+      [
+        "mutations",
+        "0"
+      ]
+    ],
+    "mutation_9410": [
+      [
+        "customers",
+        "4"
+      ],
+      [
+        "mutations",
+        "1"
+      ]
+    ]
+  }
+}
