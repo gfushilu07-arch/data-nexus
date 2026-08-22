@@ -383,11 +383,13 @@ impl FrontendProtocolAdapter for PostgreSqlFrontendProtocol {
                     .map(|fmts| fmts.iter().any(|f| *f == 1))
                     .unwrap_or(false);
                 session.prefer_binary_result = want_binary;
-                // If Describe('P') already sent RowDescription in this unit, suppress the
-                // header once on the upcoming encode. Consume the flag so a later Execute
-                // of a re-bound portal (without re-Describe) still emits RowDescription.
-                self.suppress_next_row_description =
-                    self.portal_row_described.remove(&portal).unwrap_or(false);
+                // SQLT-4B3: native PostgreSQL never emits RowDescription from
+                // Execute — only Describe does (verified against a direct 16.8
+                // wire: undescribed, described('S'), and paged resumes all
+                // execute without T). Consume any Describe('P') mark so a
+                // re-bound portal cannot resurrect a stale suppression pair.
+                self.portal_row_described.remove(&portal);
+                self.suppress_next_row_description = true;
                 if parameters.is_empty() {
                     Ok(vec![GatewayCommand::Query { sql }])
                 } else {
@@ -1897,7 +1899,7 @@ mod tests {
     }
 
     #[test]
-    fn a10_rebind_without_describe_p_sends_rowdescription_again() {
+    fn a10_rebind_without_describe_p_never_emits_rowdescription_at_execute() {
         // Parse → Describe(S) → Bind → Execute (no Describe P) → Sync → Bind → Execute.
         // Second Execute must emit RowDescription (not suppress forever after Describe S).
         let mut protocol = PostgreSqlFrontendProtocol::new("14.0".into());
@@ -1949,17 +1951,20 @@ mod tests {
         exec.extend_from_slice(&elen.to_be_bytes());
         exec.extend_from_slice(&ebody);
         protocol.decode(&exec, &mut session).unwrap();
-        assert!(!protocol.suppress_next_row_description);
+        // SQLT-4B3: native PostgreSQL 16.8 never emits RowDescription from
+        // Execute — only Describe does (verified on a direct wire for
+        // undescribed, described('S'), and paged-resume portals).
+        assert!(protocol.suppress_next_row_description);
 
         // Sync clears portal flags
         protocol.decode(&encode_sync_message(), &mut session).unwrap();
 
-        // Re-bind same portal
+        // Re-bind same portal: still no RowDescription at Execute.
         protocol.decode(&bind, &mut session).unwrap();
         protocol.decode(&exec, &mut session).unwrap();
         assert!(
-            !protocol.suppress_next_row_description,
-            "second Execute without Describe(P) must still send RowDescription"
+            protocol.suppress_next_row_description,
+            "Execute must never emit RowDescription (native PG parity)"
         );
     }
 

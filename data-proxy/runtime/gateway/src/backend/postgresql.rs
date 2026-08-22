@@ -22,6 +22,7 @@ use postgresql_protocol::{
     encode_command_complete, encode_data_row, encode_ready_for_query, encode_row_description,
     FieldDescription, TransactionStatus,
 };
+use tokio_postgres::types::Type as PgType;
 use tokio_postgres::{
     types::ToSql, Client, Config as PgConfig, NoTls, Row, SimpleQueryMessage, Statement,
 };
@@ -584,19 +585,48 @@ impl PostgreSqlBackendConnector {
         result
     }
 
+    /// 4B3: prepare (cached) and conform the bind to the declared param types.
+    async fn conformed_param_statement(
+        conn: &PoolConn<PostgreSqlBackendConnection>,
+        sql: &str,
+        parameters: &[GatewayValue],
+    ) -> GatewayResult<(PgParamBind, Statement)> {
+        let stmt = conn.get_or_prepare(sql).await?;
+        let mut bind = PgParamBind::from_values(parameters);
+        let text_positions = conform_pg_param_slots(&mut bind.slots, stmt.params());
+        if text_positions.is_empty() {
+            return Ok((bind, stmt));
+        }
+        let declared = stmt.params().to_vec();
+        let types: Vec<PgType> = declared
+            .iter()
+            .enumerate()
+            .map(
+                |(index, ty)| {
+                    if text_positions.contains(&index) {
+                        PgType::TEXT
+                    } else {
+                        ty.clone()
+                    }
+                },
+            )
+            .collect();
+        let typed =
+            conn.client()?.prepare_typed(sql, &types).await.map_err(postgresql_backend_error)?;
+        Ok((bind, typed))
+    }
+
     async fn execute_param_on_conn(
         conn: &PoolConn<PostgreSqlBackendConnection>,
         sql: &str,
         parameters: &[GatewayValue],
         mode: ExecuteMode,
     ) -> GatewayResult<GatewayResponse> {
-        let bind = PgParamBind::from_values(parameters);
-        let to_sql = bind.as_tosql();
-
         // A10: prepare-once cache on this connection; retry once if cache is stale.
         let mut retried = false;
         loop {
-            let stmt = conn.get_or_prepare(sql).await?;
+            let (bind, stmt) = Self::conformed_param_statement(conn, sql, parameters).await?;
+            let to_sql = bind.as_tosql();
             match conn.client()?.query(&stmt, to_sql.as_slice()).await {
                 Ok(rows) => return rows_to_gateway_response(rows, mode),
                 Err(e) => {
@@ -895,10 +925,8 @@ impl PostgreSqlBackendConnector {
             self.acquire_conn(&endpoint, session).await?
         };
 
-        let bind = PgParamBind::from_values(parameters);
-
-        let stmt = match conn.get_or_prepare(sql).await {
-            Ok(s) => s,
+        let (bind, stmt) = match Self::conformed_param_statement(&conn, sql, parameters).await {
+            Ok(pair) => pair,
             Err(e) => {
                 if in_transaction {
                     self.store_lease(conn);
@@ -918,6 +946,29 @@ impl PostgreSqlBackendConnector {
         };
 
         let to_sql = bind.as_tosql();
+
+        // SQLT-4B3: PostgreSQL declares row-returning at prepare time.
+        // query_raw on a non-row statement (INSERT/UPDATE/...) silently ends
+        // with zero columns, which encodes as an invalid empty resultset —
+        // execute for affected rows instead.
+        if stmt.columns().is_empty() {
+            let n = match client.execute(&stmt, to_sql.as_slice()).await {
+                Ok(n) => n,
+                Err(e) => {
+                    if in_transaction {
+                        self.store_lease(conn);
+                    }
+                    return Err(postgresql_backend_error(e));
+                }
+            };
+            if in_transaction {
+                self.store_lease(conn);
+            }
+            return Ok(ExecuteOutcome::Complete(GatewayResponse::Ok {
+                affected_rows: n,
+                last_insert_id: None,
+            }));
+        }
 
         let raw = match client.query_raw(&stmt, to_sql.iter().copied()).await {
             Ok(s) => s,
@@ -1774,7 +1825,9 @@ fn gateway_value_to_pg_param_text(v: &GatewayValue) -> Option<String> {
 
 /// A10: typed bind set for QueryParams. ISO date/time strings become chrono values
 /// so PostgreSQL receives DATE/TIME/TIMESTAMP OIDs instead of generic text.
+#[derive(Debug)]
 enum PgParamSlot {
+    Numeric(PgNumericValue),
     Null,
     Bool(bool),
     /// Prefer i32 when it fits so INT4 prepared params serialize (tokio-postgres
@@ -1843,6 +1896,7 @@ impl PgParamBind {
                     &NULL_TEXT as &(dyn ToSql + Sync)
                 }
                 PgParamSlot::Bool(b) => b as &(dyn ToSql + Sync),
+                PgParamSlot::Numeric(v) => v as &(dyn ToSql + Sync),
                 PgParamSlot::I32(i) => i as &(dyn ToSql + Sync),
                 PgParamSlot::I64(i) => i as &(dyn ToSql + Sync),
                 PgParamSlot::F64(f) => f as &(dyn ToSql + Sync),
@@ -1853,6 +1907,291 @@ impl PgParamBind {
             })
             .collect()
     }
+}
+
+/// 4B3: conform bind slots to the prepared statement's declared parameter
+/// types. Heuristic slots (i32-preferred integers, text numerals) are retyped
+/// to the declared width; parameters whose declared type has no binary ToSql
+/// slot in this build (e.g. NUMERIC) are returned as positions that must be
+/// re-prepared with TEXT so PostgreSQL applies its assignment cast on bind.
+fn conform_pg_param_slots(slots: &mut [PgParamSlot], declared: &[PgType]) -> Vec<usize> {
+    let mut text_positions = Vec::new();
+    for (index, slot) in slots.iter_mut().enumerate() {
+        let ty = match declared.get(index) {
+            Some(ty) => ty,
+            None => break,
+        };
+        match slot {
+            PgParamSlot::I32(i) => {
+                if *ty == PgType::INT8 {
+                    *slot = PgParamSlot::I64(*i as i64);
+                }
+            }
+            PgParamSlot::I64(i) => {
+                if *ty == PgType::INT4 && *i >= i32::MIN as i64 && *i <= i32::MAX as i64 {
+                    *slot = PgParamSlot::I32(*i as i32);
+                }
+            }
+            PgParamSlot::Text(text) => {
+                if *ty == PgType::INT4 || *ty == PgType::INT8 || *ty == PgType::INT2 {
+                    if let Ok(value) = text.parse::<i64>() {
+                        *slot = if *ty == PgType::INT8
+                            || value > i32::MAX as i64
+                            || value < i32::MIN as i64
+                        {
+                            PgParamSlot::I64(value)
+                        } else {
+                            PgParamSlot::I32(value as i32)
+                        };
+                    }
+                } else if *ty == PgType::FLOAT8 {
+                    if let Ok(value) = text.parse::<f64>() {
+                        *slot = PgParamSlot::F64(value);
+                    }
+                } else if *ty == PgType::NUMERIC {
+                    // Real binary NUMERIC bind: INSERT/UPDATE targets receive no
+                    // text→numeric assignment cast, so TEXT overrides fail there.
+                    if let Some(numeric) =
+                        PgNumericValue(text.clone()).to_wire().map(|_| PgNumericValue(text.clone()))
+                    {
+                        *slot = PgParamSlot::Numeric(numeric);
+                    }
+                }
+            }
+            PgParamSlot::Timestamp(ts) => {
+                if *ty == PgType::DATE {
+                    *slot = PgParamSlot::Date(ts.date());
+                }
+            }
+            _ => {}
+        }
+        let covered = match slot {
+            PgParamSlot::Null => true,
+            PgParamSlot::Numeric(_) => *ty == PgType::NUMERIC,
+            PgParamSlot::Bool(_) => *ty == PgType::BOOL,
+            PgParamSlot::I32(_) => *ty == PgType::INT4,
+            PgParamSlot::I64(_) => *ty == PgType::INT8,
+            PgParamSlot::F64(_) => *ty == PgType::FLOAT8,
+            PgParamSlot::Date(_) => *ty == PgType::DATE,
+            PgParamSlot::Time(_) => *ty == PgType::TIME,
+            PgParamSlot::Timestamp(_) => *ty == PgType::TIMESTAMP,
+            PgParamSlot::Text(_) => matches!(
+                *ty,
+                PgType::VARCHAR | PgType::TEXT | PgType::BPCHAR | PgType::NAME | PgType::UNKNOWN
+            ),
+        };
+        if !covered {
+            // Serialize as TEXT (string literal) and let the declared type's
+            // assignment cast accept it (INSERT/UPDATE targets, NUMERIC...).
+            *slot = PgParamSlot::Text(slot.to_text_literal());
+            text_positions.push(index);
+        }
+    }
+    text_positions
+}
+
+impl PgParamSlot {
+    fn to_text_literal(&self) -> String {
+        match self {
+            PgParamSlot::Null => String::new(),
+            PgParamSlot::Bool(b) => if *b { "t" } else { "f" }.to_owned(),
+            PgParamSlot::I32(i) => i.to_string(),
+            PgParamSlot::I64(i) => i.to_string(),
+            PgParamSlot::F64(f) => f.to_string(),
+            PgParamSlot::Numeric(v) => v.0.clone(),
+            PgParamSlot::Text(t) => t.clone(),
+            PgParamSlot::Date(d) => d.to_string(),
+            PgParamSlot::Timestamp(ts) => ts.to_string(),
+            PgParamSlot::Time(t) => t.to_string(),
+        }
+    }
+}
+
+/// 4B3: decimal text bound as a real binary NUMERIC parameter.
+///
+/// PostgreSQL applies no text→numeric assignment cast on INSERT/UPDATE
+/// expressions, so numeric placeholders must serialize in PG's base-10000
+/// wire form directly.
+#[derive(Debug)]
+struct PgNumericValue(String);
+
+impl PgNumericValue {
+    /// Encode this value's canonical text form into the NUMERIC wire format:
+    /// ndigits i16, sign u16, weight i16, dscale u16, then base-10000 groups.
+    fn to_wire(&self) -> Option<Vec<u8>> {
+        let raw = self.0.trim();
+        let negative = raw.starts_with('-');
+        let unsigned = raw.trim_start_matches(['-', '+']);
+        let (int_part, frac_part) = match unsigned.split_once('.') {
+            Some((int_part, frac_part)) => (int_part, frac_part),
+            None => (unsigned, ""),
+        };
+        if int_part.is_empty() && frac_part.is_empty() {
+            return None;
+        }
+        if !int_part.bytes().all(|b| b.is_ascii_digit())
+            || !frac_part.bytes().all(|b| b.is_ascii_digit())
+        {
+            return None;
+        }
+        let dscale = frac_part.len();
+        // Pad the fraction so the decimal point lands on a group boundary,
+        // then strip leading zeros while tracking how many were removed.
+        let mut all = String::with_capacity(int_part.len() + frac_part.len() + 4);
+        all.push_str(int_part);
+        all.push_str(frac_part);
+        all.push_str(&"0".repeat((4 - frac_part.len() % 4) % 4));
+        let leading_zeros = all.len() - all.trim_start_matches('0').len();
+        let significant = &all[leading_zeros..];
+        if significant.is_empty() {
+            return Some(Vec::new()); // zero: empty digit list
+        }
+        let padded_len = significant.len() + (4 - significant.len() % 4) % 4;
+        let mut aligned = String::with_capacity(padded_len);
+        aligned.push_str(&"0".repeat(padded_len - significant.len()));
+        aligned.push_str(significant);
+        // Decimal point position from the right edge: padded fraction width.
+        let point_from_right = (4 - frac_part.len() % 4) % 4;
+        let groups: Vec<u16> = aligned
+            .as_bytes()
+            .chunks(4)
+            .map(|chunk| {
+                std::str::from_utf8(chunk)
+                    .ok()
+                    .and_then(|text| text.parse::<u16>().ok())
+                    .unwrap_or(0)
+            })
+            .collect();
+        let weight = (aligned.len() / 4) as i32 - 1 - if point_from_right > 0 { 1 } else { 0 };
+        let mut out = Vec::with_capacity(8 + groups.len() * 2);
+        out.extend_from_slice(&(groups.len() as i16).to_be_bytes());
+        out.extend_from_slice(&(if negative { 0x4000u16 } else { 0 }).to_be_bytes());
+        out.extend_from_slice(&(weight as i16).to_be_bytes());
+        out.extend_from_slice(&(dscale as u16).to_be_bytes());
+        for group in groups {
+            out.extend_from_slice(&group.to_be_bytes());
+        }
+        Some(out)
+    }
+}
+
+impl ToSql for PgNumericValue {
+    fn to_sql(
+        &self,
+        _ty: &PgType,
+        out: &mut tokio_postgres::types::private::BytesMut,
+    ) -> Result<tokio_postgres::types::IsNull, Box<dyn std::error::Error + Sync + Send>> {
+        let wire =
+            self.to_wire().ok_or_else(|| format!("malformed numeric literal {:?}", self.0))?;
+        out.extend_from_slice(&wire);
+        Ok(tokio_postgres::types::IsNull::No)
+    }
+
+    fn to_sql_checked(
+        &self,
+        ty: &PgType,
+        out: &mut tokio_postgres::types::private::BytesMut,
+    ) -> Result<tokio_postgres::types::IsNull, Box<dyn std::error::Error + Sync + Send>> {
+        if !<Self as ToSql>::accepts(ty) {
+            return Err(format!("cannot convert PgNumericValue to {ty}").into());
+        }
+        self.to_sql(ty, out)
+    }
+
+    fn accepts(ty: &PgType) -> bool {
+        *ty == PgType::NUMERIC
+    }
+}
+
+/// 4B3: raw binary NUMERIC wire value (base-10000 groups).
+struct PgNumericRaw(Vec<u8>);
+
+impl<'a> tokio_postgres::types::FromSql<'a> for PgNumericRaw {
+    fn from_sql(
+        _ty: &PgType,
+        raw: &'a [u8],
+    ) -> Result<Self, Box<dyn std::error::Error + Sync + Send>> {
+        Ok(PgNumericRaw(raw.to_vec()))
+    }
+
+    fn accepts(ty: &PgType) -> bool {
+        *ty == PgType::NUMERIC
+    }
+}
+
+/// Render PostgreSQL's base-10000 NUMERIC wire form as canonical decimal text.
+///
+/// Wire layout (all big-endian): ndigits i16, weight i16, sign u16, dscale
+/// u16, then ndigits × i16 groups. Mirrors `numeric_out`: integer groups are
+/// `0..=weight` (first group unpadded), fraction groups follow as 4-digit
+/// blocks padded/truncated to the display scale. Returns `None` for malformed
+/// buffers or non-finite values.
+fn pg_numeric_to_text(buf: &[u8]) -> Option<String> {
+    if buf.len() < 8 {
+        return None;
+    }
+    let be16 = |offset: usize| -> Option<u16> {
+        buf.get(offset..offset + 2).map(|b| u16::from_be_bytes([b[0], b[1]]))
+    };
+    let ndigits = be16(0)? as usize;
+    let weight = i16::from_be_bytes([buf[4], buf[5]]) as i32;
+    let sign = be16(2)?;
+    let scale = be16(6)? as usize;
+    if buf.len() < 8 + ndigits * 2 {
+        return None;
+    }
+    if sign == 0x4000 {
+        // negative finite
+    } else if sign != 0x0000 {
+        return None; // NaN / Infinity are not decimal text
+    }
+    let negative = sign == 0x4000;
+    let mut digits: Vec<u16> = Vec::with_capacity(ndigits);
+    for index in 0..ndigits {
+        digits.push(be16(8 + index * 2)?);
+    }
+    if digits.is_empty() {
+        let mut text = String::from("0");
+        if scale > 0 {
+            text.push('.');
+            text.push_str(&"0".repeat(scale));
+        }
+        return Some(text);
+    }
+    let mut int_part = String::new();
+    let int_groups = if weight >= 0 { (weight + 1) as usize } else { 0 };
+    for index in 0..int_groups {
+        if index < digits.len() {
+            let group = digits[index];
+            if index == 0 {
+                int_part.push_str(&group.to_string());
+            } else {
+                int_part.push_str(&format!("{group:04}"));
+            }
+        } else {
+            int_part.push_str("0000");
+        }
+    }
+    if int_part.is_empty() {
+        int_part.push('0');
+    }
+    let mut frac_part = String::new();
+    for group in digits.iter().skip(int_groups) {
+        frac_part.push_str(&format!("{group:04}"));
+    }
+    while frac_part.len() < scale {
+        frac_part.push('0');
+    }
+    frac_part.truncate(scale);
+    let mut text = int_part;
+    if scale > 0 {
+        text.push('.');
+        text.push_str(&frac_part);
+    }
+    if negative {
+        text.insert(0, '-');
+    }
+    Some(text)
 }
 
 fn classify_pg_string_param(s: &str) -> PgParamSlot {
@@ -1996,6 +2335,23 @@ fn typed_row_to_gateway_values(row: &Row) -> GatewayResult<Vec<GatewayValue>> {
             "float8" => match row.try_get::<_, Option<f64>>(i) {
                 Ok(None) => GatewayValue::Null,
                 Ok(Some(n)) => GatewayValue::Float(n),
+                Err(e) => {
+                    return Err(GatewayError::Backend(format!(
+                        "postgresql row get col {i} ({col_type}): {e}"
+                    )))
+                }
+            },
+            // 4B3: tokio-postgres has no Rust NUMERIC mapping; decode the raw
+            // base-10000 wire form and render PG's canonical decimal text.
+            "numeric" => match row.try_get::<_, Option<PgNumericRaw>>(i) {
+                Ok(None) => GatewayValue::Null,
+                Ok(Some(raw)) => {
+                    pg_numeric_to_text(&raw.0).map(GatewayValue::String).ok_or_else(|| {
+                        GatewayError::Backend(format!(
+                            "postgresql row get col {i} ({col_type}): malformed numeric"
+                        ))
+                    })?
+                }
                 Err(e) => {
                     return Err(GatewayError::Backend(format!(
                         "postgresql row get col {i} ({col_type}): {e}"
@@ -2271,6 +2627,84 @@ mod tests {
             ssl_ca_file: None,
             ssl_accept_invalid_certs: true,
         }
+    }
+
+    #[test]
+    fn pg_param_slots_conform_to_declared_types() {
+        // 4B3: i32 heuristic vs INT8 column (sqlt_customers.customer_id) and
+        // text numerals vs INT4 must retype instead of failing to serialize.
+        let mut slots = vec![
+            PgParamSlot::I32(101),
+            PgParamSlot::Text("2026".into()),
+            PgParamSlot::Text("66.00".into()),
+        ];
+        let declared = vec![PgType::INT8, PgType::INT4, PgType::NUMERIC];
+        let text_positions = conform_pg_param_slots(&mut slots, &declared);
+        assert!(matches!(slots[0], PgParamSlot::I64(101)), "INT8 widen: {slots:?}");
+        assert!(matches!(slots[1], PgParamSlot::I32(2026)), "INT4 parse: {slots:?}");
+        assert!(
+            matches!(&slots[2], PgParamSlot::Numeric(v) if v.0 == "66.00"),
+            "NUMERIC binds as binary numeric: {slots:?}"
+        );
+        assert!(text_positions.is_empty(), "no TEXT override needed");
+    }
+
+    #[test]
+    fn pg_param_slots_narrow_i64_to_int4_and_date_from_timestamp() {
+        let mut slots = vec![
+            PgParamSlot::I64(7),
+            PgParamSlot::Timestamp(NaiveDateTime::from_timestamp_opt(1_800_000_000, 0).unwrap()),
+        ];
+        let declared = vec![PgType::INT4, PgType::DATE];
+        let text_positions = conform_pg_param_slots(&mut slots, &declared);
+        assert!(matches!(slots[0], PgParamSlot::I32(7)));
+        assert!(matches!(slots[1], PgParamSlot::Date(_)));
+        assert!(text_positions.is_empty());
+    }
+
+    #[test]
+    fn pg_numeric_value_encodes_wire_form_roundtrip() {
+        fn roundtrip(literal: &str) -> String {
+            let value = PgNumericValue(literal.to_owned());
+            let wire = value.to_wire().unwrap_or_else(|| panic!("{literal} encodable"));
+            pg_numeric_to_text(&wire).unwrap_or_else(|| panic!("{literal} renderable"))
+        }
+
+        assert_eq!(roundtrip("66.00"), "66.00");
+        assert_eq!(roundtrip("10.00"), "10.00");
+        assert_eq!(roundtrip("12345.67"), "12345.67");
+        assert_eq!(roundtrip("0.01"), "0.01");
+        assert_eq!(roundtrip("-5"), "-5");
+        assert_eq!(roundtrip("700000000"), "700000000");
+        assert_eq!(roundtrip("9410"), "9410");
+        assert_eq!(roundtrip("99.99"), "99.99");
+        assert!(PgNumericValue("abc".into()).to_wire().is_none());
+    }
+
+    #[test]
+    fn pg_numeric_wire_renders_canonical_decimal_text() {
+        fn render(digits: &[i16], weight: i16, negative: bool, scale: u16) -> String {
+            let mut buf = Vec::new();
+            buf.extend_from_slice(&(digits.len() as i16).to_be_bytes());
+            buf.extend_from_slice(&(if negative { 0x4000u16 } else { 0x0000u16 }).to_be_bytes());
+            buf.extend_from_slice(&weight.to_be_bytes());
+            buf.extend_from_slice(&scale.to_be_bytes());
+            for group in digits {
+                buf.extend_from_slice(&group.to_be_bytes());
+            }
+            pg_numeric_to_text(&buf).expect("renderable numeric")
+        }
+
+        assert_eq!(render(&[10, 0], 0, false, 2), "10.00");
+        assert_eq!(render(&[66, 0], 0, false, 2), "66.00");
+        assert_eq!(render(&[1, 2345, 6700], 1, false, 2), "12345.67");
+        assert_eq!(render(&[100], -1, false, 2), "0.01");
+        assert_eq!(render(&[2500], -1, false, 2), "0.25");
+        assert_eq!(render(&[9, 9999, 9999, 9900], 3, false, 2), "9999999999900.00");
+        assert_eq!(render(&[7], 2, false, 0), "700000000");
+        assert_eq!(render(&[5], 0, true, 0), "-5");
+        assert_eq!(render(&[], 0, false, 3), "0.000");
+        assert_eq!(render(&[1230], 0, false, 4), "1230.0000");
     }
 
     #[test]

@@ -490,7 +490,9 @@ impl CoreGatewayConnection {
                 }
             }
 
-            // Cross-protocol: validate subset, rewrite SQL, reject prepared stmts.
+            // Cross-protocol (A4/SQLT-4B3): validate the allowed subset and rewrite
+            // SQL/params for the backend dialect; validated Prepare/Execute/Close/
+            // DescribeSql pass through with rewritten placeholders.
             if let Some(policy) = &self.translation_policy {
                 match prepare_cross_protocol_command(
                     policy,
@@ -499,6 +501,17 @@ impl CoreGatewayConnection {
                 ) {
                     Ok(translated) => command = translated,
                     Err(error) => {
+                        // 4B3: translation reject inside a PG extended unit must
+                        // obey the Sync boundary (ignore until Sync, then exact
+                        // ReadyForQuery I/T/E), same as the wire reject paths.
+                        if self.frontend.protocol() == ProtocolKind::PostgreSql
+                            && self.session.pg_extended_query
+                        {
+                            self.session.pg_extended_error = true;
+                            if self.session.transaction_state == TransactionState::Active {
+                                self.session.transaction_state = TransactionState::Failed;
+                            }
+                        }
                         let response = GatewayResponse::Error {
                             code: "translation_error".into(),
                             message: error.to_string(),
@@ -1207,9 +1220,16 @@ impl CoreGatewayConnection {
 
             if matches!(response, GatewayResponse::Error { .. })
                 && self.frontend.protocol() == ProtocolKind::PostgreSql
-                && self.session.transaction_state == TransactionState::Active
             {
-                self.session.transaction_state = TransactionState::Failed;
+                // 4B3: a logical error inside a PG extended unit (cross-protocol
+                // backends never relay raw wire errors) must ignore the rest of
+                // the unit until Sync, mirroring direct backend behavior.
+                if self.session.pg_extended_query {
+                    self.session.pg_extended_error = true;
+                }
+                if self.session.transaction_state == TransactionState::Active {
+                    self.session.transaction_state = TransactionState::Failed;
+                }
             }
 
             let wire_bytes = match &response {
@@ -2572,10 +2592,15 @@ mod tests {
         GatewayValue,
     };
     use mysql_protocol::{
-        mysql_const::{COM_INIT_DB, COM_PING, COM_QUERY, COM_QUIT},
+        mysql_const::{
+            COM_INIT_DB, COM_PING, COM_QUERY, COM_QUIT, COM_STMT_CLOSE, COM_STMT_EXECUTE,
+            COM_STMT_PREPARE,
+        },
         server::codec::ok_packet,
     };
-    use postgresql_protocol::{encode_query_message, encode_sync_message};
+    use postgresql_protocol::{
+        encode_bind_complete, encode_parse_complete, encode_query_message, encode_sync_message,
+    };
 
     use super::*;
 
@@ -2928,7 +2953,10 @@ mod tests {
 
         let packets = connection.handle_frame(&begin).await;
 
-        assert_eq!(packets, Ok(vec![ok_packet()[4..].to_vec()]));
+        // SQLT-4B2: OK after BEGIN carries SERVER_STATUS_IN_TRANS (0x0001) in
+        // addition to autocommit (0x0002) — status flags 3, not the static
+        // idle ok_packet() (flags 2).
+        assert_eq!(packets, Ok(vec![vec![0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00]]));
         assert_eq!(connection.session().transaction_state, gateway_core::TransactionState::Active);
     }
 
@@ -3376,6 +3404,392 @@ mod tests {
         frame.extend_from_slice(b"DROP TABLE users");
         let packets = connection.handle_frame(&frame).await.unwrap();
         assert_eq!(packets[0].first(), Some(&0xff));
+    }
+
+    /// SQLT-4B3: backend stub that consumes an ordered command script.
+    ///
+    /// Each frontend step must match the next (expected, response) pair exactly;
+    /// any unexpected backend execute panics, which is how reject tests prove
+    /// `backend_execute_count = 0`.
+    struct ScriptedBackendConnector {
+        protocol: ProtocolKind,
+        steps: std::sync::Mutex<Vec<(GatewayCommand, GatewayResponse)>>,
+    }
+
+    impl ScriptedBackendConnector {
+        fn new(protocol: ProtocolKind, steps: Vec<(GatewayCommand, GatewayResponse)>) -> Arc<Self> {
+            Arc::new(Self { protocol, steps: std::sync::Mutex::new(steps) })
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl BackendConnector for ScriptedBackendConnector {
+        fn protocol(&self) -> ProtocolKind {
+            self.protocol.clone()
+        }
+
+        async fn execute_with_mode(
+            &self,
+            command: GatewayCommand,
+            _session: &mut SessionState,
+            _mode: ExecuteMode,
+        ) -> GatewayResult<GatewayResponse> {
+            let mut steps = self.steps.lock().unwrap();
+            let (expected, response) = steps.remove(0);
+            assert_eq!(command, expected, "unexpected backend command order");
+            Ok(response)
+        }
+    }
+
+    fn mysql_to_pg_translation_policy() -> TranslationPolicyConfig {
+        TranslationPolicyConfig {
+            name: "mysql-to-pg".into(),
+            enabled: true,
+            frontend_protocol: ProtocolKind::MySql,
+            backend_protocol: ProtocolKind::PostgreSql,
+            allowed_statements: gateway_core::default_allowed_statements(),
+        }
+    }
+
+    fn pg_to_mysql_translation_policy() -> TranslationPolicyConfig {
+        TranslationPolicyConfig {
+            name: "pg-to-mysql".into(),
+            enabled: true,
+            frontend_protocol: ProtocolKind::PostgreSql,
+            backend_protocol: ProtocolKind::MySql,
+            allowed_statements: gateway_core::default_allowed_statements(),
+        }
+    }
+
+    fn pg_parse_frame(statement: &str, query: &str) -> Vec<u8> {
+        let mut body = Vec::new();
+        body.extend_from_slice(statement.as_bytes());
+        body.push(0);
+        body.extend_from_slice(query.as_bytes());
+        body.push(0);
+        body.extend_from_slice(&0i16.to_be_bytes());
+        let mut frame = vec![b'P'];
+        frame.extend_from_slice(&((body.len() + 4) as i32).to_be_bytes());
+        frame.extend_from_slice(&body);
+        frame
+    }
+
+    fn pg_bind_frame(portal: &str, statement: &str, params: &[&str]) -> Vec<u8> {
+        let mut body = Vec::new();
+        body.extend_from_slice(portal.as_bytes());
+        body.push(0);
+        body.extend_from_slice(statement.as_bytes());
+        body.push(0);
+        body.extend_from_slice(&0i16.to_be_bytes());
+        body.extend_from_slice(&(params.len() as i16).to_be_bytes());
+        for param in params {
+            body.extend_from_slice(&(param.len() as i32).to_be_bytes());
+            body.extend_from_slice(param.as_bytes());
+        }
+        body.extend_from_slice(&0i16.to_be_bytes());
+        let mut frame = vec![b'B'];
+        frame.extend_from_slice(&((body.len() + 4) as i32).to_be_bytes());
+        frame.extend_from_slice(&body);
+        frame
+    }
+
+    fn pg_execute_frame(portal: &str, max_rows: i32) -> Vec<u8> {
+        let mut body = Vec::new();
+        body.extend_from_slice(portal.as_bytes());
+        body.push(0);
+        body.extend_from_slice(&max_rows.to_be_bytes());
+        let mut frame = vec![b'E'];
+        frame.extend_from_slice(&((body.len() + 4) as i32).to_be_bytes());
+        frame.extend_from_slice(&body);
+        frame
+    }
+
+    fn pg_describe_frame(target: u8, name: &str) -> Vec<u8> {
+        let mut body = vec![target];
+        body.extend_from_slice(name.as_bytes());
+        body.push(0);
+        let mut frame = vec![b'D'];
+        frame.extend_from_slice(&((body.len() + 4) as i32).to_be_bytes());
+        frame.extend_from_slice(&body);
+        frame
+    }
+
+    fn pg_ready_frame(status: u8) -> Vec<u8> {
+        vec![b'Z', 0, 0, 0, 5, status]
+    }
+
+    #[tokio::test]
+    async fn cross_protocol_mysql_prepare_rewrites_placeholders_for_pg_backend() {
+        let mut connection = CoreGatewayConnection::new(
+            Box::new(MySqlFrontendProtocol::new(
+                "app".into(),
+                "secret".into(),
+                "test".into(),
+                "8.0.36".into(),
+            )),
+            Arc::new(StaticBackendConnector {
+                protocol: ProtocolKind::PostgreSql,
+                expected_command: GatewayCommand::Prepare {
+                    sql: "SELECT id FROM t WHERE a = $1 AND b > $2".into(),
+                },
+                response: GatewayResponse::Prepared {
+                    statement_id: "7".into(),
+                    parameter_count: 2,
+                    columns: Vec::new(),
+                },
+            }),
+            SessionState::default(),
+        );
+        connection.translation_policy = Some(mysql_to_pg_translation_policy());
+
+        let mut frame = vec![COM_STMT_PREPARE];
+        frame.extend_from_slice(b"SELECT id FROM t WHERE a = ? AND b > ?");
+        let packets = connection.handle_frame(&frame).await.unwrap();
+        assert_eq!(packets[0].first(), Some(&0x00), "expected COM_STMT_PREPARE_OK");
+        let statement_id =
+            u32::from_le_bytes([packets[0][1], packets[0][2], packets[0][3], packets[0][4]]);
+        assert_eq!(statement_id, 7);
+    }
+
+    #[tokio::test]
+    async fn cross_protocol_mysql_stmt_execute_binds_registry_id_and_params() {
+        let mut connection = CoreGatewayConnection::new(
+            Box::new(MySqlFrontendProtocol::new(
+                "app".into(),
+                "secret".into(),
+                "test".into(),
+                "8.0.36".into(),
+            )),
+            Arc::new(StaticBackendConnector {
+                protocol: ProtocolKind::PostgreSql,
+                expected_command: GatewayCommand::Execute {
+                    statement_id: "7".into(),
+                    parameters: vec![GatewayValue::Integer(42), GatewayValue::String("x".into())],
+                },
+                response: GatewayResponse::ResultSet {
+                    columns: vec![GatewayColumn { name: "a".into(), data_type: "int4".into() }],
+                    rows: vec![vec![GatewayValue::Integer(42)]],
+                },
+            }),
+            SessionState::default(),
+        );
+        connection.translation_policy = Some(mysql_to_pg_translation_policy());
+
+        let mut frame = vec![COM_STMT_EXECUTE];
+        frame.extend_from_slice(&7u32.to_le_bytes());
+        frame.push(0);
+        frame.extend_from_slice(&1i32.to_le_bytes());
+        frame.push(0); // null bitmap: no NULL params
+        frame.push(1); // new_params_bound_flag
+        frame.extend_from_slice(&[0x08, 0x00]); // MYSQL_TYPE_LONGLONG
+        frame.extend_from_slice(&[0xFE, 0x00]); // MYSQL_TYPE_STRING
+        frame.extend_from_slice(&42i64.to_le_bytes());
+        frame.extend_from_slice(&[1, b'x']); // length-encoded "x"
+        let packets = connection.handle_frame(&frame).await.unwrap();
+        assert_ne!(packets[0].first(), Some(&0xff), "expected binary resultset");
+    }
+
+    #[tokio::test]
+    async fn cross_protocol_mysql_stmt_close_forwards_registry_id() {
+        let mut connection = CoreGatewayConnection::new(
+            Box::new(MySqlFrontendProtocol::new(
+                "app".into(),
+                "secret".into(),
+                "test".into(),
+                "8.0.36".into(),
+            )),
+            Arc::new(StaticBackendConnector {
+                protocol: ProtocolKind::PostgreSql,
+                expected_command: GatewayCommand::CloseStatement { statement_id: "7".into() },
+                response: GatewayResponse::Ok { affected_rows: 0, last_insert_id: None },
+            }),
+            SessionState::default(),
+        );
+        connection.translation_policy = Some(mysql_to_pg_translation_policy());
+
+        let mut frame = vec![COM_STMT_CLOSE];
+        frame.extend_from_slice(&7u32.to_le_bytes());
+        // COM_STMT_CLOSE has no client-visible response.
+        let packets = connection.handle_frame(&frame).await.unwrap();
+        assert!(packets.is_empty());
+    }
+
+    #[tokio::test]
+    async fn cross_protocol_mysql_prepare_ddl_rejected_before_backend() {
+        let mut connection = CoreGatewayConnection::new(
+            Box::new(MySqlFrontendProtocol::new(
+                "app".into(),
+                "secret".into(),
+                "test".into(),
+                "8.0.36".into(),
+            )),
+            // Empty script: any backend execute panics the test.
+            ScriptedBackendConnector::new(ProtocolKind::PostgreSql, Vec::new()),
+            SessionState::default(),
+        );
+        connection.translation_policy = Some(mysql_to_pg_translation_policy());
+
+        let mut frame = vec![COM_STMT_PREPARE];
+        frame.extend_from_slice(b"DROP TABLE users");
+        let packets = connection.handle_frame(&frame).await.unwrap();
+        assert_eq!(packets[0].first(), Some(&0xff));
+    }
+
+    #[tokio::test]
+    async fn cross_protocol_pg_extended_execute_reorders_dollar_params_for_mysql_backend() {
+        let mut connection = CoreGatewayConnection::new(
+            Box::new(PostgreSqlFrontendProtocol::new("14.0".into())),
+            ScriptedBackendConnector::new(
+                ProtocolKind::MySql,
+                vec![
+                    (
+                        GatewayCommand::ClientWire { packets: vec![encode_parse_complete()] },
+                        GatewayResponse::Wire { packets: vec![encode_parse_complete()] },
+                    ),
+                    (
+                        GatewayCommand::ClientWire { packets: vec![encode_bind_complete()] },
+                        GatewayResponse::Wire { packets: vec![encode_bind_complete()] },
+                    ),
+                    // $2, $1, $2 → ?, ?, ? with bind values reordered per occurrence.
+                    (
+                        GatewayCommand::QueryParams {
+                            sql: "SELECT ?, ?, ?".into(),
+                            parameters: vec![
+                                GatewayValue::String("B".into()),
+                                GatewayValue::String("A".into()),
+                                GatewayValue::String("B".into()),
+                            ],
+                        },
+                        GatewayResponse::ResultSet {
+                            columns: vec![
+                                GatewayColumn { name: "c1".into(), data_type: "varchar".into() },
+                                GatewayColumn { name: "c2".into(), data_type: "varchar".into() },
+                                GatewayColumn { name: "c3".into(), data_type: "varchar".into() },
+                            ],
+                            rows: vec![vec![
+                                GatewayValue::String("B".into()),
+                                GatewayValue::String("A".into()),
+                                GatewayValue::String("B".into()),
+                            ]],
+                        },
+                    ),
+                    (
+                        GatewayCommand::ClientWire { packets: vec![pg_ready_frame(b'I')] },
+                        GatewayResponse::Wire { packets: vec![pg_ready_frame(b'I')] },
+                    ),
+                ],
+            ),
+            SessionState::default(),
+        );
+        connection.translation_policy = Some(pg_to_mysql_translation_policy());
+
+        connection.handle_frame(&pg_parse_frame("s1", "SELECT $2, $1, $2")).await.unwrap();
+        connection.handle_frame(&pg_bind_frame("", "s1", &["A", "B"])).await.unwrap();
+        let executed = connection.handle_frame(&pg_execute_frame("", 0)).await.unwrap();
+        let data_row = executed
+            .iter()
+            .find(|packet| packet.first() == Some(&b'D'))
+            .expect("Execute must emit one DataRow");
+        // DataRow body: nfields(2) + per-field len(4) + bytes → B, A, B in order.
+        assert_eq!(&data_row[5..], &[0, 3, 0, 0, 0, 1, b'B', 0, 0, 0, 1, b'A', 0, 0, 0, 1, b'B']);
+
+        let synced = connection.handle_frame(&encode_sync_message()).await.unwrap();
+        assert_eq!(synced.len(), 1);
+        assert_eq!(synced[0].first(), Some(&b'Z'));
+    }
+
+    #[tokio::test]
+    async fn cross_protocol_pg_describe_catalog_prepare_rewrites_for_mysql_backend() {
+        let mut connection = CoreGatewayConnection::new(
+            Box::new(PostgreSqlFrontendProtocol::new("14.0".into())),
+            ScriptedBackendConnector::new(
+                ProtocolKind::MySql,
+                vec![
+                    (
+                        GatewayCommand::ClientWire { packets: vec![encode_parse_complete()] },
+                        GatewayResponse::Wire { packets: vec![encode_parse_complete()] },
+                    ),
+                    // Wildcard SELECT has no local column cache → catalog DescribeSql.
+                    (
+                        GatewayCommand::DescribeSql { sql: "SELECT * FROM t WHERE a = ?".into() },
+                        GatewayResponse::RowDescription {
+                            columns: vec![
+                                GatewayColumn { name: "id".into(), data_type: "int".into() },
+                                GatewayColumn { name: "name".into(), data_type: "varchar".into() },
+                            ],
+                        },
+                    ),
+                    (
+                        GatewayCommand::ClientWire { packets: vec![pg_ready_frame(b'I')] },
+                        GatewayResponse::Wire { packets: vec![pg_ready_frame(b'I')] },
+                    ),
+                ],
+            ),
+            SessionState::default(),
+        );
+        connection.translation_policy = Some(pg_to_mysql_translation_policy());
+
+        connection
+            .handle_frame(&pg_parse_frame("s1", "SELECT * FROM t WHERE a = $1"))
+            .await
+            .unwrap();
+        let described = connection.handle_frame(&pg_describe_frame(b'S', "s1")).await.unwrap();
+        assert!(
+            described.iter().any(|packet| packet.first() == Some(&b't')),
+            "Describe('S') must emit ParameterDescription"
+        );
+        assert!(
+            described.iter().any(|packet| packet.first() == Some(&b'T')),
+            "Describe('S') must emit RowDescription"
+        );
+
+        let synced = connection.handle_frame(&encode_sync_message()).await.unwrap();
+        assert_eq!(synced[0].first(), Some(&b'Z'));
+    }
+
+    #[tokio::test]
+    async fn cross_protocol_pg_extended_ddl_execute_rejected_with_sync_boundary() {
+        let ready = pg_ready_frame(b'I');
+        let mut connection = CoreGatewayConnection::new(
+            Box::new(PostgreSqlFrontendProtocol::new("14.0".into())),
+            // Script covers Parse, Bind, and final Sync only: the DDL Execute and
+            // the trailing Execute after the error must never reach the backend.
+            ScriptedBackendConnector::new(
+                ProtocolKind::MySql,
+                vec![
+                    (
+                        GatewayCommand::ClientWire { packets: vec![encode_parse_complete()] },
+                        GatewayResponse::Wire { packets: vec![encode_parse_complete()] },
+                    ),
+                    (
+                        GatewayCommand::ClientWire { packets: vec![encode_bind_complete()] },
+                        GatewayResponse::Wire { packets: vec![encode_bind_complete()] },
+                    ),
+                    (
+                        GatewayCommand::ClientWire { packets: vec![ready.clone()] },
+                        GatewayResponse::Wire { packets: vec![ready] },
+                    ),
+                ],
+            ),
+            SessionState::default(),
+        );
+        connection.translation_policy = Some(pg_to_mysql_translation_policy());
+
+        connection.handle_frame(&pg_parse_frame("s1", "DROP TABLE users")).await.unwrap();
+        connection.handle_frame(&pg_bind_frame("", "s1", &[])).await.unwrap();
+        let rejected = connection.handle_frame(&pg_execute_frame("", 0)).await.unwrap();
+        assert!(
+            rejected.iter().any(|packet| packet.first() == Some(&b'E')),
+            "DDL Execute must produce an ErrorResponse"
+        );
+
+        // Messages after the error in the same unit are ignored until Sync.
+        let ignored = connection.handle_frame(&pg_execute_frame("", 0)).await.unwrap();
+        assert!(ignored.is_empty());
+
+        let synced = connection.handle_frame(&encode_sync_message()).await.unwrap();
+        assert_eq!(synced.len(), 1);
+        assert_eq!(&synced[0][5], &b'I');
     }
 
     #[test]
