@@ -58,6 +58,10 @@ def _verify_transcript(
         if actual.get("expectation_met") is not True:
             raise MatrixError(f"{label}: {name} step {actual['name']} expectation was not met")
         for field, value in expected.items():
+            # `wire` is the pg_extended lane's phase transcript; MySQL binary
+            # transcripts have no wire tags to compare.
+            if field == "wire" and expected_protocol != "pg_extended":
+                continue
             if actual.get(field) != value:
                 raise MatrixError(
                     f"{label}: {name} step {actual['name']} {field} mismatch: "
@@ -110,7 +114,7 @@ def verify_success_path(
     )
     backend_steps = _verify_transcript(
         label, "backend control", backend_transcript, backend_protocol,
-        direction, selection["gateway_steps"],
+        selection["backend_direction"], selection["backend_steps"],
     )
     backend_after_rows = _verify_state(
         label, "backend control after", backend_after, state_protocol,

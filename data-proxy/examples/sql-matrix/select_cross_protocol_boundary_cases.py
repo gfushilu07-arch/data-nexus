@@ -208,6 +208,8 @@ def select_paths(
                 "before_state": state_profiles[oracle["before_state"]],
                 "after_state": state_profiles[oracle["after_state"]],
                 "gateway_steps": oracle[direction_name]["steps"],
+                "backend_steps": oracle[backend_direction]["steps"],
+                "backend_parameters": oracle[backend_direction].get("parameters", {}),
                 "parameters": oracle[direction_name].get("parameters", {}),
             })
 

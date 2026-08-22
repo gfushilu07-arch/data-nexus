@@ -31,8 +31,10 @@ def read_steps(path: Path) -> dict[str, str]:
 
 
 def normalize(value: Any) -> Any:
-    if value is None or isinstance(value, (bool, int, str)):
-        return value
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return "1" if value else "0"
     if isinstance(value, Decimal):
         return format(value, "f")
     if isinstance(value, dt.datetime):
@@ -40,7 +42,7 @@ def normalize(value: Any) -> Any:
     if isinstance(value, (dt.date, dt.time)):
         return value.isoformat()
     if isinstance(value, bytes):
-        return {"bytes_hex": value.hex().upper()}
+        return value.hex().upper()
     return str(value)
 
 
@@ -73,9 +75,24 @@ def base_step(name: str, expected_error: bool) -> dict[str, Any]:
     }
 
 
+def pg_command_affected(command: str) -> int | None:
+    fields = command.split()
+    if not fields:
+        return None
+    if fields[0] == "OK" and len(fields) == 2 and fields[1].isdigit():
+        return int(fields[1])
+    if fields[0] in {"UPDATE", "DELETE", "INSERT", "MERGE"} and fields[-1].isdigit():
+        return int(fields[-1])
+    if fields[0] in {"BEGIN", "COMMIT", "ROLLBACK", "SELECT", "SHOW"}:
+        return 0
+    return None
+
+
 def classify_message_error(message: str) -> str:
     lowered = message.lower()
-    if "translation policy" in lowered:
+    if "unsupported capability" in lowered:
+        return "unsupported_capability"
+    if "translation policy" in lowered or "placeholder" in lowered:
         return "translation_error"
     if "expects" in lowered and "parameters" in lowered:
         return "gateway_error"
@@ -128,25 +145,42 @@ def run_mysql(
 ) -> dict[str, Any]:
     import mysql.connector
     from mysql.connector import Error, errors
+    from mysql.connector.connection import MySQLConnection
+
+    class ScriptConnection(MySQLConnection):
+        # Cross-protocol listeners reject SET NAMES (not in the allowed
+        # statement subset), so skip the connector's post-connection queries
+        # and keep the autocommit flag local (SQLT-4B2 precedent).
+        def _post_connection(self) -> None:
+            self._autocommit = True
 
     def record(name: str, action) -> dict[str, Any]:
         expected = expectations.get(name, {})
         step = base_step(name, bool(expected.get("expected_error")))
         try:
             action(step)
+        except AttributeError as error:
+            step["kind"] = "error"
+            step["message"] = str(error)
+            step["classification"] = "client_closed_statement"
         except Error as error:
             step["kind"] = "error"
             errno = getattr(error, "errno", None)
             step["error_code"] = str(errno) if errno is not None else None
             step["sqlstate"] = getattr(error, "sqlstate", None)
             message = getattr(error, "msg", None) or str(error)
-            if errno is None and isinstance(error, errors.InterfaceError):
+            step["message"] = message
+            if isinstance(error, errors.ProgrammingError) and errno in (None, 1210):
+                step["classification"] = "client_parameter_count"
+            elif isinstance(error, (errors.InterfaceError, AttributeError)):
+                step["classification"] = "client_closed_statement"
+            elif errno is None:
                 step["classification"] = "client_closed_statement"
             else:
                 step["classification"] = classify_message_error(message)
         return step
 
-    connection = mysql.connector.connect(
+    connection = ScriptConnection(
         host=args.host,
         port=args.port,
         user=args.user,
@@ -160,14 +194,17 @@ def run_mysql(
     steps: list[dict[str, Any]] = []
     cursor = connection.cursor(prepared=True)
 
-    def prepared_execute(sql: str, params: list[Any]):
+    def prepared_execute(sql: str, params: list[Any], expect_rows: bool = False):
         def action(step: dict[str, Any]) -> None:
             cursor.execute(sql, expanded_parameters(params))
-            rows = cursor.fetchall()
-            step["columns"] = [item[0] for item in (cursor.description or [])] or None
-            if cursor.with_rows:
+            # Row shape is declared by the driver call site: prepared UPDATEs
+            # expose stale description metadata, and non-row statements must
+            # never be fetchall()-ed before rowcount is read.
+            if expect_rows:
+                rows = cursor.fetchall()
                 step["kind"] = "rows"
                 step["rows"] = [[normalize(value) for value in row] for row in rows]
+                step["columns"] = [item[0] for item in (cursor.description or ())] or None
             else:
                 step["kind"] = "ok"
                 step["affected_rows"] = max(int(cursor.rowcount), 0)
@@ -193,39 +230,39 @@ def run_mysql(
     case = args.case_id
     try:
         if case == "SQLT-XBND-001":
-            steps.append(record("select", prepared_execute(steps_sql["select"], [])))
+            steps.append(record("select", prepared_execute(steps_sql["select"], [], expect_rows=True)))
             cursor.close()
             steps.append(record("canary", text_execute(steps_sql["canary"])))
         elif case == "SQLT-XBND-002":
-            steps.append(record("select", prepared_execute(steps_sql["select"], parameters["select"])))
+            steps.append(record("select", prepared_execute(steps_sql["select"], parameters["select"], expect_rows=True)))
             cursor.close()
             steps.append(record("canary", text_execute(steps_sql["canary"])))
         elif case in {"SQLT-XBND-003", "SQLT-XBND-004"}:
-            steps.append(record("select", prepared_execute(steps_sql["select"], parameters["select"])))
+            steps.append(record("select", prepared_execute(steps_sql["select"], parameters["select"], expect_rows=True)))
         elif case == "SQLT-XBND-005":
             for name in ("execute_tenant_10", "execute_tenant_20", "execute_tenant_10_again"):
-                steps.append(record(name, prepared_execute(steps_sql["select"], parameters[name])))
+                steps.append(record(name, prepared_execute(steps_sql["select"], parameters[name], expect_rows=True)))
         elif case == "SQLT-XBND-006":
-            steps.append(record("execute_paid", prepared_execute(steps_sql["select"], parameters["execute_paid"])))
+            steps.append(record("execute_paid", prepared_execute(steps_sql["select"], parameters["execute_paid"], expect_rows=True)))
             cursor.close()
             steps.append(record("close", lambda step: step.update(kind="closed")))
             cursor = connection.cursor(prepared=True)
             steps.append(record(
                 "execute_refunded_after_recreate",
-                prepared_execute(steps_sql["select"], parameters["execute_refunded_after_recreate"]),
+                prepared_execute(steps_sql["select"], parameters["execute_refunded_after_recreate"], expect_rows=True),
             ))
         elif case == "SQLT-XBND-007":
-            steps.append(record("execute", prepared_execute(steps_sql["select"], parameters["execute"])))
+            steps.append(record("execute", prepared_execute(steps_sql["select"], parameters["execute"], expect_rows=True)))
         elif case == "SQLT-XBND-008":
             for name, action in (
                 ("begin", text_execute(steps_sql["begin"])),
                 ("insert", prepared_execute(steps_sql["insert"], parameters["insert"])),
                 ("commit", text_execute(steps_sql["commit"])),
-                ("verify", prepared_execute(steps_sql["verify"], parameters["verify"])),
+                ("verify", prepared_execute(steps_sql["verify"], parameters["verify"], expect_rows=True)),
                 ("begin_rollback", text_execute(steps_sql["begin_rollback"])),
                 ("update", prepared_execute(steps_sql["update"], parameters["update"])),
                 ("rollback", text_execute(steps_sql["rollback"])),
-                ("verify_rollback", prepared_execute(steps_sql["verify_rollback"], parameters["verify_rollback"])),
+                ("verify_rollback", prepared_execute(steps_sql["verify_rollback"], parameters["verify_rollback"], expect_rows=True)),
             ):
                 steps.append(record(name, action))
         elif case in {"SQLT-XBND-009", "SQLT-XBND-010", "SQLT-XBND-011"}:
@@ -233,14 +270,17 @@ def run_mysql(
             steps.append(record(key, prepared_execute(steps_sql[key], [])))
             steps.append(record("canary", text_execute(steps_sql["canary"])))
         elif case == "SQLT-XBND-012":
-            steps.append(record("missing_binding", prepared_execute(steps_sql["select"], [])))
-            steps.append(record("recovered", prepared_execute(steps_sql["select"], parameters["recovered"])))
+            # Extra bindings are rejected client-side with a stable identity
+            # (mysql-connector refuses to bind more values than placeholders,
+            # mirroring the SQLT-3E2 PRP-006 precedent); nothing reaches the wire.
+            steps.append(record("extra_binding", prepared_execute(steps_sql["select"], parameters["extra_binding"])))
+            steps.append(record("recovered", prepared_execute(steps_sql["select"], parameters["recovered"], expect_rows=True)))
         elif case == "SQLT-XBND-013":
-            steps.append(record("execute", prepared_execute(steps_sql["select"], [])))
+            steps.append(record("execute", prepared_execute(steps_sql["select"], [], expect_rows=True)))
             cursor.close()
             steps.append(record("closed_reuse", prepared_execute(steps_sql["select"], [])))
             cursor = connection.cursor(prepared=True)
-            steps.append(record("recovered", prepared_execute(steps_sql["select"], [])))
+            steps.append(record("recovered", prepared_execute(steps_sql["select"], [], expect_rows=True)))
         else:
             raise ValueError(f"unsupported boundary case: {case}")
     finally:
@@ -253,8 +293,10 @@ def run_mysql(
 
 
 TAG_CHAR = {
-    b"1": "1", b"2": "2", b"3": "3", b"C": "C", b"D": "D", b"E": "E",
-    b"n": "n", b"s": "s", b"T": "T", b"t": "t", b"Z": "Z",
+    "ParseComplete": "1", "BindComplete": "2", "CloseComplete": "3",
+    "CommandComplete": "C", "DataRow": "D", "ErrorResponse": "E",
+    "NoData": "n", "PortalSuspended": "s", "RowDescription": "T",
+    "ParameterDescription": "t", "ReadyForQuery": "Z",
 }
 
 
@@ -264,7 +306,7 @@ def run_postgres(
     expectations: dict[str, dict[str, Any]],
     parameters: dict[str, list[Any]],
 ) -> dict[str, Any]:
-    from extended_client import PgWire, bind, close, describe, execute, message, parse
+    from extended_client import PgWire, bind, close, cstr, describe, execute, message, parse
 
     wire = PgWire(args.host, args.port, args.user, args.password, args.database)
 
@@ -272,7 +314,7 @@ def run_postgres(
         return [None if value is None else str(expand_parameter(value)) for value in values]
 
     def summarize(events: list[dict[str, Any]], step: dict[str, Any]) -> None:
-        chars = [TAG_CHAR.get(event["tag"].encode("latin1", "replace"), "?") for event in events]
+        chars = [TAG_CHAR.get(event["tag"], "?") for event in events]
         step["wire"] = " ".join(chars)
         errors = [event for event in events if event["tag"] == "ErrorResponse"]
         commands = [event["command"] for event in events if event["tag"] == "CommandComplete"]
@@ -286,6 +328,7 @@ def run_postgres(
             step["kind"] = "error"
             step["sqlstate"] = error.get("sqlstate")
             message = error.get("message", "")
+            step["message"] = message
             if error.get("sqlstate") == "08P01":
                 step["classification"] = "unknown_statement"
             else:
@@ -302,6 +345,7 @@ def run_postgres(
             step["kind"] = "ok"
             if commands:
                 step["command_tag"] = commands[-1]
+                step["affected_rows"] = pg_command_affected(commands[-1])
 
     def unit(statement: str, sql: str, params: list[Any], formats: list[int] | None = None):
         def action(step: dict[str, Any]) -> None:
@@ -310,15 +354,15 @@ def run_postgres(
             summarize(wire.receive_until({b"Z"}), step)
         return action
 
-    def rebind(statement: str, params: list[Any]):
+    def rebind(statement: str, params: list[Any], formats: list[int] | None = None):
         def action(step: dict[str, Any]) -> None:
-            wire.send(bind("", statement, to_text(params)), execute(""), message(b"S"))
+            wire.send(bind("", statement, to_text(params), formats), execute(""), message(b"S"))
             summarize(wire.receive_until({b"Z"}), step)
         return action
 
     def simple(sql: str):
         def action(step: dict[str, Any]) -> None:
-            wire.send(message(b"Q", sql.encode()))
+            wire.send(message(b"Q", cstr(sql)))
             summarize(wire.receive_until({b"Z"}), step)
         return action
 
@@ -360,10 +404,14 @@ def run_postgres(
                 summarize(wire.receive_until({b"Z"}), step)
                 step["kind"] = "describe"
             steps.append(record("describe", describe_action))
-            # Binary result format for target_id only; text for the other columns.
-            if wire.columns:
-                wire.columns[0]["format_code"] = 1
-            steps.append(record("execute", rebind("s1", parameters["execute"])))
+            # Binary result format on a single int8 column so per-column
+            # (native PG) and whole-resultset (gateway) format semantics agree.
+            # Execute emits no RowDescription: pin the one column manually.
+            wire.columns = [{"name": "target_id", "type_oid": 20, "format_code": 1}]
+            steps.append(record(
+                "execute",
+                unit("s2", steps_sql["binary_fetch"], parameters["execute"], [1]),
+            ))
         elif case == "SQLT-XBND-008":
             for name, action in (
                 ("begin", simple(steps_sql["begin"])),

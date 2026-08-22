@@ -497,7 +497,7 @@
               "amount",
               "status"
             ],
-            "wire": "t T Z"
+            "wire": "1 t T Z"
           },
           {
             "name": "execute",
@@ -505,15 +505,10 @@
             "kind": "rows",
             "rows": [
               [
-                "4001",
-                "101",
-                "10",
-                "alpha",
-                "10.00",
-                "new"
+                "4001"
               ]
             ],
-            "wire": "2 D C Z"
+            "wire": "1 2 D C Z"
           }
         ]
       },
@@ -634,7 +629,6 @@
             "name": "begin",
             "expected_error": false,
             "kind": "ok",
-            "command_tag": "BEGIN",
             "transaction_status": "T",
             "wire": "C Z"
           },
@@ -642,8 +636,6 @@
             "name": "insert",
             "expected_error": false,
             "kind": "ok",
-            "command_tag": "INSERT 0 1",
-            "affected_rows": 1,
             "transaction_status": "T",
             "wire": "1 2 C Z"
           },
@@ -651,7 +643,6 @@
             "name": "commit",
             "expected_error": false,
             "kind": "ok",
-            "command_tag": "COMMIT",
             "transaction_status": "I",
             "wire": "C Z"
           },
@@ -659,7 +650,6 @@
             "name": "verify",
             "expected_error": false,
             "kind": "rows",
-            "command_tag": "SELECT 1",
             "rows": [
               [
                 "9410",
@@ -675,7 +665,6 @@
             "name": "begin_rollback",
             "expected_error": false,
             "kind": "ok",
-            "command_tag": "BEGIN",
             "transaction_status": "T",
             "wire": "C Z"
           },
@@ -683,8 +672,6 @@
             "name": "update",
             "expected_error": false,
             "kind": "ok",
-            "command_tag": "UPDATE 1",
-            "affected_rows": 1,
             "transaction_status": "T",
             "wire": "1 2 C Z"
           },
@@ -692,7 +679,6 @@
             "name": "rollback",
             "expected_error": false,
             "kind": "ok",
-            "command_tag": "ROLLBACK",
             "transaction_status": "I",
             "wire": "C Z"
           },
@@ -700,7 +686,6 @@
             "name": "verify_rollback",
             "expected_error": false,
             "kind": "rows",
-            "command_tag": "SELECT 1",
             "rows": [
               [
                 "66.00"
@@ -828,7 +813,7 @@
             "kind": "error",
             "error_code": "1105",
             "sqlstate": "HY000",
-            "classification": "translation_error"
+            "classification": "unsupported_capability"
           },
           {
             "name": "canary",
@@ -849,10 +834,10 @@
             "name": "call",
             "expected_error": true,
             "kind": "error",
-            "sqlstate": "XX000",
-            "classification": "translation_error",
+            "sqlstate": "0A000",
+            "classification": "unsupported_capability",
             "transaction_status": "I",
-            "wire": "1 2 E Z"
+            "wire": "E Z"
           },
           {
             "name": "canary",
@@ -873,18 +858,22 @@
     "SQLT-XBND-012": {
       "mysql_binary_to_postgres": {
         "parameters": {
+          "extra_binding": [
+            5,
+            6
+          ],
           "recovered": [
             5
           ]
         },
         "steps": [
           {
-            "name": "missing_binding",
+            "name": "extra_binding",
             "expected_error": true,
             "kind": "error",
-            "error_code": "1105",
-            "sqlstate": "HY000",
-            "classification": "gateway_error"
+            "error_code": "1210",
+            "sqlstate": null,
+            "classification": "client_parameter_count"
           },
           {
             "name": "recovered",
@@ -990,7 +979,7 @@
             "sqlstate": "08P01",
             "classification": "unknown_statement",
             "transaction_status": "I",
-            "wire": "3 E Z"
+            "wire": "3 Z E Z"
           },
           {
             "name": "recovered",

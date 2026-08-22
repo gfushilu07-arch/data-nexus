@@ -38,9 +38,12 @@ def state(protocol: str, rows: list) -> dict:
     }
 
 
-def transcript(selection: dict, protocol: str) -> dict:
+def transcript(selection: dict, protocol: str, direction: str | None = None) -> dict:
+    source = selection["gateway_steps"]
+    if direction is not None and direction == selection.get("backend_direction"):
+        source = selection["backend_steps"]
     steps = []
-    for expected in selection["gateway_steps"]:
+    for expected in source:
         step = dict(expected)
         step.setdefault("rows", [])
         step.setdefault("columns", None)
@@ -56,7 +59,7 @@ def transcript(selection: dict, protocol: str) -> dict:
     return {
         "protocol": protocol,
         "case_id": selection["case_id"],
-        "direction": selection["direction"],
+        "direction": direction or selection["direction"],
         "steps": steps,
     }
 
@@ -74,7 +77,7 @@ class CrossProtocolBoundaryMatrixTest(unittest.TestCase):
 
     def test_success_path_closes_against_backend_control_and_states(self) -> None:
         selection = self.selections[("SQLT-XBND-001", "mysql_binary_to_postgres")]
-        backend = transcript(selection, "pg_extended")
+        backend = transcript(selection, "pg_extended", selection["backend_direction"])
         gateway = transcript(selection, "mysql_binary")
         result = MATRIX.verify_success_path(
             selection,
@@ -100,7 +103,7 @@ class CrossProtocolBoundaryMatrixTest(unittest.TestCase):
     def test_transaction_success_path_requires_state_change(self) -> None:
         selection = self.selections[("SQLT-XBND-008", "pg_extended_to_mysql")]
         gateway = transcript(selection, "pg_extended")
-        backend = transcript(selection, "mysql_binary")
+        backend = transcript(selection, "mysql_binary", selection["backend_direction"])
         result = MATRIX.verify_success_path(
             selection,
             state("mysql_text", BASELINE),
@@ -191,7 +194,7 @@ class CrossProtocolBoundaryMatrixTest(unittest.TestCase):
                 results.append(MATRIX.verify_success_path(
                     selection,
                     before,
-                    transcript({**selection, "gateway_steps": selection["gateway_steps"]}, backend_protocol),
+                    transcript(selection, backend_protocol, selection["backend_direction"]),
                     after,
                     before,
                     transcript(selection, protocol),
@@ -231,7 +234,7 @@ class CrossProtocolBoundaryMatrixTest(unittest.TestCase):
         state_protocol = "pg_simple"
         before = state(state_protocol, BASELINE)
         gateway = transcript(selection, "mysql_binary")
-        backend = transcript(selection, "pg_extended")
+        backend = transcript(selection, "pg_extended", selection["backend_direction"])
         result = MATRIX.verify_success_path(
             selection, before, backend, before, before, gateway, before,
             {name: f"/evidence/{name}" for name in (
