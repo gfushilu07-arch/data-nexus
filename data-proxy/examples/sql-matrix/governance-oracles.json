@@ -1,0 +1,974 @@
+{
+  "schema_version": 1,
+  "matrix_id": "SQLT-5A",
+  "state_profiles": {
+    "baseline": [
+      [
+        "customers",
+        "4"
+      ],
+      [
+        "mutations",
+        "0"
+      ]
+    ],
+    "mutation_9501": [
+      [
+        "customers",
+        "4"
+      ],
+      [
+        "mutations",
+        "1"
+      ]
+    ]
+  },
+  "results": {
+    "SQLT-GOV-001": {
+      "state": {
+        "security_off": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "deny_dml": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "deny_select_targets": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "row_filter_tenant10": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        }
+      },
+      "mysql_text_to_mysql": {
+        "security_off": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "101",
+                  "Ada"
+                ],
+                [
+                  "102",
+                  "Lin"
+                ],
+                [
+                  "201",
+                  "Grace"
+                ],
+                [
+                  "202",
+                  "Edsger"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "deny_dml": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "101",
+                  "Ada"
+                ],
+                [
+                  "102",
+                  "Lin"
+                ],
+                [
+                  "201",
+                  "Grace"
+                ],
+                [
+                  "202",
+                  "Edsger"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "deny_select_targets": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "101",
+                  "Ada"
+                ],
+                [
+                  "102",
+                  "Lin"
+                ],
+                [
+                  "201",
+                  "Grace"
+                ],
+                [
+                  "202",
+                  "Edsger"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "row_filter_tenant10": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "101",
+                  "Ada"
+                ],
+                [
+                  "102",
+                  "Lin"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        }
+      },
+      "pg_simple_to_postgres": {
+        "security_off": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 4",
+              "rows": [
+                [
+                  "101",
+                  "Ada"
+                ],
+                [
+                  "102",
+                  "Lin"
+                ],
+                [
+                  "201",
+                  "Grace"
+                ],
+                [
+                  "202",
+                  "Edsger"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "deny_dml": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 4",
+              "rows": [
+                [
+                  "101",
+                  "Ada"
+                ],
+                [
+                  "102",
+                  "Lin"
+                ],
+                [
+                  "201",
+                  "Grace"
+                ],
+                [
+                  "202",
+                  "Edsger"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "deny_select_targets": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 4",
+              "rows": [
+                [
+                  "101",
+                  "Ada"
+                ],
+                [
+                  "102",
+                  "Lin"
+                ],
+                [
+                  "201",
+                  "Grace"
+                ],
+                [
+                  "202",
+                  "Edsger"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "row_filter_tenant10": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 2",
+              "rows": [
+                [
+                  "101",
+                  "Ada"
+                ],
+                [
+                  "102",
+                  "Lin"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        }
+      }
+    },
+    "SQLT-GOV-002": {
+      "state": {
+        "security_off": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "deny_dml": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "deny_select_targets": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "row_filter_tenant10": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        }
+      },
+      "mysql_text_to_mysql": {
+        "security_off": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  "10.00",
+                  "new"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "deny_dml": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  "10.00",
+                  "new"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "deny_select_targets": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": true,
+              "kind": "error",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [],
+              "error_code": "1105",
+              "sqlstate": "HY000",
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "row_filter_tenant10": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  "10.00",
+                  "new"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        }
+      },
+      "pg_simple_to_postgres": {
+        "security_off": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 1",
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  "10.00",
+                  "new"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "deny_dml": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 1",
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  "10.00",
+                  "new"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "deny_select_targets": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": true,
+              "kind": "error",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": "XX000",
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "row_filter_tenant10": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 1",
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  "10.00",
+                  "new"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        }
+      }
+    },
+    "SQLT-GOV-003": {
+      "state": {
+        "security_off": {
+          "before_state": "baseline",
+          "after_state": "mutation_9501"
+        },
+        "deny_dml": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "deny_select_targets": {
+          "before_state": "baseline",
+          "after_state": "mutation_9501"
+        },
+        "row_filter_tenant10": {
+          "before_state": "baseline",
+          "after_state": "mutation_9501"
+        }
+      },
+      "mysql_text_to_mysql": {
+        "security_off": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "deny_dml": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": true,
+              "kind": "error",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [],
+              "error_code": "1105",
+              "sqlstate": "HY000",
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "deny_select_targets": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "row_filter_tenant10": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        }
+      },
+      "pg_simple_to_postgres": {
+        "security_off": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": "OK 1",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "deny_dml": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": true,
+              "kind": "error",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": "XX000",
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "deny_select_targets": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": "OK 1",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "row_filter_tenant10": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": "OK 1",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        }
+      }
+    },
+    "SQLT-GOV-004": {
+      "state": {
+        "security_off": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "deny_dml": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "deny_select_targets": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "row_filter_tenant10": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        }
+      },
+      "mysql_text_to_mysql": {
+        "security_off": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "delete",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "verify_count",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "0"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "deny_dml": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": true,
+              "kind": "error",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [],
+              "error_code": "1105",
+              "sqlstate": "HY000",
+              "transaction_status": "I"
+            },
+            {
+              "name": "delete",
+              "expected_error": true,
+              "kind": "error",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [],
+              "error_code": "1105",
+              "sqlstate": "HY000",
+              "transaction_status": "I"
+            },
+            {
+              "name": "verify_count",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "0"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "deny_select_targets": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "delete",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "verify_count",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "0"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "row_filter_tenant10": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "delete",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "verify_count",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "0"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        }
+      },
+      "pg_simple_to_postgres": {
+        "security_off": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": "OK 1",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "delete",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": "OK 1",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "verify_count",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 1",
+              "rows": [
+                [
+                  "0"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "deny_dml": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": true,
+              "kind": "error",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": "XX000",
+              "transaction_status": "I"
+            },
+            {
+              "name": "delete",
+              "expected_error": true,
+              "kind": "error",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": "XX000",
+              "transaction_status": "I"
+            },
+            {
+              "name": "verify_count",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 1",
+              "rows": [
+                [
+                  "0"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "deny_select_targets": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": "OK 1",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "delete",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": "OK 1",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "verify_count",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 1",
+              "rows": [
+                [
+                  "0"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "row_filter_tenant10": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": "OK 1",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "delete",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": "OK 1",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "verify_count",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 1",
+              "rows": [
+                [
+                  "0"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1792,6 +1792,41 @@ def _validate_cross_protocol_dml_matrix(root: Path, errors: list[str]) -> set[Pa
     return referenced
 
 
+def _validate_governance_matrix(root: Path, errors: list[str]) -> set[Path]:
+    spec_path = root / "governance-matrix.json"
+    if not spec_path.is_file():
+        return set()
+    selector_spec = importlib.util.spec_from_file_location(
+        "sql_matrix_governance_selector",
+        root / "select_governance_cases.py",
+    )
+    if not selector_spec or not selector_spec.loader:
+        errors.append("cannot load select_governance_cases.py")
+        return set()
+    selector = importlib.util.module_from_spec(selector_spec)
+    selector_spec.loader.exec_module(selector)
+    spec = _load_json(spec_path, errors)
+    oracles = _load_json(root / "governance-oracles.json", errors)
+    if spec is None or oracles is None:
+        return set()
+    try:
+        selected = selector.select_paths(spec, oracles, root)
+    except (OSError, ValueError) as error:
+        errors.append(f"governance matrix: {error}")
+        return set()
+    referenced: set[Path] = set()
+    for record in selected:
+        for field in ("sql_file", "backend_sql_file"):
+            value = record.get(field)
+            if isinstance(value, str):
+                referenced.add(root / "cases" / PurePosixPath(value))
+        for field in ("state_query", "policy_config"):
+            value = record.get(field)
+            if isinstance(value, str):
+                referenced.add(root / PurePosixPath(value))
+    return referenced
+
+
 def _validate_cross_protocol_boundary_matrix(root: Path, errors: list[str]) -> set[Path]:
     spec_path = root / "cross-protocol-boundary-matrix.json"
     if not spec_path.is_file():
@@ -1875,6 +1910,7 @@ def validate_repository(root: Path) -> list[str]:
     referenced_files.update(_validate_cross_protocol_matrix(root, manifest, errors))
     referenced_files.update(_validate_cross_protocol_dml_matrix(root, errors))
     referenced_files.update(_validate_cross_protocol_boundary_matrix(root, errors))
+    referenced_files.update(_validate_governance_matrix(root, errors))
 
     if case_root.is_dir():
         actual_files = set(case_root.rglob("*.sql"))

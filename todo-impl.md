@@ -355,3 +355,4 @@ H04b-4 生产部署验收、T01、F30（延后）、P01–P04（延后）。
 | SQLT-4B3 | boundary matrix corpus + clients + runner, 26 paths (bf794d7, 6751526) | test(SQLT-4B3) |
 | SQLT-4B3 | Sync boundary, PG numeric bind, non-row Execute, Execute T suppression (4214fa5) | fix(SQLT-4B3) |
 | SQLT-4B3 | Docker acceptance 2 lanes / 13 cases / 26 paths (16 success + 10 reject) | docs(SQLT-4B3) |
+| SQLT-5A | governance core matrix: security_off/deny_dml/deny_select_targets/row_filter x 2 protocols, 32 paths | test(sqlt5a) |

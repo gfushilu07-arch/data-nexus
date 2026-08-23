@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "matrix_id": "SQLT-5A",
+  "policy": "governance",
+  "expected_cases": 4,
+  "expected_policies": 4,
+  "expected_paths": 32,
+  "protocols": {
+    "mysql_text_to_mysql": {
+      "frontend": "mysql_text",
+      "frontend_dialect": "mysql",
+      "backend": "mysql",
+      "backend_dialect": "mysql",
+      "protocol": "mysql_text",
+      "port": 29120,
+      "listener": "sqlt-governance-mysql",
+      "state_query": "fixtures/mysql/oracle-governance-state.sql"
+    },
+    "pg_simple_to_postgres": {
+      "frontend": "pg_simple",
+      "frontend_dialect": "postgres",
+      "backend": "postgres",
+      "backend_dialect": "postgres",
+      "protocol": "pg_simple",
+      "port": 29121,
+      "listener": "sqlt-governance-postgresql",
+      "state_query": "fixtures/postgres/oracle-governance-state.sql"
+    }
+  },
+  "policies": {
+    "security_off": {
+      "config": "fixtures/governance-security-off-gateway-config.toml",
+      "enabled": false
+    },
+    "deny_dml": {
+      "config": "fixtures/governance-deny-dml-gateway-config.toml",
+      "enabled": true
+    },
+    "deny_select_targets": {
+      "config": "fixtures/governance-deny-select-targets-gateway-config.toml",
+      "enabled": true
+    },
+    "row_filter_tenant10": {
+      "config": "fixtures/governance-row-filter-tenant10-gateway-config.toml",
+      "enabled": true
+    }
+  },
+  "cases": [
+    {
+      "id": "SQLT-GOV-001",
+      "name": "select_customers",
+      "sql": {
+        "mysql_text_to_mysql": "governance/mysql-select-customers.sql",
+        "pg_simple_to_postgres": "governance/postgres-select-customers.sql"
+      }
+    },
+    {
+      "id": "SQLT-GOV-002",
+      "name": "select_target_row",
+      "sql": {
+        "mysql_text_to_mysql": "governance/mysql-select-target-row.sql",
+        "pg_simple_to_postgres": "governance/postgres-select-target-row.sql"
+      }
+    },
+    {
+      "id": "SQLT-GOV-003",
+      "name": "insert_mutation",
+      "sql": {
+        "mysql_text_to_mysql": "governance/mysql-insert-mutation.sql",
+        "pg_simple_to_postgres": "governance/postgres-insert-mutation.sql"
+      }
+    },
+    {
+      "id": "SQLT-GOV-004",
+      "name": "insert_delete_mutation",
+      "sql": {
+        "mysql_text_to_mysql": "governance/mysql-insert-delete-mutation.sql",
+        "pg_simple_to_postgres": "governance/postgres-insert-delete-mutation.sql"
+      }
+    }
+  ]
+}
