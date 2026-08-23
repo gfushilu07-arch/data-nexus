@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "matrix_id": "SQLT-5A",
+  "matrix_id": "SQLT-5",
   "policy": "governance",
-  "expected_cases": 4,
-  "expected_policies": 4,
-  "expected_paths": 32,
+  "expected_cases": 5,
+  "expected_policies": 8,
+  "expected_paths": 80,
   "protocols": {
     "mysql_text_to_mysql": {
       "frontend": "mysql_text",
@@ -43,6 +43,22 @@
     "row_filter_tenant10": {
       "config": "fixtures/governance-row-filter-tenant10-gateway-config.toml",
       "enabled": true
+    },
+    "column_strip_amount": {
+      "config": "fixtures/governance-column-strip-amount-gateway-config.toml",
+      "enabled": true
+    },
+    "mask_pii": {
+      "config": "fixtures/governance-mask-pii-gateway-config.toml",
+      "enabled": true
+    },
+    "watermark_column": {
+      "config": "fixtures/governance-watermark-column-gateway-config.toml",
+      "enabled": true
+    },
+    "max_rows_1": {
+      "config": "fixtures/governance-max-rows-1-gateway-config.toml",
+      "enabled": true
     }
   },
   "cases": [
@@ -76,6 +92,14 @@
       "sql": {
         "mysql_text_to_mysql": "governance/mysql-insert-delete-mutation.sql",
         "pg_simple_to_postgres": "governance/postgres-insert-delete-mutation.sql"
+      }
+    },
+    {
+      "id": "SQLT-GOV-005",
+      "name": "select_targets_multi",
+      "sql": {
+        "mysql_text_to_mysql": "governance/mysql-select-targets-multi.sql",
+        "pg_simple_to_postgres": "governance/postgres-select-targets-multi.sql"
       }
     }
   ]

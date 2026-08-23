@@ -1,0 +1,89 @@
+# SQLT-5B governance obligation policy gateway: result obligations cap every read at one row...
+version = "2"
+
+[admin]
+host = "127.0.0.1"
+port = 28084
+log_level = "INFO"
+
+[security]
+enabled = true
+fail_closed = true
+default_audit_level = "L1"
+
+
+[security.subject]
+sources = ["protocol_user"]
+
+[security.pdp]
+backend = "local"
+
+[security.streaming]
+window_rows = 64
+passthrough = false
+max_rows = 1
+
+[security.audit]
+queue_capacity = 65536
+overflow = "drop_new"
+sinks = ["tracing"]
+
+[[listeners]]
+name = "sqlt-governance-mysql"
+listen_addr = "127.0.0.1:29120"
+protocol = "mysql"
+service = "sqlt-governance-via-mysql"
+auth_policy = "sqlt-users"
+
+[[listeners]]
+name = "sqlt-governance-postgresql"
+listen_addr = "127.0.0.1:29121"
+protocol = "postgresql"
+service = "sqlt-governance-via-postgres"
+auth_policy = "sqlt-users"
+
+[[services]]
+name = "sqlt-governance-via-mysql"
+backend_protocol = "mysql"
+endpoints = ["sqlt-mysql-primary"]
+route_policy = "sqlt-mysql-route"
+plugin_policies = []
+
+[[services]]
+name = "sqlt-governance-via-postgres"
+backend_protocol = "postgresql"
+endpoints = ["sqlt-postgres-primary"]
+route_policy = "sqlt-postgres-route"
+plugin_policies = []
+
+[[endpoints]]
+name = "sqlt-mysql-primary"
+protocol = "mysql"
+address = "127.0.0.1:23306"
+database = "sqlt"
+username = "root"
+password = "root"
+weight = 1
+
+[[endpoints]]
+name = "sqlt-postgres-primary"
+protocol = "postgresql"
+address = "127.0.0.1:25432"
+database = "sqlt"
+username = "sqlt"
+password = "sqlt"
+weight = 1
+
+[[route_policies]]
+name = "sqlt-mysql-route"
+kind = "simple_load_balance"
+
+[[route_policies]]
+name = "sqlt-postgres-route"
+kind = "simple_load_balance"
+
+[[auth_policies]]
+name = "sqlt-users"
+kind = "static"
+username = "root"
+password = "root"

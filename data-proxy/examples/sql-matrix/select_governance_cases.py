@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate and select SQLT-5A governance policy matrix paths."""
+"""Validate and select SQLT-5 governance policy matrix paths."""
 
 from __future__ import annotations
 
@@ -36,6 +36,10 @@ EXPECTED_POLICIES = {
     "deny_dml": {"enabled": True},
     "deny_select_targets": {"enabled": True},
     "row_filter_tenant10": {"enabled": True},
+    "column_strip_amount": {"enabled": True},
+    "mask_pii": {"enabled": True},
+    "watermark_column": {"enabled": True},
+    "max_rows_1": {"enabled": True},
 }
 
 STEP_KINDS = {"ok", "rows", "error"}
@@ -118,9 +122,9 @@ def select_paths(
     case_from: str = "",
     case_to: str = "",
 ) -> list[dict[str, Any]]:
-    if spec.get("schema_version") != 1 or spec.get("matrix_id") != "SQLT-5A":
+    if spec.get("schema_version") != 1 or spec.get("matrix_id") != "SQLT-5":
         raise SelectionError("governance spec identity is invalid")
-    if oracles.get("schema_version") != 1 or oracles.get("matrix_id") != "SQLT-5A":
+    if oracles.get("schema_version") != 1 or oracles.get("matrix_id") != "SQLT-5":
         raise SelectionError("governance oracle identity is invalid")
     protocols = spec.get("protocols")
     if not isinstance(protocols, dict) or set(protocols) != set(EXPECTED_PROTOCOLS):
@@ -133,7 +137,7 @@ def select_paths(
         _safe_file(root, actual.get("state_query", ""), "")
     policies = spec.get("policies")
     if not isinstance(policies, dict) or set(policies) != set(EXPECTED_POLICIES):
-        raise SelectionError("governance policies must be the four SQLT-5A policies")
+        raise SelectionError("governance policies must be the eight SQLT-5 policies")
     for name, expected in EXPECTED_POLICIES.items():
         actual = policies[name]
         if actual.get("enabled") != expected["enabled"]:
@@ -154,7 +158,7 @@ def select_paths(
     if not isinstance(cases, list) or len(cases) != spec.get("expected_cases"):
         raise SelectionError("governance case count does not match expected_cases")
     case_ids = [case.get("id") for case in cases]
-    if case_ids != [f"SQLT-GOV-{index:03d}" for index in range(1, 5)]:
+    if case_ids != [f"SQLT-GOV-{index:03d}" for index in range(1, 6)]:
         raise SelectionError("governance case IDs must be SQLT-GOV-001 through 004")
     if not isinstance(oracle_results, dict) or set(case_ids) != set(oracle_results):
         raise SelectionError("governance spec and oracle cases do not match")

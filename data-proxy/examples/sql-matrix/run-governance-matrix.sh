@@ -22,7 +22,7 @@ CASE_TO="${SQLT_GOVERNANCE_CASE_TO:-}"
 FILTERED=0
 RUN_TOKEN="$(printf '%s' "$RUN_ID" | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:]')"
 [[ -n "$RUN_TOKEN" ]] || { echo "run ID needs an ASCII alphanumeric character" >&2; exit 1; }
-COMPOSE_PROJECT="sqlt5a-$RUN_TOKEN"
+COMPOSE_PROJECT="sqlt5-$RUN_TOKEN"
 COMPOSE=(docker compose -p "$COMPOSE_PROJECT" -f "$ROOT/fixtures/docker-compose.yml")
 GATEWAY_PID=""
 RESULTS="$RUN_DIR/results.jsonl"
@@ -36,7 +36,7 @@ case "$PROTOCOL_FILTER" in
   *) echo "unknown governance protocol: $PROTOCOL_FILTER" >&2; exit 1 ;;
 esac
 case "$POLICY_FILTER" in
-  ""|security_off|deny_dml|deny_select_targets|row_filter_tenant10) ;;
+  ""|security_off|deny_dml|deny_select_targets|row_filter_tenant10|column_strip_amount|mask_pii|watermark_column|max_rows_1) ;;
   *) echo "unknown governance policy: $POLICY_FILTER" >&2; exit 1 ;;
 esac
 if [[ -n "$CASE_FROM" || -n "$CASE_TO" ]]; then
@@ -97,7 +97,7 @@ finish() {
   fi
   for resource in containers networks volumes gateway; do
     if [[ -s "$RUN_DIR/audit/${resource}.residual.tsv" ]]; then
-      echo "SQLT-5A left owned $resource resources" >&2
+      echo "SQLT-5 left owned $resource resources" >&2
       status=1
     fi
   done
@@ -112,7 +112,7 @@ command -v python3 >/dev/null 2>&1 || { echo "missing python3" >&2; exit 1; }
 command -v curl >/dev/null 2>&1 || { echo "missing curl" >&2; exit 1; }
 command -v rustup >/dev/null 2>&1 || { echo "missing rustup" >&2; exit 1; }
 [[ "$(rustup run "$RUSTUP_TOOLCHAIN" rustc --version)" == rustc\ 1.94.1\ * ]] || {
-  echo "SQLT-5A requires rustc 1.94.1" >&2
+  echo "SQLT-5 requires rustc 1.94.1" >&2
   exit 1
 }
 
@@ -272,6 +272,10 @@ policy_config() {
     deny_dml) echo "fixtures/governance-deny-dml-gateway-config.toml" ;;
     deny_select_targets) echo "fixtures/governance-deny-select-targets-gateway-config.toml" ;;
     row_filter_tenant10) echo "fixtures/governance-row-filter-tenant10-gateway-config.toml" ;;
+    column_strip_amount) echo "fixtures/governance-column-strip-amount-gateway-config.toml" ;;
+    mask_pii) echo "fixtures/governance-mask-pii-gateway-config.toml" ;;
+    watermark_column) echo "fixtures/governance-watermark-column-gateway-config.toml" ;;
+    max_rows_1) echo "fixtures/governance-max-rows-1-gateway-config.toml" ;;
     *) echo "unknown governance policy: $1" >&2; return 1 ;;
   esac
 }
@@ -335,7 +339,7 @@ python3 "$ROOT/governance_matrix.py" "${aggregate_args[@]}" \
   >"$RUN_DIR/logs/aggregate.log" 2>&1
 
 if ((FILTERED)); then
-  printf 'SQLT-5A reproduction passed with acceptance_complete=false\nartifacts: %s\n' "$RUN_DIR"
+  printf 'SQLT-5 reproduction passed with acceptance_complete=false\nartifacts: %s\n' "$RUN_DIR"
 else
-  printf 'SQLT-5A passed: 4 policies x 4 cases x 2 protocols = 32 paths\nartifacts: %s\n' "$RUN_DIR"
+  printf 'SQLT-5 passed: 8 policies x 5 cases x 2 protocols = 80 paths\nartifacts: %s\n' "$RUN_DIR"
 fi

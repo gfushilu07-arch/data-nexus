@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "matrix_id": "SQLT-5A",
+  "matrix_id": "SQLT-5",
   "state_profiles": {
     "baseline": [
       [
@@ -39,6 +39,22 @@
           "after_state": "baseline"
         },
         "row_filter_tenant10": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "column_strip_amount": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "mask_pii": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "watermark_column": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "max_rows_1": {
           "before_state": "baseline",
           "after_state": "baseline"
         }
@@ -156,6 +172,126 @@
                 [
                   "102",
                   "Lin"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "column_strip_amount": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "101",
+                  "Ada"
+                ],
+                [
+                  "102",
+                  "Lin"
+                ],
+                [
+                  "201",
+                  "Grace"
+                ],
+                [
+                  "202",
+                  "Edsger"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "mask_pii": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "101",
+                  null
+                ],
+                [
+                  "102",
+                  null
+                ],
+                [
+                  "201",
+                  null
+                ],
+                [
+                  "202",
+                  null
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "watermark_column": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "101",
+                  "Ada",
+                  "sqlt5b-watermark-token"
+                ],
+                [
+                  "102",
+                  "Lin",
+                  "sqlt5b-watermark-token"
+                ],
+                [
+                  "201",
+                  "Grace",
+                  "sqlt5b-watermark-token"
+                ],
+                [
+                  "202",
+                  "Edsger",
+                  "sqlt5b-watermark-token"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "max_rows_1": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "101",
+                  "Ada"
                 ]
               ],
               "error_code": null,
@@ -285,6 +421,126 @@
               "transaction_status": "I"
             }
           ]
+        },
+        "column_strip_amount": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 4",
+              "rows": [
+                [
+                  "101",
+                  "Ada"
+                ],
+                [
+                  "102",
+                  "Lin"
+                ],
+                [
+                  "201",
+                  "Grace"
+                ],
+                [
+                  "202",
+                  "Edsger"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "mask_pii": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 4",
+              "rows": [
+                [
+                  "101",
+                  null
+                ],
+                [
+                  "102",
+                  null
+                ],
+                [
+                  "201",
+                  null
+                ],
+                [
+                  "202",
+                  null
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "watermark_column": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 4",
+              "rows": [
+                [
+                  "101",
+                  "Ada",
+                  "sqlt5b-watermark-token"
+                ],
+                [
+                  "102",
+                  "Lin",
+                  "sqlt5b-watermark-token"
+                ],
+                [
+                  "201",
+                  "Grace",
+                  "sqlt5b-watermark-token"
+                ],
+                [
+                  "202",
+                  "Edsger",
+                  "sqlt5b-watermark-token"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "max_rows_1": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 1",
+              "rows": [
+                [
+                  "101",
+                  "Ada"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
         }
       }
     },
@@ -303,6 +559,22 @@
           "after_state": "baseline"
         },
         "row_filter_tenant10": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "column_strip_amount": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "mask_pii": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "watermark_column": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "max_rows_1": {
           "before_state": "baseline",
           "after_state": "baseline"
         }
@@ -388,6 +660,94 @@
               "transaction_status": "I"
             }
           ]
+        },
+        "column_strip_amount": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  "new"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "mask_pii": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  null,
+                  "new"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "watermark_column": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  "10.00",
+                  "new",
+                  "sqlt5b-watermark-token"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "max_rows_1": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  "10.00",
+                  "new"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
         }
       },
       "pg_simple_to_postgres": {
@@ -451,6 +811,94 @@
           ]
         },
         "row_filter_tenant10": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 1",
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  "10.00",
+                  "new"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "column_strip_amount": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 1",
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  "new"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "mask_pii": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 1",
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  null,
+                  "new"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "watermark_column": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 1",
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  "10.00",
+                  "new",
+                  "sqlt5b-watermark-token"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "max_rows_1": {
           "steps": [
             {
               "name": "select",
@@ -491,6 +939,22 @@
         "row_filter_tenant10": {
           "before_state": "baseline",
           "after_state": "mutation_9501"
+        },
+        "column_strip_amount": {
+          "before_state": "baseline",
+          "after_state": "mutation_9501"
+        },
+        "mask_pii": {
+          "before_state": "baseline",
+          "after_state": "mutation_9501"
+        },
+        "watermark_column": {
+          "before_state": "baseline",
+          "after_state": "mutation_9501"
+        },
+        "max_rows_1": {
+          "before_state": "baseline",
+          "after_state": "mutation_9501"
         }
       },
       "mysql_text_to_mysql": {
@@ -553,6 +1017,66 @@
               "transaction_status": "I"
             }
           ]
+        },
+        "column_strip_amount": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "mask_pii": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "watermark_column": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "max_rows_1": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
         }
       },
       "pg_simple_to_postgres": {
@@ -602,6 +1126,66 @@
           ]
         },
         "row_filter_tenant10": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": "OK 1",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "column_strip_amount": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": "OK 1",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "mask_pii": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": "OK 1",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "watermark_column": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": "OK 1",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "max_rows_1": {
           "steps": [
             {
               "name": "insert",
@@ -635,6 +1219,22 @@
         "row_filter_tenant10": {
           "before_state": "baseline",
           "after_state": "baseline"
+        },
+        "column_strip_amount": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "mask_pii": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "watermark_column": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "max_rows_1": {
+          "before_state": "baseline",
+          "after_state": "baseline"
         }
       },
       "mysql_text_to_mysql": {
@@ -762,6 +1362,171 @@
           ]
         },
         "row_filter_tenant10": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "delete",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "verify_count",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "0"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "column_strip_amount": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "delete",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "verify_count",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "0"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "mask_pii": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "delete",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "verify_count",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "0"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "watermark_column": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "delete",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "verify_count",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "0",
+                  "sqlt5b-watermark-token"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "max_rows_1": {
           "steps": [
             {
               "name": "insert",
@@ -960,6 +1725,837 @@
               "rows": [
                 [
                   "0"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "column_strip_amount": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": "OK 1",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "delete",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": "OK 1",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "verify_count",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 1",
+              "rows": [
+                [
+                  "0"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "mask_pii": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": "OK 1",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "delete",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": "OK 1",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "verify_count",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 1",
+              "rows": [
+                [
+                  "0"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "watermark_column": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": "OK 1",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "delete",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": "OK 1",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "verify_count",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 1",
+              "rows": [
+                [
+                  "0",
+                  "sqlt5b-watermark-token"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "max_rows_1": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": "OK 1",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "delete",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": "OK 1",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "verify_count",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 1",
+              "rows": [
+                [
+                  "0"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        }
+      }
+    },
+    "SQLT-GOV-005": {
+      "state": {
+        "security_off": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "deny_dml": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "deny_select_targets": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "row_filter_tenant10": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "column_strip_amount": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "mask_pii": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "watermark_column": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "max_rows_1": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        }
+      },
+      "mysql_text_to_mysql": {
+        "security_off": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  "10.00",
+                  "new"
+                ],
+                [
+                  "4002",
+                  "beta",
+                  "20.00",
+                  "new"
+                ],
+                [
+                  "4003",
+                  "gamma",
+                  "30.00",
+                  "ready"
+                ],
+                [
+                  "4004",
+                  "delta",
+                  null,
+                  "ready"
+                ],
+                [
+                  "4005",
+                  "epsilon",
+                  "50.00",
+                  "archived"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "deny_dml": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  "10.00",
+                  "new"
+                ],
+                [
+                  "4002",
+                  "beta",
+                  "20.00",
+                  "new"
+                ],
+                [
+                  "4003",
+                  "gamma",
+                  "30.00",
+                  "ready"
+                ],
+                [
+                  "4004",
+                  "delta",
+                  null,
+                  "ready"
+                ],
+                [
+                  "4005",
+                  "epsilon",
+                  "50.00",
+                  "archived"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "deny_select_targets": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": true,
+              "kind": "error",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [],
+              "error_code": "1105",
+              "sqlstate": "HY000",
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "row_filter_tenant10": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  "10.00",
+                  "new"
+                ],
+                [
+                  "4002",
+                  "beta",
+                  "20.00",
+                  "new"
+                ],
+                [
+                  "4003",
+                  "gamma",
+                  "30.00",
+                  "ready"
+                ],
+                [
+                  "4004",
+                  "delta",
+                  null,
+                  "ready"
+                ],
+                [
+                  "4005",
+                  "epsilon",
+                  "50.00",
+                  "archived"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "column_strip_amount": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  "new"
+                ],
+                [
+                  "4002",
+                  "beta",
+                  "new"
+                ],
+                [
+                  "4003",
+                  "gamma",
+                  "ready"
+                ],
+                [
+                  "4004",
+                  "delta",
+                  "ready"
+                ],
+                [
+                  "4005",
+                  "epsilon",
+                  "archived"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "mask_pii": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  null,
+                  "new"
+                ],
+                [
+                  "4002",
+                  "beta",
+                  null,
+                  "new"
+                ],
+                [
+                  "4003",
+                  "gamma",
+                  null,
+                  "ready"
+                ],
+                [
+                  "4004",
+                  "delta",
+                  null,
+                  "ready"
+                ],
+                [
+                  "4005",
+                  "epsilon",
+                  null,
+                  "archived"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "watermark_column": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  "10.00",
+                  "new",
+                  "sqlt5b-watermark-token"
+                ],
+                [
+                  "4002",
+                  "beta",
+                  "20.00",
+                  "new",
+                  "sqlt5b-watermark-token"
+                ],
+                [
+                  "4003",
+                  "gamma",
+                  "30.00",
+                  "ready",
+                  "sqlt5b-watermark-token"
+                ],
+                [
+                  "4004",
+                  "delta",
+                  null,
+                  "ready",
+                  "sqlt5b-watermark-token"
+                ],
+                [
+                  "4005",
+                  "epsilon",
+                  "50.00",
+                  "archived",
+                  "sqlt5b-watermark-token"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "max_rows_1": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  "10.00",
+                  "new"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        }
+      },
+      "pg_simple_to_postgres": {
+        "security_off": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 5",
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  "10.00",
+                  "new"
+                ],
+                [
+                  "4002",
+                  "beta",
+                  "20.00",
+                  "new"
+                ],
+                [
+                  "4003",
+                  "gamma",
+                  "30.00",
+                  "ready"
+                ],
+                [
+                  "4004",
+                  "delta",
+                  null,
+                  "ready"
+                ],
+                [
+                  "4005",
+                  "epsilon",
+                  "50.00",
+                  "archived"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "deny_dml": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 5",
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  "10.00",
+                  "new"
+                ],
+                [
+                  "4002",
+                  "beta",
+                  "20.00",
+                  "new"
+                ],
+                [
+                  "4003",
+                  "gamma",
+                  "30.00",
+                  "ready"
+                ],
+                [
+                  "4004",
+                  "delta",
+                  null,
+                  "ready"
+                ],
+                [
+                  "4005",
+                  "epsilon",
+                  "50.00",
+                  "archived"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "deny_select_targets": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": true,
+              "kind": "error",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": "XX000",
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "row_filter_tenant10": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 5",
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  "10.00",
+                  "new"
+                ],
+                [
+                  "4002",
+                  "beta",
+                  "20.00",
+                  "new"
+                ],
+                [
+                  "4003",
+                  "gamma",
+                  "30.00",
+                  "ready"
+                ],
+                [
+                  "4004",
+                  "delta",
+                  null,
+                  "ready"
+                ],
+                [
+                  "4005",
+                  "epsilon",
+                  "50.00",
+                  "archived"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "column_strip_amount": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 5",
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  "new"
+                ],
+                [
+                  "4002",
+                  "beta",
+                  "new"
+                ],
+                [
+                  "4003",
+                  "gamma",
+                  "ready"
+                ],
+                [
+                  "4004",
+                  "delta",
+                  "ready"
+                ],
+                [
+                  "4005",
+                  "epsilon",
+                  "archived"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "mask_pii": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 5",
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  null,
+                  "new"
+                ],
+                [
+                  "4002",
+                  "beta",
+                  null,
+                  "new"
+                ],
+                [
+                  "4003",
+                  "gamma",
+                  null,
+                  "ready"
+                ],
+                [
+                  "4004",
+                  "delta",
+                  null,
+                  "ready"
+                ],
+                [
+                  "4005",
+                  "epsilon",
+                  null,
+                  "archived"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "watermark_column": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 5",
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  "10.00",
+                  "new",
+                  "sqlt5b-watermark-token"
+                ],
+                [
+                  "4002",
+                  "beta",
+                  "20.00",
+                  "new",
+                  "sqlt5b-watermark-token"
+                ],
+                [
+                  "4003",
+                  "gamma",
+                  "30.00",
+                  "ready",
+                  "sqlt5b-watermark-token"
+                ],
+                [
+                  "4004",
+                  "delta",
+                  null,
+                  "ready",
+                  "sqlt5b-watermark-token"
+                ],
+                [
+                  "4005",
+                  "epsilon",
+                  "50.00",
+                  "archived",
+                  "sqlt5b-watermark-token"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "max_rows_1": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 1",
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  "10.00",
+                  "new"
                 ]
               ],
               "error_code": null,
