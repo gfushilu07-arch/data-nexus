@@ -35,14 +35,18 @@ def _verify_transcript(
     evidence: dict[str, Any],
     expected_protocol: str,
     expected_steps: list[dict[str, Any]],
+    selection_requires_single_connection: bool = False,
 ) -> list[dict[str, Any]]:
     required = {"protocol", "connection", "steps"}
     if not isinstance(evidence, dict) or set(evidence) != required:
         raise MatrixError(f"{label}: transcript fields must be {sorted(required)}")
     if evidence["protocol"] != expected_protocol:
         raise MatrixError(f"{label}: protocol mismatch")
-    if evidence["connection"] != "same":
-        raise MatrixError(f"{label}: must use one connection")
+    # Ticket dual-control spans three connections (deny, issued, replay).
+    if evidence["connection"] not in ("same", "orchestrated"):
+        raise MatrixError(f"{label}: unexpected connection mode {evidence['connection']!r}")
+    if selection_requires_single_connection and evidence["connection"] != "same":
+        raise MatrixError(f"{label}: non-orchestrated path reused connections unexpectedly")
     actual_steps = evidence["steps"]
     if not isinstance(actual_steps, list) or len(actual_steps) != len(expected_steps):
         raise MatrixError(f"{label}: step count mismatch")
@@ -152,13 +156,20 @@ def verify_path(
     )
     steps = _verify_transcript(
         label, gateway_transcript, selection["client_protocol"], selection["gateway_steps"],
+        selection_requires_single_connection=not selection.get("requires_ticket_orchestration", False),
     )
     after_rows = _verify_state(
         label, "gateway after", gateway_after, state_protocol, selection["after_state"],
     )
     error_steps = [step for step in steps if step["kind"] == "error"]
-    if selection["policy_enabled"] and error_steps and before_rows != after_rows:
-        # Deny decisions must never reach the backend.
+    if (
+        selection["policy_enabled"]
+        and error_steps
+        and before_rows != after_rows
+        and not selection.get("authorized_state_change")
+    ):
+        # Deny decisions must never reach the backend unless the oracle marks
+        # the state change as authorized (e.g. an approved ticket DDL).
         raise MatrixError(f"{label}: denied policy mutated backend state")
     required_paths = {"gateway_before", "gateway_transcript", "gateway_after"}
     if set(evidence_paths) != required_paths or not all(
@@ -226,16 +237,16 @@ def aggregate(
         protocols[item["protocol"]] = protocols.get(item["protocol"], 0) + 1
     cases = len({item["case_id"] for item in results})
     complete = not filtered
-    if complete and (len(results), cases) != (110, 5):
-        raise MatrixError("formal SQLT-5 acceptance must be 110 paths: 5 cases x 11 policies x 2 protocols")
+    if complete and (len(results), cases) != (144, 6):
+        raise MatrixError("formal SQLT-5 acceptance must be 144 paths: 6 cases x 12 policies x 2 protocols")
     expected_policies = {
-        "audit_l0": 10, "audit_l1": 10, "audit_l2": 10,
-        "column_strip_amount": 10, "deny_dml": 10, "deny_select_targets": 10,
-        "mask_pii": 10, "max_rows_1": 10, "row_filter_tenant10": 10,
-        "security_off": 10, "watermark_column": 10,
+        "audit_l0": 12, "audit_l1": 12, "audit_l2": 12,
+        "column_strip_amount": 12, "deny_dml": 12, "deny_select_targets": 12,
+        "mask_pii": 12, "max_rows_1": 12, "row_filter_tenant10": 12,
+        "security_off": 12, "ticket_ddl": 12, "watermark_column": 12,
     }
     if complete and (policies != expected_policies or protocols != {
-        "mysql_text_to_mysql": 55, "pg_simple_to_postgres": 55,
+        "mysql_text_to_mysql": 72, "pg_simple_to_postgres": 72,
     }):
         raise MatrixError("formal SQLT-5 lane distribution mismatch")
     return {

@@ -26,3 +26,6 @@ DROP TABLE IF EXISTS sqlt_ddl_view_source;
 DROP TABLE IF EXISTS sqlt_tcl_ddl;
 DROP SCHEMA IF EXISTS sqlt_ddl_schema CASCADE;
 DROP SEQUENCE IF EXISTS sqlt_ddl_sequence;
+-- SQLT-5C-b governance ticket-case tables
+DROP TABLE IF EXISTS sqlt_gov_ticket_t CASCADE;
+DROP TABLE IF EXISTS sqlt_gov_ticket_reuse_t CASCADE;

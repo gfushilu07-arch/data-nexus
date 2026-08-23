@@ -2,9 +2,9 @@
   "schema_version": 1,
   "matrix_id": "SQLT-5",
   "policy": "governance",
-  "expected_cases": 5,
-  "expected_policies": 11,
-  "expected_paths": 110,
+  "expected_cases": 6,
+  "expected_policies": 12,
+  "expected_paths": 144,
   "protocols": {
     "mysql_text_to_mysql": {
       "frontend": "mysql_text",
@@ -77,6 +77,10 @@
       "enabled": true,
       "audit_file": "/tmp/dn-sqlt5-audit-l2.jsonl",
       "audit_level": "L2"
+    },
+    "ticket_ddl": {
+      "config": "fixtures/governance-ticket-ddl-gateway-config.toml",
+      "enabled": true
     }
   },
   "cases": [
@@ -118,6 +122,22 @@
       "sql": {
         "mysql_text_to_mysql": "governance/mysql-select-targets-multi.sql",
         "pg_simple_to_postgres": "governance/postgres-select-targets-multi.sql"
+      }
+    },
+    {
+      "id": "SQLT-GOV-006",
+      "name": "create_table_ticket",
+      "sql": {
+        "mysql_text_to_mysql": {
+          "main": "governance/mysql-create-table-ticket.sql",
+          "with_ticket": "governance/mysql-create-table-with-ticket.sql",
+          "reuse_ticket": "governance/mysql-create-table-reuse-ticket.sql"
+        },
+        "pg_simple_to_postgres": {
+          "main": "governance/postgres-create-table-ticket.sql",
+          "with_ticket": "governance/postgres-create-table-with-ticket.sql",
+          "reuse_ticket": "governance/postgres-create-table-reuse-ticket.sql"
+        }
       }
     }
   ]

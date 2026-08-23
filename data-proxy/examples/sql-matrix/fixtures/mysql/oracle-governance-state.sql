@@ -6,4 +6,7 @@
 SELECT 'customers' AS entity, COUNT(*) AS cnt FROM sqlt_customers
 UNION ALL
 SELECT 'mutations' AS entity, COUNT(*) AS cnt
-FROM sqlt_mutations WHERE mutation_id BETWEEN 9500 AND 9599;
+FROM sqlt_mutations WHERE mutation_id BETWEEN 9500 AND 9599
+UNION ALL
+SELECT 'ticket_table' AS entity, COUNT(*) AS cnt FROM information_schema.tables
+WHERE table_schema = 'sqlt' AND table_name = 'sqlt_gov_ticket_t';

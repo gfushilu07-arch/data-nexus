@@ -1816,7 +1816,8 @@ def _validate_governance_matrix(root: Path, errors: list[str]) -> set[Path]:
         return set()
     referenced: set[Path] = set()
     for record in selected:
-        for field in ("sql_file", "backend_sql_file"):
+        for field in ("sql_file", "backend_sql_file", "with_ticket_sql_file",
+                      "reuse_ticket_sql_file"):
             value = record.get(field)
             if isinstance(value, str):
                 referenced.add(root / "cases" / PurePosixPath(value))

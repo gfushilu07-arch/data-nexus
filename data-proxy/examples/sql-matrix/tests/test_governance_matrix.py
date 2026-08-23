@@ -51,9 +51,12 @@ def transcript(selection: dict, protocol: str) -> dict:
             step["rows"] = []
         step["expectation_met"] = (step["kind"] == "error") == step["expected_error"]
         steps.append(step)
+    connection = (
+        "orchestrated" if selection.get("requires_ticket_orchestration") else "same"
+    )
     return {
         "protocol": protocol,
-        "connection": "same",
+        "connection": connection,
         "steps": steps,
     }
 
@@ -78,14 +81,14 @@ class GovernanceMatrixTest(unittest.TestCase):
         selection = self.selections[("SQLT-GOV-003", "security_off", "mysql_text_to_mysql")]
         result = MATRIX.verify_path(
             selection,
-            state("mysql_text", BASELINE),
+            state("mysql_text", selection["before_state"]),
             transcript(selection, "mysql_text"),
-            state("mysql_text", MUTATED),
+            state("mysql_text", selection["after_state"]),
             self.evidence(),
             "repro-command",
         )
         self.assertEqual(result["status"], "passed")
-        self.assertEqual(result["state_evidence"]["after_state"], MUTATED)
+        self.assertEqual(result["state_evidence"]["after_state"], selection["after_state"])
         self.assertEqual(result["denied_steps"], [])
 
     def test_denied_write_requires_unchanged_backend_state(self) -> None:
@@ -93,20 +96,23 @@ class GovernanceMatrixTest(unittest.TestCase):
         gateway = transcript(selection, "pg_simple")
         result = MATRIX.verify_path(
             selection,
-            state("pg_simple", BASELINE),
+            state("pg_simple", selection["before_state"]),
             gateway,
-            state("pg_simple", BASELINE),
+            state("pg_simple", selection["before_state"]),
             self.evidence(),
             "repro-command",
         )
         self.assertEqual(len(result["denied_steps"]), 1)
         self.assertTrue(result["policy_enabled"])
+        # A deny that nonetheless changed backend state must trip the invariant.
+        mutated = [row if row[0] != "mutations" else ["mutations", "1"]
+                   for row in selection["before_state"]]
         with self.assertRaises(MATRIX.MatrixError):
             MATRIX.verify_path(
                 selection,
-                state("pg_simple", BASELINE),
+                state("pg_simple", selection["before_state"]),
                 gateway,
-                state("pg_simple", MUTATED),
+                state("pg_simple", mutated),
                 self.evidence(),
                 "repro-command",
             )
@@ -115,9 +121,9 @@ class GovernanceMatrixTest(unittest.TestCase):
         selection = self.selections[("SQLT-GOV-001", "row_filter_tenant10", "pg_simple_to_postgres")]
         result = MATRIX.verify_path(
             selection,
-            state("pg_simple", BASELINE),
+            state("pg_simple", selection["before_state"]),
             transcript(selection, "pg_simple"),
-            state("pg_simple", BASELINE),
+            state("pg_simple", selection["after_state"]),
             self.evidence(),
             "repro-command",
         )
@@ -133,9 +139,9 @@ class GovernanceMatrixTest(unittest.TestCase):
         with self.assertRaises(MATRIX.MatrixError):
             MATRIX.verify_path(
                 selection,
-                state("mysql_text", BASELINE),
+                state("mysql_text", selection["before_state"]),
                 gateway,
-                state("mysql_text", BASELINE),
+                state("mysql_text", selection["after_state"]),
                 self.evidence(),
                 "repro-command",
             )
@@ -154,13 +160,14 @@ class GovernanceMatrixTest(unittest.TestCase):
             ))
         summary = MATRIX.aggregate(selections, results, "run-id", "/run/dir", filtered=False)
         self.assertTrue(summary["acceptance_complete"])
-        self.assertEqual(summary["paths"], 110)
-        self.assertEqual(summary["policies"]["security_off"], 10)
-        self.assertEqual(summary["protocols"]["mysql_text_to_mysql"], 55)
+        self.assertEqual(summary["paths"], 144)
+        self.assertEqual(summary["cases"], 6)
+        self.assertEqual(summary["policies"]["security_off"], 12)
+        self.assertEqual(summary["protocols"]["mysql_text_to_mysql"], 72)
 
     def test_filtered_aggregate_marks_incomplete(self) -> None:
         selection = self.selections[("SQLT-GOV-004", "deny_dml", "pg_simple_to_postgres")]
-        before = state("pg_simple", BASELINE)
+        before = state("pg_simple", selection["before_state"])
         result = MATRIX.verify_path(
             selection, before, transcript(selection, "pg_simple"), before,
             self.evidence(), "repro-command",

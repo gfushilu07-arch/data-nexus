@@ -36,13 +36,24 @@ class SelectGovernanceCasesTest(unittest.TestCase):
             case_to=kwargs.pop("case_to", ""),
         )
 
-    def test_formal_selection_is_eleven_policies_times_five_cases_times_two_protocols(self) -> None:
+    def test_formal_selection_is_twelve_policies_times_six_cases_times_two_protocols(self) -> None:
         selected = self.select()
-        self.assertEqual(len(selected), 110)
-        self.assertEqual(len({record["case_id"] for record in selected}), 5)
-        self.assertEqual(
-            len({record["policy"] for record in selected}), 11,
-        )
+        self.assertEqual(len(selected), 144)
+        self.assertEqual(len({record["case_id"] for record in selected}), 6)
+        self.assertEqual(len({record["policy"] for record in selected}), 12)
+
+    def test_ticket_case_carries_orchestration_only_for_ticket_policy(self) -> None:
+        selected = self.select(case_from="SQLT-GOV-006", case_to="SQLT-GOV-006")
+        by_policy = {record["policy"]: record for record in selected}
+        self.assertTrue(by_policy["ticket_ddl"]["requires_ticket_orchestration"])
+        self.assertTrue(by_policy["ticket_ddl"]["with_ticket_sql_file"])
+        for policy, record in by_policy.items():
+            if policy != "ticket_ddl":
+                # The with/reuse files belong to the case; only the ticket
+                # policy drives the admin-issue orchestration.
+                self.assertFalse(record["requires_ticket_orchestration"])
+            self.assertEqual(record["after_state"],
+                             [["customers", "4"], ["mutations", "0"], ["ticket_table", "1"]])
         self.assertEqual(
             {record["protocol"] for record in selected},
             {"mysql_text_to_mysql", "pg_simple_to_postgres"},
@@ -93,7 +104,8 @@ class SelectGovernanceCasesTest(unittest.TestCase):
         insert = {
             record["case_id"]: record for record in selected
         }["SQLT-GOV-003"]
-        self.assertEqual(insert["after_state"], [["customers", "4"], ["mutations", "1"]])
+        self.assertEqual(insert["after_state"],
+                         [["customers", "4"], ["mutations", "1"], ["ticket_table", "0"]])
 
     def test_unknown_filters_are_rejected(self) -> None:
         with self.assertRaises(SELECTOR.SelectionError):

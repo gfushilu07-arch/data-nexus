@@ -43,6 +43,7 @@ EXPECTED_POLICIES = {
     "audit_l0": {"enabled": True},
     "audit_l1": {"enabled": True},
     "audit_l2": {"enabled": True},
+    "ticket_ddl": {"enabled": True},
 }
 
 STEP_KINDS = {"ok", "rows", "error"}
@@ -161,7 +162,7 @@ def select_paths(
     if not isinstance(cases, list) or len(cases) != spec.get("expected_cases"):
         raise SelectionError("governance case count does not match expected_cases")
     case_ids = [case.get("id") for case in cases]
-    if case_ids != [f"SQLT-GOV-{index:03d}" for index in range(1, 6)]:
+    if case_ids != [f"SQLT-GOV-{index:03d}" for index in range(1, 7)]:
         raise SelectionError("governance case IDs must be SQLT-GOV-001 through 004")
     if not isinstance(oracle_results, dict) or set(case_ids) != set(oracle_results):
         raise SelectionError("governance spec and oracle cases do not match")
@@ -178,6 +179,15 @@ def select_paths(
         sql = case.get("sql")
         if not isinstance(sql, dict) or set(sql) != set(protocols):
             raise SelectionError(f"{case_id}: SQL paths must cover both protocols")
+
+        def sql_files(value: Any) -> dict[str, str]:
+            if isinstance(value, str):
+                return {"main": value}
+            if isinstance(value, dict):
+                if set(value) != {"main", "with_ticket", "reuse_ticket"}:
+                    raise SelectionError(f"{case_id}: ticket case files are invalid")
+                return dict(value)
+            raise SelectionError(f"{case_id}: SQL path shape is invalid")
         oracle = oracle_results[case_id]
         if not isinstance(oracle, dict) or set(oracle) != set(protocols) | {"state"}:
             raise SelectionError(f"{case_id}: oracle fields are invalid")
@@ -203,16 +213,24 @@ def select_paths(
                 states[state_name] = profile
             for protocol_name in protocol_names:
                 protocol = protocols[protocol_name]
-                path = _safe_file(root, sql[protocol_name], "cases")
+                files = sql_files(sql[protocol_name])
+                path = _safe_file(root, files["main"], "cases")
                 _validate_header(path, case_id, protocol["frontend_dialect"])
+                extra_files = {}
+                for key in ("with_ticket", "reuse_ticket"):
+                    if key in files:
+                        extra = _safe_file(root, files[key], "cases")
+                        _validate_header(extra, case_id, protocol["frontend_dialect"])
+                        extra_files[key] = files[key]
                 backend_protocol = next(
                     name for name, candidate in protocols.items()
                     if candidate["frontend_dialect"] == protocol["backend_dialect"]
                 )
-                backend_path = _safe_file(root, sql[backend_protocol], "cases")
+                backend_files = sql_files(sql[backend_protocol])
+                backend_path = _safe_file(root, backend_files["main"], "cases")
                 _validate_header(backend_path, case_id, protocol["backend_dialect"])
                 lane_oracle = oracle[protocol_name][policy_name]
-                if not isinstance(lane_oracle, dict) or set(lane_oracle) != {"steps"}:
+                if not isinstance(lane_oracle, dict) or set(lane_oracle) - {"steps", "authorized_state_change"}:
                     raise SelectionError(f"{case_id}/{policy_name}/{protocol_name}: lane fields are invalid")
                 _validate_steps(
                     f"{case_id}/{policy_name}/{protocol_name}", lane_oracle["steps"]
@@ -229,12 +247,18 @@ def select_paths(
                     "client_protocol": protocol["protocol"],
                     "port": protocol["port"],
                     "listener": protocol["listener"],
-                    "sql_file": sql[protocol_name],
-                    "backend_sql_file": sql[backend_protocol],
+                    "sql_file": files["main"],
+                    "with_ticket_sql_file": extra_files.get("with_ticket"),
+                    "reuse_ticket_sql_file": extra_files.get("reuse_ticket"),
+                    "requires_ticket_orchestration": (
+                        policy_name == "ticket_ddl" and "with_ticket" in files
+                    ),
+                    "backend_sql_file": backend_files["main"],
                     "state_query": protocol["state_query"],
                     "before_state": states["before_state"],
                     "after_state": states["after_state"],
                     "gateway_steps": lane_oracle["steps"],
+                    "authorized_state_change": lane_oracle.get("authorized_state_change", False),
                 "audit_file": policy.get("audit_file"),
                 "audit_level": policy.get("audit_level"),
                 })

@@ -10,6 +10,10 @@
       [
         "mutations",
         "0"
+      ],
+      [
+        "ticket_table",
+        "0"
       ]
     ],
     "mutation_9501": [
@@ -19,6 +23,24 @@
       ],
       [
         "mutations",
+        "1"
+      ],
+      [
+        "ticket_table",
+        "0"
+      ]
+    ],
+    "ticket_table_created": [
+      [
+        "customers",
+        "4"
+      ],
+      [
+        "mutations",
+        "0"
+      ],
+      [
+        "ticket_table",
         "1"
       ]
     ]
@@ -67,6 +89,10 @@
           "after_state": "baseline"
         },
         "audit_l2": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "ticket_ddl": {
           "before_state": "baseline",
           "after_state": "baseline"
         }
@@ -377,6 +403,38 @@
           ]
         },
         "audit_l2": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "101",
+                  "Ada"
+                ],
+                [
+                  "102",
+                  "Lin"
+                ],
+                [
+                  "201",
+                  "Grace"
+                ],
+                [
+                  "202",
+                  "Edsger"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "ticket_ddl": {
           "steps": [
             {
               "name": "select",
@@ -745,6 +803,38 @@
               "transaction_status": "I"
             }
           ]
+        },
+        "ticket_ddl": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 4",
+              "rows": [
+                [
+                  "101",
+                  "Ada"
+                ],
+                [
+                  "102",
+                  "Lin"
+                ],
+                [
+                  "201",
+                  "Grace"
+                ],
+                [
+                  "202",
+                  "Edsger"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
         }
       }
     },
@@ -791,6 +881,10 @@
           "after_state": "baseline"
         },
         "audit_l2": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "ticket_ddl": {
           "before_state": "baseline",
           "after_state": "baseline"
         }
@@ -1030,6 +1124,28 @@
               "transaction_status": "I"
             }
           ]
+        },
+        "ticket_ddl": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  "10.00",
+                  "new"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
         }
       },
       "pg_simple_to_postgres": {
@@ -1247,6 +1363,28 @@
           ]
         },
         "audit_l2": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 1",
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  "10.00",
+                  "new"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "ticket_ddl": {
           "steps": [
             {
               "name": "select",
@@ -1315,6 +1453,10 @@
         "audit_l2": {
           "before_state": "baseline",
           "after_state": "baseline"
+        },
+        "ticket_ddl": {
+          "before_state": "baseline",
+          "after_state": "baseline"
         }
       },
       "mysql_text_to_mysql": {
@@ -1482,6 +1624,21 @@
               "transaction_status": "I"
             }
           ]
+        },
+        "ticket_ddl": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": true,
+              "kind": "error",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [],
+              "error_code": "1105",
+              "sqlstate": "HY000",
+              "transaction_status": "I"
+            }
+          ]
         }
       },
       "pg_simple_to_postgres": {
@@ -1636,6 +1793,21 @@
           ]
         },
         "audit_l2": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": true,
+              "kind": "error",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": "XX000",
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "ticket_ddl": {
           "steps": [
             {
               "name": "insert",
@@ -1697,6 +1869,10 @@
         "audit_l2": {
           "before_state": "baseline",
           "after_state": "baseline"
+        },
+        "ticket_ddl": {
+          "before_state": "baseline",
+          "after_state": "baseline"
         }
       },
       "mysql_text_to_mysql": {
@@ -2151,6 +2327,47 @@
               "transaction_status": "I"
             }
           ]
+        },
+        "ticket_ddl": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": true,
+              "kind": "error",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [],
+              "error_code": "1105",
+              "sqlstate": "HY000",
+              "transaction_status": "I"
+            },
+            {
+              "name": "delete",
+              "expected_error": true,
+              "kind": "error",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [],
+              "error_code": "1105",
+              "sqlstate": "HY000",
+              "transaction_status": "I"
+            },
+            {
+              "name": "verify_count",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "0"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
         }
       },
       "pg_simple_to_postgres": {
@@ -2566,6 +2783,47 @@
           ]
         },
         "audit_l2": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": true,
+              "kind": "error",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": "XX000",
+              "transaction_status": "I"
+            },
+            {
+              "name": "delete",
+              "expected_error": true,
+              "kind": "error",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": "XX000",
+              "transaction_status": "I"
+            },
+            {
+              "name": "verify_count",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 1",
+              "rows": [
+                [
+                  "0"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "ticket_ddl": {
           "steps": [
             {
               "name": "insert",
@@ -2653,6 +2911,10 @@
         "audit_l2": {
           "before_state": "baseline",
           "after_state": "baseline"
+        },
+        "ticket_ddl": {
+          "before_state": "baseline",
+          "after_state": "baseline"
         }
       },
       "mysql_text_to_mysql": {
@@ -3062,6 +3324,52 @@
           ]
         },
         "audit_l2": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  "10.00",
+                  "new"
+                ],
+                [
+                  "4002",
+                  "beta",
+                  "20.00",
+                  "new"
+                ],
+                [
+                  "4003",
+                  "gamma",
+                  "30.00",
+                  "ready"
+                ],
+                [
+                  "4004",
+                  "delta",
+                  null,
+                  "ready"
+                ],
+                [
+                  "4005",
+                  "epsilon",
+                  "50.00",
+                  "archived"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "ticket_ddl": {
           "steps": [
             {
               "name": "select",
@@ -3559,6 +3867,536 @@
               "transaction_status": "I"
             }
           ]
+        },
+        "ticket_ddl": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 5",
+              "rows": [
+                [
+                  "4001",
+                  "alpha",
+                  "10.00",
+                  "new"
+                ],
+                [
+                  "4002",
+                  "beta",
+                  "20.00",
+                  "new"
+                ],
+                [
+                  "4003",
+                  "gamma",
+                  "30.00",
+                  "ready"
+                ],
+                [
+                  "4004",
+                  "delta",
+                  null,
+                  "ready"
+                ],
+                [
+                  "4005",
+                  "epsilon",
+                  "50.00",
+                  "archived"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        }
+      }
+    },
+    "SQLT-GOV-006": {
+      "state": {
+        "security_off": {
+          "before_state": "baseline",
+          "after_state": "ticket_table_created"
+        },
+        "deny_dml": {
+          "before_state": "baseline",
+          "after_state": "ticket_table_created"
+        },
+        "deny_select_targets": {
+          "before_state": "baseline",
+          "after_state": "ticket_table_created"
+        },
+        "row_filter_tenant10": {
+          "before_state": "baseline",
+          "after_state": "ticket_table_created"
+        },
+        "column_strip_amount": {
+          "before_state": "baseline",
+          "after_state": "ticket_table_created"
+        },
+        "mask_pii": {
+          "before_state": "baseline",
+          "after_state": "ticket_table_created"
+        },
+        "watermark_column": {
+          "before_state": "baseline",
+          "after_state": "ticket_table_created"
+        },
+        "max_rows_1": {
+          "before_state": "baseline",
+          "after_state": "ticket_table_created"
+        },
+        "audit_l0": {
+          "before_state": "baseline",
+          "after_state": "ticket_table_created"
+        },
+        "audit_l1": {
+          "before_state": "baseline",
+          "after_state": "ticket_table_created"
+        },
+        "audit_l2": {
+          "before_state": "baseline",
+          "after_state": "ticket_table_created"
+        },
+        "ticket_ddl": {
+          "before_state": "baseline",
+          "after_state": "ticket_table_created"
+        }
+      },
+      "mysql_text_to_mysql": {
+        "security_off": {
+          "steps": [
+            {
+              "name": "ddl_no_ticket",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 0,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ],
+          "authorized_state_change": true
+        },
+        "deny_dml": {
+          "steps": [
+            {
+              "name": "ddl_no_ticket",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 0,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ],
+          "authorized_state_change": true
+        },
+        "deny_select_targets": {
+          "steps": [
+            {
+              "name": "ddl_no_ticket",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 0,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ],
+          "authorized_state_change": true
+        },
+        "row_filter_tenant10": {
+          "steps": [
+            {
+              "name": "ddl_no_ticket",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 0,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ],
+          "authorized_state_change": true
+        },
+        "column_strip_amount": {
+          "steps": [
+            {
+              "name": "ddl_no_ticket",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 0,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ],
+          "authorized_state_change": true
+        },
+        "mask_pii": {
+          "steps": [
+            {
+              "name": "ddl_no_ticket",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 0,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ],
+          "authorized_state_change": true
+        },
+        "watermark_column": {
+          "steps": [
+            {
+              "name": "ddl_no_ticket",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 0,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ],
+          "authorized_state_change": true
+        },
+        "max_rows_1": {
+          "steps": [
+            {
+              "name": "ddl_no_ticket",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 0,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ],
+          "authorized_state_change": true
+        },
+        "audit_l0": {
+          "steps": [
+            {
+              "name": "ddl_no_ticket",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 0,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ],
+          "authorized_state_change": true
+        },
+        "audit_l1": {
+          "steps": [
+            {
+              "name": "ddl_no_ticket",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 0,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ],
+          "authorized_state_change": true
+        },
+        "audit_l2": {
+          "steps": [
+            {
+              "name": "ddl_no_ticket",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 0,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ],
+          "authorized_state_change": true
+        },
+        "ticket_ddl": {
+          "steps": [
+            {
+              "name": "ddl_no_ticket",
+              "expected_error": true,
+              "kind": "error",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [],
+              "error_code": "1105",
+              "sqlstate": "HY000",
+              "transaction_status": "I"
+            },
+            {
+              "name": "ddl_with_ticket",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 0,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "ddl_ticket_reuse",
+              "expected_error": true,
+              "kind": "error",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [],
+              "error_code": "1105",
+              "sqlstate": "HY000",
+              "transaction_status": "I"
+            }
+          ],
+          "authorized_state_change": true
+        }
+      },
+      "pg_simple_to_postgres": {
+        "security_off": {
+          "steps": [
+            {
+              "name": "ddl_no_ticket",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 0,
+              "command_tag": "OK 0",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ],
+          "authorized_state_change": true
+        },
+        "deny_dml": {
+          "steps": [
+            {
+              "name": "ddl_no_ticket",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 0,
+              "command_tag": "OK 0",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ],
+          "authorized_state_change": true
+        },
+        "deny_select_targets": {
+          "steps": [
+            {
+              "name": "ddl_no_ticket",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 0,
+              "command_tag": "OK 0",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ],
+          "authorized_state_change": true
+        },
+        "row_filter_tenant10": {
+          "steps": [
+            {
+              "name": "ddl_no_ticket",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 0,
+              "command_tag": "OK 0",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ],
+          "authorized_state_change": true
+        },
+        "column_strip_amount": {
+          "steps": [
+            {
+              "name": "ddl_no_ticket",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 0,
+              "command_tag": "OK 0",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ],
+          "authorized_state_change": true
+        },
+        "mask_pii": {
+          "steps": [
+            {
+              "name": "ddl_no_ticket",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 0,
+              "command_tag": "OK 0",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ],
+          "authorized_state_change": true
+        },
+        "watermark_column": {
+          "steps": [
+            {
+              "name": "ddl_no_ticket",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 0,
+              "command_tag": "OK 0",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ],
+          "authorized_state_change": true
+        },
+        "max_rows_1": {
+          "steps": [
+            {
+              "name": "ddl_no_ticket",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 0,
+              "command_tag": "OK 0",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ],
+          "authorized_state_change": true
+        },
+        "audit_l0": {
+          "steps": [
+            {
+              "name": "ddl_no_ticket",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 0,
+              "command_tag": "OK 0",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ],
+          "authorized_state_change": true
+        },
+        "audit_l1": {
+          "steps": [
+            {
+              "name": "ddl_no_ticket",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 0,
+              "command_tag": "OK 0",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ],
+          "authorized_state_change": true
+        },
+        "audit_l2": {
+          "steps": [
+            {
+              "name": "ddl_no_ticket",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 0,
+              "command_tag": "OK 0",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ],
+          "authorized_state_change": true
+        },
+        "ticket_ddl": {
+          "steps": [
+            {
+              "name": "ddl_no_ticket",
+              "expected_error": true,
+              "kind": "error",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": "XX000",
+              "transaction_status": "I"
+            },
+            {
+              "name": "ddl_with_ticket",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 0,
+              "command_tag": "OK 0",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "ddl_ticket_reuse",
+              "expected_error": true,
+              "kind": "error",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": "XX000",
+              "transaction_status": "I"
+            }
+          ],
+          "authorized_state_change": true
         }
       }
     }

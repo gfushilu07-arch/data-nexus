@@ -36,7 +36,7 @@ case "$PROTOCOL_FILTER" in
   *) echo "unknown governance protocol: $PROTOCOL_FILTER" >&2; exit 1 ;;
 esac
 case "$POLICY_FILTER" in
-  ""|security_off|deny_dml|deny_select_targets|row_filter_tenant10|column_strip_amount|mask_pii|watermark_column|max_rows_1|audit_l0|audit_l1|audit_l2) ;;
+  ""|security_off|deny_dml|deny_select_targets|row_filter_tenant10|column_strip_amount|mask_pii|watermark_column|max_rows_1|audit_l0|audit_l1|audit_l2|ticket_ddl) ;;
   *) echo "unknown governance policy: $POLICY_FILTER" >&2; exit 1 ;;
 esac
 if [[ -n "$CASE_FROM" || -n "$CASE_TO" ]]; then
@@ -281,6 +281,7 @@ policy_config() {
     mask_pii) echo "fixtures/governance-mask-pii-gateway-config.toml" ;;
     watermark_column) echo "fixtures/governance-watermark-column-gateway-config.toml" ;;
     max_rows_1) echo "fixtures/governance-max-rows-1-gateway-config.toml" ;;
+    ticket_ddl) echo "fixtures/governance-ticket-ddl-gateway-config.toml" ;;
     audit_l0) echo "fixtures/governance-audit-l0-gateway-config.toml" ;;
     audit_l1) echo "fixtures/governance-audit-l1-gateway-config.toml" ;;
     audit_l2) echo "fixtures/governance-audit-l2-gateway-config.toml" ;;
@@ -291,9 +292,10 @@ policy_config() {
 CURRENT_POLICY=""
 while IFS= read -r selection_record; do
   [[ -n "$selection_record" ]] || continue
-  fields="$(python3 -c 'import json,sys; v=json.loads(sys.argv[1]); print("\t".join(str(v[k]) for k in ("case_id","policy","protocol","client_protocol","port","backend","sql_file","backend_sql_file","state_query")))' "$selection_record")"
+  fields="$(python3 -c 'import json,sys; v=json.loads(sys.argv[1]); print("\t".join(str(v[k]) for k in ("case_id","policy","protocol","client_protocol","port","backend","sql_file","with_ticket_sql_file","reuse_ticket_sql_file","requires_ticket_orchestration","backend_sql_file","state_query")))' "$selection_record")"
   IFS=$'\t' read -r case_id policy protocol client_protocol port backend \
-    sql_file backend_sql_file state_query <<<"$fields"
+    sql_file with_ticket_sql_file reuse_ticket_sql_file requires_ticket_orchestration \
+    backend_sql_file state_query <<<"$fields"
   stem="$case_id-$policy-$protocol"
   selection_file="$RUN_DIR/selections/$stem.json"
   gateway_before="$RUN_DIR/results/$stem.gateway-before.json"
@@ -311,14 +313,96 @@ while IFS= read -r selection_record; do
   echo "==> $case_id [$policy / $protocol]"
 
   status=passed
-  if ! reset_backend "$backend" "$RUN_DIR/logs/$stem.reset"; then
-    status=backend-reset-failed
-  elif ! run_state "$client_protocol" "$state_query" "$gateway_before"; then
-    status=gateway-before-state-failed
-  elif ! run_steps_tolerant "$client_protocol" "$port" "$sql_file" "$gateway_transcript"; then
-    status=gateway-client-failed
-  elif ! run_state "$client_protocol" "$state_query" "$gateway_after"; then
-    status=gateway-after-state-failed
+  if [[ "$requires_ticket_orchestration" == "True" ]]; then
+    # SQLT-5C-b dual control: phase 1 denies, issue a one-shot ticket bound to
+    # the exact approved SQL text, substitute the id into the execution copy,
+    # phase 2 succeeds once, phase 3 replay fails.
+    p1="$gateway_transcript.p1" p2="$gateway_transcript.p2" p3="$gateway_transcript.p3"
+    prepared_dir="$RUN_DIR/results/$stem.prepared"
+    mkdir -p "$prepared_dir"
+    # Template keeps /*dn_ticket:@TICKET@*/; payload carries the bare SQL.
+    python3 - "$ROOT/cases/$with_ticket_sql_file" \
+      "$prepared_dir/with-ticket.tmpl.sql" "$prepared_dir/reuse-ticket.tmpl.sql" \
+      "$prepared_dir/issue-payload.json" <<'PY'
+import json, re, sys
+text = open(sys.argv[1], encoding="utf-8").read()
+steps, name = {}, None
+for line in text.splitlines():
+    if line.startswith("-- @step "):
+        name = line.removeprefix("-- @step ").strip()
+        steps[name] = []
+    elif name is not None:
+        steps[name].append(line)
+tagged = "\n".join(steps["ddl_with_ticket"]).strip()
+bare = re.sub(r"^/\*dn_ticket:[^*]*\*/\s*", "", tagged)
+open(sys.argv[2], "w", encoding="utf-8").write(
+    "-- case: SQLT-GOV-006\n-- Purpose: runner-generated ticketed DDL.\n"
+    "-- Expected: executes once under the issued approval ticket.\n"
+    "-- Dialect: generated\n\n-- @step ddl_with_ticket\n" + tagged + "\n")
+open(sys.argv[3], "w", encoding="utf-8").write(
+    "-- case: SQLT-GOV-006\n-- Purpose: replay of the consumed approval ticket.\n"
+    "-- Expected: rejected; the ticket is single-use.\n"
+    "-- Dialect: generated\n\n-- @step ddl_ticket_reuse\n"
+    + tagged.replace("sqlt_gov_ticket_t", "sqlt_gov_ticket_reuse_t") + "\n")
+payload = {
+    "subject_id": "root", "sql": bare, "ticket_type": "ddl",
+    "ttl_secs": 600, "max_uses": 1, "note": "SQLT-5 governance matrix",
+}
+open(sys.argv[4], "w", encoding="utf-8").write(json.dumps(payload))
+PY
+    if ! reset_backend "$backend" "$RUN_DIR/logs/$stem.reset"; then
+      status=backend-reset-failed
+    elif ! run_state "$client_protocol" "$state_query" "$gateway_before"; then
+      status=gateway-before-state-failed
+    else
+      set +e
+      run_steps "$client_protocol" "$port" "$sql_file" "$p1"
+      ticket_id="$(curl -fsS -X POST "http://127.0.0.1:28084/admin/tickets" \
+        -H 'Content-Type: application/json' \
+        -d @"$prepared_dir/issue-payload.json" \
+        | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')"
+      echo "$ticket_id" >"$RUN_DIR/results/$stem.ticket-id.txt"
+      sed "s/@TICKET@/$ticket_id/g" "$prepared_dir/with-ticket.tmpl.sql"         >"$prepared_dir/with-ticket.run.sql"
+      sed "s/@TICKET@/$ticket_id/g" "$prepared_dir/reuse-ticket.tmpl.sql"         >"$prepared_dir/reuse-ticket.run.sql"
+      docker run --rm "${RUN_LABEL[@]}" --add-host=host.docker.internal:host-gateway \
+        -v "$ROOT:/matrix:ro" -v "$prepared_dir:/prepared:ro" "$CLIENT_IMAGE" \
+        python /matrix/cross_protocol_dml_client.py --protocol "$client_protocol" \
+        --sql "/prepared/with-ticket.run.sql" --host host.docker.internal --port "$port" \
+        --user root --password root --database sqlt \
+        >"$p2" 2>"$p2.err"
+      docker run --rm "${RUN_LABEL[@]}" --add-host=host.docker.internal:host-gateway \
+        -v "$ROOT:/matrix:ro" -v "$prepared_dir:/prepared:ro" "$CLIENT_IMAGE" \
+        python /matrix/cross_protocol_dml_client.py --protocol "$client_protocol" \
+        --sql "/prepared/reuse-ticket.run.sql" --host host.docker.internal --port "$port" \
+        --user root --password root --database sqlt \
+        >"$p3" 2>"$p3.err"
+      python3 -c '
+import json, sys
+out, protocol = sys.argv[2], sys.argv[1]
+steps = []
+for path in sys.argv[3:]:
+    steps.extend(json.load(open(path, encoding="utf-8"))["steps"])
+json.dump({"protocol": protocol, "connection": "orchestrated", "steps": steps},
+          open(out, "w", encoding="utf-8"), sort_keys=True, separators=(",", ":"))
+' "$client_protocol" "$gateway_transcript" "$p1" "$p2" "$p3"
+      set -e
+      if [[ ! -s "$p1" || ! -s "$p2" || ! -s "$p3" || ! -s "$gateway_transcript" ]]; then
+        status=gateway-client-failed
+        evidence+=("$p1" "$p2" "$p3")
+      elif ! run_state "$client_protocol" "$state_query" "$gateway_after"; then
+        status=gateway-after-state-failed
+      fi
+    fi
+  else
+    if ! reset_backend "$backend" "$RUN_DIR/logs/$stem.reset"; then
+      status=backend-reset-failed
+    elif ! run_state "$client_protocol" "$state_query" "$gateway_before"; then
+      status=gateway-before-state-failed
+    elif ! run_steps_tolerant "$client_protocol" "$port" "$sql_file" "$gateway_transcript"; then
+      status=gateway-client-failed
+    elif ! run_state "$client_protocol" "$state_query" "$gateway_after"; then
+      status=gateway-after-state-failed
+    fi
   fi
 
   audit_evidence="$RUN_DIR/results/$stem.audit.jsonl"
@@ -357,5 +441,5 @@ python3 "$ROOT/governance_matrix.py" "${aggregate_args[@]}" \
 if ((FILTERED)); then
   printf 'SQLT-5 reproduction passed with acceptance_complete=false\nartifacts: %s\n' "$RUN_DIR"
 else
-  printf 'SQLT-5 passed: 11 policies x 5 cases x 2 protocols = 110 paths\nartifacts: %s\n' "$RUN_DIR"
+  printf 'SQLT-5 passed: 12 policies x 6 cases x 2 protocols = 144 paths\nartifacts: %s\n' "$RUN_DIR"
 fi
