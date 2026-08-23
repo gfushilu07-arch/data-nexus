@@ -40,6 +40,9 @@ EXPECTED_POLICIES = {
     "mask_pii": {"enabled": True},
     "watermark_column": {"enabled": True},
     "max_rows_1": {"enabled": True},
+    "audit_l0": {"enabled": True},
+    "audit_l1": {"enabled": True},
+    "audit_l2": {"enabled": True},
 }
 
 STEP_KINDS = {"ok", "rows", "error"}
@@ -232,6 +235,8 @@ def select_paths(
                     "before_state": states["before_state"],
                     "after_state": states["after_state"],
                     "gateway_steps": lane_oracle["steps"],
+                "audit_file": policy.get("audit_file"),
+                "audit_level": policy.get("audit_level"),
                 })
 
     if not selected:

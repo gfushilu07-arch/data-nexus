@@ -90,6 +90,49 @@ def _verify_state(
     return evidence["rows"]
 
 
+AUDIT_LEVEL_RULES = {
+    # level -> (sql_text_required_on_all_events, sample_required_on_row_events)
+    "L0": (False, False),
+    "L1": (True, False),
+    "L2": (True, True),
+}
+
+
+def _verify_audit(
+    label: str,
+    level: str,
+    audit_lines: list[str],
+) -> list[dict[str, Any]]:
+    if not audit_lines:
+        raise MatrixError(f"{label}: audit evidence is empty for level {level}")
+    events = []
+    for line in audit_lines:
+        try:
+            events.append(json.loads(line))
+        except json.JSONDecodeError as error:
+            raise MatrixError(f"{label}: malformed audit line: {error}") from error
+    sql_required, sample_required = AUDIT_LEVEL_RULES[level]
+    for event in events:
+        # Deny decisions audit rule identity rather than SQL payload, so the
+        # sql_text presence requirement applies to executed commands only.
+        requires_sql = sql_required and event.get("decision") == "execute"
+        if requires_sql and not event.get("sql_text"):
+            raise MatrixError(f"{label}: {level} event lacks sql_text")
+        if not sql_required and event.get("sql_text"):
+            raise MatrixError(f"{label}: {level} event leaks sql_text")
+        if event.get("sample_body") and level != "L2":
+            raise MatrixError(f"{label}: {level} event leaks sample_body")
+    row_events = [e for e in events if e.get("outcome") in ("resultset", "xproto_stream")]
+    if sample_required and not any(e.get("sample_body") for e in row_events):
+        raise MatrixError(f"{label}: {level} row events lack sample_body")
+    return [{
+        "decision": event.get("decision"),
+        "outcome": event.get("outcome"),
+        "has_sql_text": bool(event.get("sql_text")),
+        "has_sample": bool(event.get("sample_body")),
+    } for event in events]
+
+
 def verify_path(
     selection: dict[str, Any],
     gateway_before: dict[str, Any],
@@ -97,6 +140,7 @@ def verify_path(
     gateway_after: dict[str, Any],
     evidence_paths: dict[str, str],
     reproduction: str,
+    audit_lines: list[str] | None = None,
 ) -> dict[str, Any]:
     case_id = selection["case_id"]
     policy = selection["policy"]
@@ -151,6 +195,11 @@ def verify_path(
         ],
         "reproduction": reproduction,
     }
+    if selection.get("audit_level"):
+        result["audit_evidence"] = _verify_audit(
+            f"{case_id}/{policy}", selection["audit_level"], audit_lines or [],
+        )
+    return result
 
 
 def aggregate(
@@ -177,15 +226,16 @@ def aggregate(
         protocols[item["protocol"]] = protocols.get(item["protocol"], 0) + 1
     cases = len({item["case_id"] for item in results})
     complete = not filtered
-    if complete and (len(results), cases) != (80, 5):
-        raise MatrixError("formal SQLT-5 acceptance must be 80 paths: 5 cases x 8 policies x 2 protocols")
+    if complete and (len(results), cases) != (110, 5):
+        raise MatrixError("formal SQLT-5 acceptance must be 110 paths: 5 cases x 11 policies x 2 protocols")
     expected_policies = {
+        "audit_l0": 10, "audit_l1": 10, "audit_l2": 10,
         "column_strip_amount": 10, "deny_dml": 10, "deny_select_targets": 10,
         "mask_pii": 10, "max_rows_1": 10, "row_filter_tenant10": 10,
         "security_off": 10, "watermark_column": 10,
     }
     if complete and (policies != expected_policies or protocols != {
-        "mysql_text_to_mysql": 40, "pg_simple_to_postgres": 40,
+        "mysql_text_to_mysql": 55, "pg_simple_to_postgres": 55,
     }):
         raise MatrixError("formal SQLT-5 lane distribution mismatch")
     return {
@@ -210,6 +260,7 @@ def main() -> int:
     compare.add_argument("--gateway-before", type=Path, required=True)
     compare.add_argument("--gateway-transcript", type=Path, required=True)
     compare.add_argument("--gateway-after", type=Path, required=True)
+    compare.add_argument("--audit-evidence", type=Path)
     compare.add_argument("--reproduction", required=True)
     summary = subparsers.add_parser("aggregate")
     summary.add_argument("--selection", type=Path, required=True)
@@ -232,6 +283,15 @@ def main() -> int:
                     "gateway_after": str(args.gateway_after),
                 },
                 args.reproduction,
+                [
+                    line
+                    for line in (
+                        args.audit_evidence.read_text(encoding="utf-8").splitlines()
+                        if args.audit_evidence and args.audit_evidence.is_file()
+                        else []
+                    )
+                    if line
+                ],
             )
             print(json.dumps(value, sort_keys=True, separators=(",", ":")))
             return 0

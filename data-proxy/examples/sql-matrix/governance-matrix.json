@@ -3,8 +3,8 @@
   "matrix_id": "SQLT-5",
   "policy": "governance",
   "expected_cases": 5,
-  "expected_policies": 8,
-  "expected_paths": 80,
+  "expected_policies": 11,
+  "expected_paths": 110,
   "protocols": {
     "mysql_text_to_mysql": {
       "frontend": "mysql_text",
@@ -59,6 +59,24 @@
     "max_rows_1": {
       "config": "fixtures/governance-max-rows-1-gateway-config.toml",
       "enabled": true
+    },
+    "audit_l0": {
+      "config": "fixtures/governance-audit-l0-gateway-config.toml",
+      "enabled": true,
+      "audit_file": "/tmp/dn-sqlt5-audit-l0.jsonl",
+      "audit_level": "L0"
+    },
+    "audit_l1": {
+      "config": "fixtures/governance-audit-l1-gateway-config.toml",
+      "enabled": true,
+      "audit_file": "/tmp/dn-sqlt5-audit-l1.jsonl",
+      "audit_level": "L1"
+    },
+    "audit_l2": {
+      "config": "fixtures/governance-audit-l2-gateway-config.toml",
+      "enabled": true,
+      "audit_file": "/tmp/dn-sqlt5-audit-l2.jsonl",
+      "audit_level": "L2"
     }
   },
   "cases": [

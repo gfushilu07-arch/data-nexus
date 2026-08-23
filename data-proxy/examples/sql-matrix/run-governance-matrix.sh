@@ -36,7 +36,7 @@ case "$PROTOCOL_FILTER" in
   *) echo "unknown governance protocol: $PROTOCOL_FILTER" >&2; exit 1 ;;
 esac
 case "$POLICY_FILTER" in
-  ""|security_off|deny_dml|deny_select_targets|row_filter_tenant10|column_strip_amount|mask_pii|watermark_column|max_rows_1) ;;
+  ""|security_off|deny_dml|deny_select_targets|row_filter_tenant10|column_strip_amount|mask_pii|watermark_column|max_rows_1|audit_l0|audit_l1|audit_l2) ;;
   *) echo "unknown governance policy: $POLICY_FILTER" >&2; exit 1 ;;
 esac
 if [[ -n "$CASE_FROM" || -n "$CASE_TO" ]]; then
@@ -194,6 +194,11 @@ start_gateway() {
     sleep 1
   done
   curl -fsS http://127.0.0.1:28084/admin/listeners >"$RUN_DIR/logs/listeners-$policy.json"
+  AUDIT_BASELINE_LINES=0
+  policy_audit_file="$(python3 -c 'import json,sys; v=json.load(open(sys.argv[1], encoding="utf-8")); print((v["policies"].get(sys.argv[2]) or {}).get("audit_file") or "")' "$ROOT/governance-matrix.json" "$policy")"
+  if [[ -n "$policy_audit_file" && -f "$policy_audit_file" ]]; then
+    AUDIT_BASELINE_LINES="$(wc -l <"$policy_audit_file" | tr -d ' ')"
+  fi
   python3 - "$RUN_DIR/logs/listeners-$policy.json" <<'PY'
 import json, sys
 names = sorted(item["name"] for item in json.load(open(sys.argv[1], encoding="utf-8")))
@@ -276,6 +281,9 @@ policy_config() {
     mask_pii) echo "fixtures/governance-mask-pii-gateway-config.toml" ;;
     watermark_column) echo "fixtures/governance-watermark-column-gateway-config.toml" ;;
     max_rows_1) echo "fixtures/governance-max-rows-1-gateway-config.toml" ;;
+    audit_l0) echo "fixtures/governance-audit-l0-gateway-config.toml" ;;
+    audit_l1) echo "fixtures/governance-audit-l1-gateway-config.toml" ;;
+    audit_l2) echo "fixtures/governance-audit-l2-gateway-config.toml" ;;
     *) echo "unknown governance policy: $1" >&2; return 1 ;;
   esac
 }
@@ -313,12 +321,20 @@ while IFS= read -r selection_record; do
     status=gateway-after-state-failed
   fi
 
+  audit_evidence="$RUN_DIR/results/$stem.audit.jsonl"
+  : >"$audit_evidence"
+  if [[ -n "${policy_audit_file:-}" && -f "$policy_audit_file" ]]; then
+    tail -n +"$((AUDIT_BASELINE_LINES + 1))" "$policy_audit_file" >"$audit_evidence" 2>/dev/null || true
+  fi
+  evidence+=("$audit_evidence")
+
   if [[ "$status" == passed ]]; then
     if ! python3 "$ROOT/governance_matrix.py" compare \
       --selection "$selection_file" \
       --gateway-before "$gateway_before" \
       --gateway-transcript "$gateway_transcript" \
       --gateway-after "$gateway_after" \
+      --audit-evidence "$audit_evidence" \
       --reproduction "$reproduction" \
       >>"$RESULTS" 2>"$RUN_DIR/logs/$stem.compare.err"; then
       status=oracle-mismatch
@@ -341,5 +357,5 @@ python3 "$ROOT/governance_matrix.py" "${aggregate_args[@]}" \
 if ((FILTERED)); then
   printf 'SQLT-5 reproduction passed with acceptance_complete=false\nartifacts: %s\n' "$RUN_DIR"
 else
-  printf 'SQLT-5 passed: 8 policies x 5 cases x 2 protocols = 80 paths\nartifacts: %s\n' "$RUN_DIR"
+  printf 'SQLT-5 passed: 11 policies x 5 cases x 2 protocols = 110 paths\nartifacts: %s\n' "$RUN_DIR"
 fi

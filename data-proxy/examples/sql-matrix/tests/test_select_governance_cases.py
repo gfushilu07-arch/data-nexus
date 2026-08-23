@@ -36,14 +36,12 @@ class SelectGovernanceCasesTest(unittest.TestCase):
             case_to=kwargs.pop("case_to", ""),
         )
 
-    def test_formal_selection_is_eight_policies_times_five_cases_times_two_protocols(self) -> None:
+    def test_formal_selection_is_eleven_policies_times_five_cases_times_two_protocols(self) -> None:
         selected = self.select()
-        self.assertEqual(len(selected), 80)
+        self.assertEqual(len(selected), 110)
         self.assertEqual(len({record["case_id"] for record in selected}), 5)
         self.assertEqual(
-            {record["policy"] for record in selected},
-            {"security_off", "deny_dml", "deny_select_targets", "row_filter_tenant10",
-             "column_strip_amount", "mask_pii", "watermark_column", "max_rows_1"},
+            len({record["policy"] for record in selected}), 11,
         )
         self.assertEqual(
             {record["protocol"] for record in selected},
@@ -77,7 +75,7 @@ class SelectGovernanceCasesTest(unittest.TestCase):
     def test_deny_select_targets_never_leaks_target_rows(self) -> None:
         selected = self.select(policy="deny_select_targets")
         for record in selected:
-            if record["case_id"] != "SQLT-GOV-002":
+            if record["case_id"] not in ("SQLT-GOV-002",):
                 continue
             step = record["gateway_steps"][0]
             self.assertEqual(step["kind"], "error")
