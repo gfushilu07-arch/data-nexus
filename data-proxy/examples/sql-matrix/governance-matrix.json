@@ -3,8 +3,8 @@
   "matrix_id": "SQLT-5",
   "policy": "governance",
   "expected_cases": 6,
-  "expected_policies": 12,
-  "expected_paths": 144,
+  "expected_policies": 13,
+  "expected_paths": 156,
   "protocols": {
     "mysql_text_to_mysql": {
       "frontend": "mysql_text",
@@ -81,6 +81,11 @@
     "ticket_ddl": {
       "config": "fixtures/governance-ticket-ddl-gateway-config.toml",
       "enabled": true
+    },
+    "remote_pdp": {
+      "config": "fixtures/governance-remote-pdp-gateway-config.toml",
+      "enabled": true,
+      "remote_mock": true
     }
   },
   "cases": [

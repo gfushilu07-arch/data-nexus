@@ -160,10 +160,10 @@ class GovernanceMatrixTest(unittest.TestCase):
             ))
         summary = MATRIX.aggregate(selections, results, "run-id", "/run/dir", filtered=False)
         self.assertTrue(summary["acceptance_complete"])
-        self.assertEqual(summary["paths"], 144)
+        self.assertEqual(summary["paths"], 156)
         self.assertEqual(summary["cases"], 6)
         self.assertEqual(summary["policies"]["security_off"], 12)
-        self.assertEqual(summary["protocols"]["mysql_text_to_mysql"], 72)
+        self.assertEqual(summary["protocols"]["mysql_text_to_mysql"], 78)
 
     def test_filtered_aggregate_marks_incomplete(self) -> None:
         selection = self.selections[("SQLT-GOV-004", "deny_dml", "pg_simple_to_postgres")]

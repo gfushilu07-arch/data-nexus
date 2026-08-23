@@ -36,7 +36,7 @@ case "$PROTOCOL_FILTER" in
   *) echo "unknown governance protocol: $PROTOCOL_FILTER" >&2; exit 1 ;;
 esac
 case "$POLICY_FILTER" in
-  ""|security_off|deny_dml|deny_select_targets|row_filter_tenant10|column_strip_amount|mask_pii|watermark_column|max_rows_1|audit_l0|audit_l1|audit_l2|ticket_ddl) ;;
+  ""|security_off|deny_dml|deny_select_targets|row_filter_tenant10|column_strip_amount|mask_pii|watermark_column|max_rows_1|audit_l0|audit_l1|audit_l2|ticket_ddl|remote_pdp) ;;
   *) echo "unknown governance policy: $POLICY_FILTER" >&2; exit 1 ;;
 esac
 if [[ -n "$CASE_FROM" || -n "$CASE_TO" ]]; then
@@ -71,6 +71,10 @@ cleanup_owned() {
     wait "$GATEWAY_PID" 2>/dev/null || true
   fi
   GATEWAY_PID=""
+  if [[ -n "${REMOTE_MOCK_PID:-}" ]] && kill -0 "$REMOTE_MOCK_PID" 2>/dev/null; then
+    kill "$REMOTE_MOCK_PID" 2>/dev/null || true
+  fi
+  REMOTE_MOCK_PID=""
   client_ids="$(docker ps -aq --filter "label=data-nexus.sql-matrix.run-id=$RUN_ID" || true)"
   if [[ -n "$client_ids" ]]; then
     docker rm -f $client_ids >/dev/null 2>&1 || true
@@ -92,6 +96,10 @@ finish() {
   docker volume ls -q --filter "label=com.docker.compose.project=$COMPOSE_PROJECT" \
     | sort -u >"$RUN_DIR/audit/volumes.residual.tsv"
   : >"$RUN_DIR/audit/gateway.residual.tsv"
+  if pgrep -f "remote_pdp_mock.py" >/dev/null 2>&1; then
+    echo "SQLT-5 left owned remote PDP mock processes" >&2
+    status=1
+  fi
   if pgrep -f "proxy daemon -c .*governance-" >/dev/null 2>&1; then
     pgrep -f "proxy daemon -c .*governance-" >"$RUN_DIR/audit/gateway.residual.tsv" || true
   fi
@@ -194,6 +202,23 @@ start_gateway() {
     sleep 1
   done
   curl -fsS http://127.0.0.1:28084/admin/listeners >"$RUN_DIR/logs/listeners-$policy.json"
+  REMOTE_MOCK_PID=""
+  if [[ "$policy" == "remote_pdp" ]]; then
+    python3 "$ROOT/fixtures/remote_pdp_mock.py" 18181 \
+      >"$RUN_DIR/logs/remote-pdp-mock-$policy.log" 2>&1 &
+    REMOTE_MOCK_PID=$!
+    for _ in $(seq 1 20); do
+      if curl -fsS -X POST "http://127.0.0.1:18181/v1/data_nexus" \
+        -H 'Content-Type: application/json' \
+        -d '{"subject_id":"probe","service":"probe","action":"select","tables":[]}' \
+        >"$RUN_DIR/logs/mock-probe-$policy.json" 2>/dev/null; then
+        break
+      fi
+      sleep 1
+    done
+    python3 -c 'import json,sys; assert json.load(open(sys.argv[1], encoding="utf-8"))["allow"] is True' \
+      "$RUN_DIR/logs/mock-probe-$policy.json"
+  fi
   AUDIT_BASELINE_LINES=0
   policy_audit_file="$(python3 -c 'import json,sys; v=json.load(open(sys.argv[1], encoding="utf-8")); print((v["policies"].get(sys.argv[2]) or {}).get("audit_file") or "")' "$ROOT/governance-matrix.json" "$policy")"
   if [[ -n "$policy_audit_file" && -f "$policy_audit_file" ]]; then
@@ -214,6 +239,11 @@ stop_gateway() {
     wait "$GATEWAY_PID" 2>/dev/null || true
   fi
   GATEWAY_PID=""
+  if [[ -n "${REMOTE_MOCK_PID:-}" ]] && kill -0 "$REMOTE_MOCK_PID" 2>/dev/null; then
+    kill "$REMOTE_MOCK_PID" 2>/dev/null || true
+    wait "$REMOTE_MOCK_PID" 2>/dev/null || true
+  fi
+  REMOTE_MOCK_PID=""
 }
 
 run_steps() {
@@ -282,6 +312,7 @@ policy_config() {
     watermark_column) echo "fixtures/governance-watermark-column-gateway-config.toml" ;;
     max_rows_1) echo "fixtures/governance-max-rows-1-gateway-config.toml" ;;
     ticket_ddl) echo "fixtures/governance-ticket-ddl-gateway-config.toml" ;;
+    remote_pdp) echo "fixtures/governance-remote-pdp-gateway-config.toml" ;;
     audit_l0) echo "fixtures/governance-audit-l0-gateway-config.toml" ;;
     audit_l1) echo "fixtures/governance-audit-l1-gateway-config.toml" ;;
     audit_l2) echo "fixtures/governance-audit-l2-gateway-config.toml" ;;
@@ -441,5 +472,5 @@ python3 "$ROOT/governance_matrix.py" "${aggregate_args[@]}" \
 if ((FILTERED)); then
   printf 'SQLT-5 reproduction passed with acceptance_complete=false\nartifacts: %s\n' "$RUN_DIR"
 else
-  printf 'SQLT-5 passed: 12 policies x 6 cases x 2 protocols = 144 paths\nartifacts: %s\n' "$RUN_DIR"
+  printf 'SQLT-5 passed: 13 policies x 6 cases x 2 protocols = 156 paths\nartifacts: %s\n' "$RUN_DIR"
 fi

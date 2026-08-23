@@ -359,3 +359,4 @@ H04b-4 生产部署验收、T01、F30（延后）、P01–P04（延后）。
 | SQLT-5B | governance obligation matrix: column_strip/mask/watermark/max_rows, framework at 80 paths | test(sqlt5b) |
 | SQLT-5C-a | audit level matrix: L0/L1/L2 field semantics + leak assertions, framework at 110 paths | test(sqlt5c) |
 | SQLT-5C-b | ticket dual-control matrix: one-shot dn_ticket DDL flow, framework at 144 paths | test(sqlt5cb) |
+| SQLT-5C-c | remote PDP matrix: HTTP contract + mock lifecycle, framework at 156 paths | test(sqlt5cc) |

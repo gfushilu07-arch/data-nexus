@@ -36,11 +36,11 @@ class SelectGovernanceCasesTest(unittest.TestCase):
             case_to=kwargs.pop("case_to", ""),
         )
 
-    def test_formal_selection_is_twelve_policies_times_six_cases_times_two_protocols(self) -> None:
+    def test_formal_selection_is_thirteen_policies_times_six_cases_times_two_protocols(self) -> None:
         selected = self.select()
-        self.assertEqual(len(selected), 144)
+        self.assertEqual(len(selected), 156)
         self.assertEqual(len({record["case_id"] for record in selected}), 6)
-        self.assertEqual(len({record["policy"] for record in selected}), 12)
+        self.assertEqual(len({record["policy"] for record in selected}), 13)
 
     def test_ticket_case_carries_orchestration_only_for_ticket_policy(self) -> None:
         selected = self.select(case_from="SQLT-GOV-006", case_to="SQLT-GOV-006")

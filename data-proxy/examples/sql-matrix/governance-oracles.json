@@ -95,6 +95,10 @@
         "ticket_ddl": {
           "before_state": "baseline",
           "after_state": "baseline"
+        },
+        "remote_pdp": {
+          "before_state": "baseline",
+          "after_state": "baseline"
         }
       },
       "mysql_text_to_mysql": {
@@ -435,6 +439,38 @@
           ]
         },
         "ticket_ddl": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "101",
+                  "Ada"
+                ],
+                [
+                  "102",
+                  "Lin"
+                ],
+                [
+                  "201",
+                  "Grace"
+                ],
+                [
+                  "202",
+                  "Edsger"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "remote_pdp": {
           "steps": [
             {
               "name": "select",
@@ -835,6 +871,38 @@
               "transaction_status": "I"
             }
           ]
+        },
+        "remote_pdp": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 4",
+              "rows": [
+                [
+                  "101",
+                  "Ada"
+                ],
+                [
+                  "102",
+                  "Lin"
+                ],
+                [
+                  "201",
+                  "Grace"
+                ],
+                [
+                  "202",
+                  "Edsger"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
         }
       }
     },
@@ -885,6 +953,10 @@
           "after_state": "baseline"
         },
         "ticket_ddl": {
+          "before_state": "baseline",
+          "after_state": "baseline"
+        },
+        "remote_pdp": {
           "before_state": "baseline",
           "after_state": "baseline"
         }
@@ -1146,6 +1218,21 @@
               "transaction_status": "I"
             }
           ]
+        },
+        "remote_pdp": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": true,
+              "kind": "error",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [],
+              "error_code": "1105",
+              "sqlstate": "HY000",
+              "transaction_status": "I"
+            }
+          ]
         }
       },
       "pg_simple_to_postgres": {
@@ -1402,6 +1489,21 @@
               ],
               "error_code": null,
               "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "remote_pdp": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": true,
+              "kind": "error",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": "XX000",
               "transaction_status": "I"
             }
           ]
@@ -1457,6 +1559,10 @@
         "ticket_ddl": {
           "before_state": "baseline",
           "after_state": "baseline"
+        },
+        "remote_pdp": {
+          "before_state": "baseline",
+          "after_state": "mutation_9501"
         }
       },
       "mysql_text_to_mysql": {
@@ -1639,6 +1745,21 @@
               "transaction_status": "I"
             }
           ]
+        },
+        "remote_pdp": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
         }
       },
       "pg_simple_to_postgres": {
@@ -1818,6 +1939,21 @@
               "rows": [],
               "error_code": null,
               "sqlstate": "XX000",
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "remote_pdp": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": "OK 1",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
               "transaction_status": "I"
             }
           ]
@@ -1873,6 +2009,10 @@
         "ticket_ddl": {
           "before_state": "baseline",
           "after_state": "baseline"
+        },
+        "remote_pdp": {
+          "before_state": "baseline",
+          "after_state": "baseline"
         }
       },
       "mysql_text_to_mysql": {
@@ -2368,6 +2508,47 @@
               "transaction_status": "I"
             }
           ]
+        },
+        "remote_pdp": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "delete",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "verify_count",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [
+                [
+                  "0"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
         }
       },
       "pg_simple_to_postgres": {
@@ -2845,6 +3026,47 @@
               "rows": [],
               "error_code": null,
               "sqlstate": "XX000",
+              "transaction_status": "I"
+            },
+            {
+              "name": "verify_count",
+              "expected_error": false,
+              "kind": "rows",
+              "affected_rows": null,
+              "command_tag": "SELECT 1",
+              "rows": [
+                [
+                  "0"
+                ]
+              ],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "remote_pdp": {
+          "steps": [
+            {
+              "name": "insert",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": "OK 1",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            },
+            {
+              "name": "delete",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 1,
+              "command_tag": "OK 1",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
               "transaction_status": "I"
             },
             {
@@ -2915,6 +3137,10 @@
         "ticket_ddl": {
           "before_state": "baseline",
           "after_state": "baseline"
+        },
+        "remote_pdp": {
+          "before_state": "baseline",
+          "after_state": "baseline"
         }
       },
       "mysql_text_to_mysql": {
@@ -3411,6 +3637,21 @@
               ],
               "error_code": null,
               "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ]
+        },
+        "remote_pdp": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": true,
+              "kind": "error",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [],
+              "error_code": "1105",
+              "sqlstate": "HY000",
               "transaction_status": "I"
             }
           ]
@@ -3913,6 +4154,21 @@
               "transaction_status": "I"
             }
           ]
+        },
+        "remote_pdp": {
+          "steps": [
+            {
+              "name": "select",
+              "expected_error": true,
+              "kind": "error",
+              "affected_rows": null,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": "XX000",
+              "transaction_status": "I"
+            }
+          ]
         }
       }
     },
@@ -3963,6 +4219,10 @@
           "after_state": "ticket_table_created"
         },
         "ticket_ddl": {
+          "before_state": "baseline",
+          "after_state": "ticket_table_created"
+        },
+        "remote_pdp": {
           "before_state": "baseline",
           "after_state": "ticket_table_created"
         }
@@ -4181,6 +4441,22 @@
             }
           ],
           "authorized_state_change": true
+        },
+        "remote_pdp": {
+          "steps": [
+            {
+              "name": "ddl_no_ticket",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 0,
+              "command_tag": null,
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
+              "transaction_status": "I"
+            }
+          ],
+          "authorized_state_change": true
         }
       },
       "pg_simple_to_postgres": {
@@ -4393,6 +4669,22 @@
               "rows": [],
               "error_code": null,
               "sqlstate": "XX000",
+              "transaction_status": "I"
+            }
+          ],
+          "authorized_state_change": true
+        },
+        "remote_pdp": {
+          "steps": [
+            {
+              "name": "ddl_no_ticket",
+              "expected_error": false,
+              "kind": "ok",
+              "affected_rows": 0,
+              "command_tag": "OK 0",
+              "rows": [],
+              "error_code": null,
+              "sqlstate": null,
               "transaction_status": "I"
             }
           ],

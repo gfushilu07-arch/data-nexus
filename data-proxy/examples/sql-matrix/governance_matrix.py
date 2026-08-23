@@ -237,16 +237,17 @@ def aggregate(
         protocols[item["protocol"]] = protocols.get(item["protocol"], 0) + 1
     cases = len({item["case_id"] for item in results})
     complete = not filtered
-    if complete and (len(results), cases) != (144, 6):
-        raise MatrixError("formal SQLT-5 acceptance must be 144 paths: 6 cases x 12 policies x 2 protocols")
+    if complete and (len(results), cases) != (156, 6):
+        raise MatrixError("formal SQLT-5 acceptance must be 156 paths: 6 cases x 13 policies x 2 protocols")
     expected_policies = {
         "audit_l0": 12, "audit_l1": 12, "audit_l2": 12,
         "column_strip_amount": 12, "deny_dml": 12, "deny_select_targets": 12,
-        "mask_pii": 12, "max_rows_1": 12, "row_filter_tenant10": 12,
-        "security_off": 12, "ticket_ddl": 12, "watermark_column": 12,
+        "mask_pii": 12, "max_rows_1": 12, "remote_pdp": 12,
+        "row_filter_tenant10": 12, "security_off": 12,
+        "ticket_ddl": 12, "watermark_column": 12,
     }
     if complete and (policies != expected_policies or protocols != {
-        "mysql_text_to_mysql": 72, "pg_simple_to_postgres": 72,
+        "mysql_text_to_mysql": 78, "pg_simple_to_postgres": 78,
     }):
         raise MatrixError("formal SQLT-5 lane distribution mismatch")
     return {

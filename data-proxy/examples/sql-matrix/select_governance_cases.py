@@ -44,6 +44,7 @@ EXPECTED_POLICIES = {
     "audit_l1": {"enabled": True},
     "audit_l2": {"enabled": True},
     "ticket_ddl": {"enabled": True},
+    "remote_pdp": {"enabled": True},
 }
 
 STEP_KINDS = {"ok", "rows", "error"}
@@ -259,6 +260,7 @@ def select_paths(
                     "after_state": states["after_state"],
                     "gateway_steps": lane_oracle["steps"],
                     "authorized_state_change": lane_oracle.get("authorized_state_change", False),
+                    "remote_mock": bool(policy.get("remote_mock", False)),
                 "audit_file": policy.get("audit_file"),
                 "audit_level": policy.get("audit_level"),
                 })
